@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f6fa">
+  <title>Create a post · Flexoverse</title>
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body data-page="create">
+  <div id="site-header"></div>
+  <div class="page-layout">
+    <aside id="left-sidebar"></aside>
+    <main class="main-column create-page">
+      <section class="page-intro">
+        <p class="overline">SHARE WITH YOUR CIRCLE</p>
+        <h1>Create a post</h1>
+        <p class="muted">Put a thought, a moment, or a little good news out there.</p>
+      </section>
+      <form class="card create-post-card" id="post-form">
+        <div class="create-post-author">
+          <span class="avatar avatar-you" id="post-author-avatar">Y</span>
+          <span class="create-post-author-info">
+            <strong id="post-author-name">Your profile</strong>
+            <small id="post-author-handle">@yourname</small>
+          </span>
+        </div>
+        <label class="sr-only" for="post-content">Write your post</label>
+        <textarea id="post-content" name="content" required maxlength="2000" placeholder="What would you like to share?" rows="8"></textarea>
+        <div class="create-post-footer">
+          <span>Your post will appear in the public feed.</span>
+          <span id="post-count">0 / 2000</span>
+        </div>
+        <div class="create-post-actions">
+          <a class="button button-outline" href="/">Cancel</a>
+          <button class="button button-primary" type="submit">Share post</button>
+        </div>
+      </form>
+      <p class="create-post-note">Please share respectfully and keep personal information private.</p>
+    </main>
+    <aside id="right-sidebar"></aside>
+  </div>
+  <nav id="mobile-nav"></nav>
+  <div id="modal-root"></div>
+  <div id="toast" role="status"></div>
+  <script type="module" src="../assets/app.js"></script>
+</body>
+</html>
