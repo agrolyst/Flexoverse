@@ -1,7 +1,25 @@
-Flexoverse is a responsive social app starter built with Vite and Supabase.
+# Flexoverse
 
-It includes responsive Home, Friends, Reels, Chats, Notifications, Settings, and public profile screens, with one shared `src/app.js` app entry point. Usernames are unique, lowercase, 3–30 letters or numbers; numbers are optional unless a name is taken. Profile links use clean paths such as `/theirusername`.
+Flexoverse is a responsive social app starter. It uses one `src/app.js` entry point for shared navigation and the Home, Friends, Reels, Chats, Notifications, Settings, and profile screens. Desktop, tablet, and mobile each have their own layout.
 
-The starter Supabase schema and setup steps are in `supabase/setup.sql` and `README.md`. Home feed auth and post creation connect to Supabase; Friends, Reels, Chats, Notifications, and settings are currently UI previews.
+## Run locally
 
-Install Node.js, then run `npm install` and `npm run dev`. Copy `.env.example` to `.env.local` and set your Supabase URL and publishable key. Never place a service-role or secret key in frontend code.
+1. Install Node.js (LTS).
+2. In this folder, run `npm install` and `npm run dev`.
+3. `.env.local` is configured for the Flexoverse Supabase project on this machine. For another environment, copy `.env.example` to `.env.local` and set the project URL and publishable key.
+4. Use a deployment host with SPA rewrites enabled for clean profile links such as `/theirusername`. Vercel and Netlify rewrite configuration is included.
+
+The public publishable key is safe for frontend use when paired with row-level security. Never put a Supabase service-role or secret key in browser code or a public repository.
+
+## Supabase
+
+The `supabase/setup.sql` file documents the starter schema. It has already been applied to the connected Flexoverse project (`gkgjfbusdyiohiztwuec`). It creates profiles with unique lowercase usernames, public posts, likes, comments, friend requests, user blocks, conversations, and messages. Public tables have explicit Data API grants and row-level security policies. Message records are stored in Postgres, and Realtime is enabled for the messages table when available.
+
+Usernames contain 3–30 letters or numbers. Numbers are optional; the database enforces uniqueness so a number is only needed when a preferred username is taken.
+
+## Current scope
+
+The Home feed, sign-in/sign-up form, username validation, and post creation connect to Supabase. Friends, Reels, Chat, Notifications, settings, and profile pages are currently interface previews; their persistence and production media upload are the next build steps. Chat messages are represented in the Supabase schema but the preview does not send or fetch them yet.
+
+Subscription billing, business plans, verification review, public-profile Google indexing controls, and admin moderation still need their own implementation before launch.
+
