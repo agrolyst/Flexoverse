@@ -122,24 +122,57 @@ async function loadComments(postId, article) {
   if (count) count.textContent = `${comments.length} ${comments.length===1?'comment':'comments'}`
 }
 
+function friendEmptyState(title,description,action='') {
+  return `<div class="friends-empty-state"><span class="friends-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.8 19a5.2 5.2 0 0 1 10.4 0v1H2.8zM14 15.3a4.4 4.4 0 0 1 7.2 3.4v1h-6"/></svg></span><strong>${esc(title)}</strong><p>${esc(description)}</p>${action}</div>`
+}
+
 async function loadFriends() {
-  if(!session)return
+  const requests=document.querySelector('#requests-list')
+  const connections=document.querySelector('#friends-list')
+  const suggestionsList=document.querySelector('#suggestions-list')
+  if(!session){
+    document.querySelector('#request-count').textContent='0'
+    document.querySelector('#request-section-count').textContent='0'
+    document.querySelector('#friends-count').textContent='0'
+    requests.innerHTML=friendEmptyState('Sign in to check requests','Friend requests from your community will be waiting here.','<a class="button button-outline" href="/login/">Sign in</a>')
+    suggestionsList.innerHTML=friendEmptyState('Find your people','Sign in to discover members and send friend requests.','<a class="button button-outline" href="/login/">Sign in</a>')
+    connections.innerHTML=friendEmptyState('Your circle starts here','Sign in to see your friends and keep in touch.','<a class="button button-outline" href="/login/">Sign in</a>')
+    return
+  }
   const {data,error}=await supabase.from('friend_requests').select('id,from_user_id,to_user_id,status,created_at').or(`from_user_id.eq.${session.user.id},to_user_id.eq.${session.user.id}`).order('created_at',{ascending:false})
-  if(error)return toast(error.message,'error')
+  if(error){
+    toast(error.message,'error')
+    const retry='<button class="button button-outline" data-retry-friends>Try again</button>'
+    requests.innerHTML=friendEmptyState('Could not load requests','Check your connection and try again.',retry)
+    connections.innerHTML=friendEmptyState('Could not load your friends','Check your connection and try again.',retry)
+    suggestionsList.innerHTML=friendEmptyState('Could not find people','Check your connection and try again.',retry)
+    return
+  }
   friendRequests=(data||[]).filter(r=>r.status==='pending'&&r.to_user_id===session.user.id)
+  const sentRequests=(data||[]).filter(r=>r.status==='pending'&&r.from_user_id===session.user.id)
   acceptedFriends=(data||[]).filter(r=>r.status==='accepted').map(r=>r.from_user_id===session.user.id?r.to_user_id:r.from_user_id)
-  const ids=[...new Set([...friendRequests.map(r=>r.from_user_id),...acceptedFriends])]
-  const {data:people}=ids.length?await supabase.from('profiles').select('id,username,full_name,avatar_url').in('id',ids):{data:[]}
+  const acceptedIds=[...new Set(acceptedFriends)]
+  const sentIds=new Set(sentRequests.map(r=>r.to_user_id))
+  const ids=[...new Set([...friendRequests.map(r=>r.from_user_id),...acceptedIds,...sentIds])]
+  const {data:people,error:peopleError}=ids.length?await supabase.from('profiles').select('id,username,full_name,avatar_url').in('id',ids):{data:[],error:null}
+  if(peopleError){toast(peopleError.message,'error')}
   const byId=Object.fromEntries((people||[]).map(p=>[p.id,p]))
   document.querySelector('#request-count').textContent=friendRequests.length
-  document.querySelector('#friends-count').textContent=acceptedFriends.length
-  document.querySelector('#requests-list').innerHTML=friendRequests.length?friendRequests.map(r=>{const p=byId[r.from_user_id]||{};return `<div class="friend-request-row">${avatar(initials(p.full_name), 'peach',p.avatar_url)}<div class="request-user"><strong>${esc(p.full_name||'Flexoverse member')}</strong><small>@${esc(p.username||'member')}</small></div><div class="request-actions"><button class="button button-primary" data-accept="${r.id}">Accept</button><button class="quiet-button" data-ignore="${r.id}">Ignore</button></div></div>`}).join(''):'<div class="empty-inline">Your new friend requests will appear here.</div>'
-  document.querySelector('#friends-list').innerHTML=acceptedFriends.length?acceptedFriends.map(id=>{const p=byId[id]||{};return `<div class="friend-list-row">${avatar(initials(p.full_name),'mint',p.avatar_url)}<div><strong>${esc(p.full_name||'Flexoverse member')}</strong><small>@${esc(p.username||'member')}</small></div><a class="button button-outline" href="/chats/">Message</a></div>`}).join(''):'<div class="empty-inline">Your friends will appear here once you connect.</div>'
-  const {data:suggestions}=await supabase.from('profiles').select('id,username,full_name,avatar_url').neq('id',session.user.id).limit(9)
-  const exclude=new Set([...ids,session.user.id])
+  document.querySelector('#request-section-count').textContent=friendRequests.length
+  document.querySelector('#friends-count').textContent=acceptedIds.length
+  const sidebarCount=document.querySelector('#friend-count');if(sidebarCount)sidebarCount.textContent=friendRequests.length||''
+
+  requests.innerHTML=friendRequests.length?friendRequests.map(r=>{const p=byId[r.from_user_id]||{};const name=p.full_name||'Flexoverse member';return `<article class="friend-request-item"><div class="friend-request-person">${avatar(initials(name),'peach',p.avatar_url)}<div class="friend-contact-copy"><strong>${esc(name)}</strong><small>@${esc(p.username||'member')} <span>·</span> ${esc(timeAgo(r.created_at))}</small></div></div><div class="friend-request-actions"><button class="button button-primary" data-accept="${esc(r.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><span>Accept</span></button><button class="button button-muted" data-ignore="${esc(r.id)}">Ignore</button></div></article>`}).join(''):friendEmptyState('No requests right now','When someone asks to connect, you can review it here.')
+
+  connections.innerHTML=acceptedIds.length?acceptedIds.map(id=>{const p=byId[id]||{};const name=p.full_name||'Flexoverse member';return `<article class="friend-contact" data-search-text="${esc(`${name} ${p.username||''}`.toLowerCase())}">${avatar(initials(name),'mint',p.avatar_url)}<div class="friend-contact-copy"><strong>${esc(name)}</strong><small>@${esc(p.username||'member')}</small></div><a class="button button-outline" href="/chats/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.7 8.7 0 0 1-4-.95L3 21l1.95-5.5A8.5 8.5 0 1 1 21 11.5Z"/></svg><span>Message</span></a></article>`}).join('')+'<div class="friends-filter-empty" data-empty-results hidden>No friends match that search.</div>':friendEmptyState('Your circle starts here','Discover people in the community and connect with them.')
+
+  const {data:suggestions,error:suggestionError}=await supabase.from('profiles').select('id,username,full_name,avatar_url').eq('is_public',true).neq('id',session.user.id).limit(24)
+  if(suggestionError){toast(suggestionError.message,'error');suggestionsList.innerHTML=friendEmptyState('Could not find people','Check your connection and try again.','<button class="button button-outline" data-retry-friends>Try again</button>');return}
+  const exclude=new Set([...friendRequests.map(r=>r.from_user_id),...acceptedIds,...sentIds,session.user.id])
   const filtered=(suggestions||[]).filter(p=>!exclude.has(p.id))
-  if(filtered.length)document.querySelector('#suggestions-list').innerHTML=filtered.map((p,i)=>`<article class="person-card card"><div class="person-cover ${['cover-mint','cover-peach','cover-violet'][i%3]}"></div><div class="person-content">${avatar(initials(p.full_name),'blue',p.avatar_url)}<strong>${esc(p.full_name||'Flexoverse member')}</strong><small>@${esc(p.username)}</small><button class="button button-outline" data-request="${p.id}">＋ Add friend</button></div></article>`).join('')
-  const count=document.querySelector('#friend-count');if(count)count.textContent=friendRequests.length||''
+  const requestIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>'
+  const sentIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>'
+  suggestionsList.innerHTML=filtered.length?filtered.map((p,i)=>{const name=p.full_name||'Flexoverse member';const pending=sentIds.has(p.id);return `<article class="friend-person-card card" data-search-text="${esc(`${name} ${p.username||''}`.toLowerCase())}"><div class="friend-person-cover friend-cover-${i%3}"></div><div class="friend-person-content">${avatar(initials(name),'blue',p.avatar_url)}<strong>${esc(name)}</strong><small>@${esc(p.username||'member')}</small><button class="button ${pending?'button-request-sent':'button-outline'}" data-request="${esc(p.id)}" ${pending?'disabled':''}>${pending?sentIcon:requestIcon}<span>${pending?'Request sent':'Add friend'}</span></button></div></article>`}).join('')+'<div class="friends-filter-empty" data-empty-results hidden>No people match that search.</div>':friendEmptyState('No new people to show','You’re up to date. Check back as more people join the community.')
 }
 
 async function loadProfilePage() {
@@ -168,10 +201,11 @@ function authReturnPath() {
 function authPageHref(targetPage) { return `/${targetPage}/?next=${encodeURIComponent(authReturnPath())}` }
 function openAuth() { location.href=authPageHref('login') }
 async function sendFriendRequest(id) {
-  if(!session)return openAuth()
+  if(!session){openAuth();return false}
   const {error}=await supabase.from('friend_requests').insert({from_user_id:session.user.id,to_user_id:id})
-  if(error){toast(error.code==='23505'?'A request already exists.':error.message,error.code==='23505'?'info':'error');return}
+  if(error){toast(error.code==='23505'?'A request already exists.':error.message,error.code==='23505'?'info':'error');return false}
   toast('Friend request sent.','success')
+  return true
 }
 
 async function initialize() {
@@ -259,8 +293,10 @@ function bindEvents() {
     await loadComments(postId,article)
     toast('Comment added.','success')
   })
-  document.querySelector('#suggestions-list')?.addEventListener('click',e=>{const b=e.target.closest('[data-request]');if(b)sendFriendRequest(b.dataset.request)})
-  document.querySelector('#requests-list')?.addEventListener('click',async e=>{const accept=e.target.closest('[data-accept]');const ignore=e.target.closest('[data-ignore]');if(accept){const {error}=await supabase.from('friend_requests').update({status:'accepted'}).eq('id',accept.dataset.accept);if(error)toast(error.message,'error');else{await loadFriends();toast('You’re friends now.','success')}}if(ignore){const {error}=await supabase.from('friend_requests').delete().eq('id',ignore.dataset.ignore);if(error)toast(error.message,'error');else await loadFriends()}})
+  document.querySelector('#suggestions-list')?.addEventListener('click',async e=>{const b=e.target.closest('[data-request]');if(!b||b.disabled)return;const old=b.innerHTML;b.disabled=true;b.innerHTML='<span>Sending…</span>';const sent=await sendFriendRequest(b.dataset.request);if(sent)await loadFriends();else{b.disabled=false;b.innerHTML=old}})
+  document.querySelector('#requests-list')?.addEventListener('click',async e=>{const accept=e.target.closest('[data-accept]');const ignore=e.target.closest('[data-ignore]');if(accept){accept.disabled=true;const {error}=await supabase.from('friend_requests').update({status:'accepted'}).eq('id',accept.dataset.accept);if(error){accept.disabled=false;toast(error.message,'error')}else{await loadFriends();toast('You’re friends now.','success')}}if(ignore){ignore.disabled=true;const {error}=await supabase.from('friend_requests').delete().eq('id',ignore.dataset.ignore);if(error){ignore.disabled=false;toast(error.message,'error')}else{await loadFriends();toast('Request dismissed.','success')}}})
+  document.querySelectorAll('[data-friends-filter]').forEach(input=>input.addEventListener('input',()=>{const list=document.querySelector(input.dataset.friendsFilter);if(!list)return;const query=input.value.trim().toLowerCase();let visible=0;list.querySelectorAll(input.dataset.filterItems).forEach(item=>{const matches=String(item.dataset.searchText||'').includes(query);item.hidden=!matches;if(matches)visible++});const empty=list.querySelector('[data-empty-results]');if(empty)empty.hidden=visible>0||!query}))
+  document.querySelectorAll('[data-retry-friends]').forEach(button=>button.addEventListener('click',()=>loadFriends()))
   document.querySelector('#profile-form')?.addEventListener('submit',async e=>{e.preventDefault();if(!session)return openAuth();const f=new FormData(e.currentTarget);const username=String(f.get('username')).trim().toLowerCase();if(!/^[a-z0-9]{3,30}$/.test(username))return toast('Use 3–30 letters or numbers for your username.','error');const {error}=await supabase.from('profiles').update({username,full_name:f.get('full_name'),bio:f.get('bio'),is_public:document.querySelector('#public-profile').checked}).eq('id',session.user.id);if(error)return toast(error.code==='23505'?'That username is taken. Try adding a number.':error.message,'error');await supabase.auth.updateUser({data:{username}});toast('Profile saved.','success');document.querySelector('#profile-link').textContent=`/${username}`})
   document.querySelector('#username-field')?.addEventListener('input',e=>{e.target.value=e.target.value.toLowerCase().replace(/[^a-z0-9]/g,'');document.querySelector('#profile-link').textContent=`/${e.target.value}`})
   document.querySelector('#message-form')?.addEventListener('submit',e=>{e.preventDefault();toast('Chat messages are being connected next.')})
