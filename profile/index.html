@@ -1,1 +1,59 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f6fa"><meta name="description" content="Find your people on Flexoverse."><meta name="robots" content="noindex,nofollow"><title>Profile · Flexoverse</title><link rel="stylesheet" href="../assets/site.css"></head><body data-page="profile"><div id="site-header"></div><div class="page-layout"><aside id="left-sidebar"></aside><main class="main-column"><section class="profile-page" id="profile-view"><div class="profile-banner"></div><div class="profile-summary card"><div class="avatar avatar-large avatar-you" data-user-avatar>Y</div><div class="profile-summary-text"><p class="overline">FLEXOVERSE MEMBER</p><h1 id="profile-name">Loading profile…</h1><p class="muted" id="profile-username">@username</p><p class="profile-bio" id="profile-bio"></p></div><button class="button button-primary" id="profile-action">Add friend</button></div><nav class="profile-tabs"><a class="active" href="#posts">Posts</a><a href="#about">About</a><a href="#photos">Photos</a></nav><div id="profile-posts" class="feed-list"></div></section></main><aside id="right-sidebar"></aside></div><nav id="mobile-nav"></nav><div id="modal-root"></div><div id="toast" role="status"></div><script type="module" src="../assets/app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f6fa">
+  <meta name="description" content="View a Flexoverse member's profile and public posts.">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Profile · Flexoverse</title>
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body data-page="profile">
+  <div id="site-header"></div>
+  <div class="page-layout">
+    <aside id="left-sidebar"></aside>
+    <main class="main-column profile-view-page">
+      <section id="profile-view" class="profile-page">
+        <div id="profile-state" class="profile-state card" role="status" hidden></div>
+        <div id="profile-content">
+          <div class="profile-banner"><span class="profile-banner-orbit profile-banner-orbit-one"></span><span class="profile-banner-orbit profile-banner-orbit-two"></span></div>
+          <section class="profile-summary card">
+            <div id="profile-avatar" class="avatar avatar-large avatar-blue" aria-hidden="true">FX</div>
+            <div class="profile-summary-text">
+              <p class="overline">FLEXOVERSE MEMBER</p>
+              <h1 id="profile-name">Loading profile…</h1>
+              <p class="muted" id="profile-username">@username</p>
+              <p class="profile-bio" id="profile-bio"></p>
+            </div>
+            <div class="profile-actions">
+              <button class="button button-primary" id="profile-action" type="button">Add friend</button>
+              <button class="button profile-share-button" id="profile-share" type="button" aria-label="Share profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.4m-6.6 7 6.6 4.4"/></svg></button>
+            </div>
+          </section>
+          <section class="profile-stats card" aria-label="Profile stats"><div><strong id="profile-post-count">0</strong><span>Posts</span></div><span class="profile-stat-divider"></span><div><strong id="profile-joined">Member</strong><span>On Flexoverse</span></div></section>
+          <nav class="profile-tabs" role="tablist" aria-label="Profile sections">
+            <button class="active" id="profile-tab-posts" type="button" role="tab" aria-selected="true" aria-controls="profile-panel-posts" data-profile-tab="posts">Posts</button>
+            <button id="profile-tab-photos" type="button" role="tab" aria-selected="false" aria-controls="profile-panel-photos" data-profile-tab="photos">Photos</button>
+            <button id="profile-tab-about" type="button" role="tab" aria-selected="false" aria-controls="profile-panel-about" data-profile-tab="about">About</button>
+          </nav>
+          <section id="profile-panel-posts" class="profile-panel" role="tabpanel" aria-labelledby="profile-tab-posts">
+            <div class="feed-list" id="profile-posts"><div class="feed-state card" role="status">Loading public posts…</div></div>
+          </section>
+          <section id="profile-panel-photos" class="profile-panel" role="tabpanel" aria-labelledby="profile-tab-photos" hidden>
+            <div id="profile-photos" class="profile-photos"></div>
+          </section>
+          <section id="profile-panel-about" class="profile-panel" role="tabpanel" aria-labelledby="profile-tab-about" hidden>
+            <div class="profile-about-card card"><div class="profile-about-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg></div><div><p class="overline">ABOUT</p><h2>About this member</h2><p id="profile-about-bio">No bio has been added yet.</p><div class="profile-about-meta"><span class="profile-about-meta-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></span><span id="profile-joined-detail">Member on Flexoverse</span></div></div></div>
+          </section>
+        </div>
+      </section>
+    </main>
+    <aside id="right-sidebar"></aside>
+  </div>
+  <nav id="mobile-nav"></nav>
+  <div id="modal-root"></div>
+  <div id="toast" role="status"></div>
+  <script type="module" src="../assets/app.js"></script>
+</body>
+</html>
