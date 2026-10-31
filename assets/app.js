@@ -68,8 +68,10 @@ function mountShell() {
   const sidebarAvatar=avatar(session?initials(myName()):'FX','blue',profile?.avatar_url)
   document.querySelector('#left-sidebar').innerHTML = `<section class="mini-profile"><a href="${session?esc(pageUrl()):'/login/'}" class="mini-profile-link"><span class="mini-cover" aria-hidden="true"></span><span class="mini-profile-body">${sidebarAvatar}<span class="mini-profile-copy"><strong>${esc(sidebarName)}</strong><small>${esc(sidebarHandle)}</small></span></span><span class="mini-profile-action">${session?'View your profile':'Sign in to personalize'}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a></section><nav class="side-menu" aria-label="Primary navigation"><span class="side-label">YOUR SPACE</span>${shellLinks}</nav><footer class="side-footer"><nav aria-label="Information"><a href="/how-it-works/">How it works</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><a href="/help/">Help</a></nav><small>© 2026 Flexoverse</small></footer>`
   document.querySelector('#right-sidebar').innerHTML = `<section class="right-card card community-rail-card"><span class="rail-kicker">COMMUNITY</span><h3>Find your people</h3><p>Connect with friends and keep up with what they share.</p><a class="button button-soft" href="/friends/">Explore friends <span>→</span></a></section><section class="right-card card community-rail-card"><span class="rail-kicker">MESSAGES</span><h3>Keep in touch</h3><p>Private conversations are here for your accepted friends.</p><a class="text-link" href="/chats/">Open chats <span>→</span></a></section>`
-  document.querySelector('#mobile-nav').className = 'mobile-nav'
-  document.querySelector('#mobile-nav').innerHTML = navItems.filter(([key])=>key!=='notifications').map(([key,label,url])=>`<a class="${activePage(key)?'active':''}" aria-label="${label}" aria-current="${activePage(key)?'page':'false'}" href="${url}"><span class="mobile-nav-icon">${sidebarIcons[key]}</span><small>${label}</small></a>`).join('')
+  const mobileNav=document.querySelector('#mobile-nav')
+  mobileNav.className='mobile-nav'
+  mobileNav.setAttribute('aria-label','Mobile navigation')
+  mobileNav.innerHTML=navItems.filter(([key])=>key!=='notifications').map(([key,label,url])=>`<a class="${activePage(key)?'active':''}" aria-label="${label}" aria-current="${activePage(key)?'page':'false'}" href="${url}"><span class="mobile-nav-icon">${sidebarIcons[key]}</span><small>${label}</small></a>`).join('')
   document.querySelector('#modal-root').innerHTML = ''
 }
 
