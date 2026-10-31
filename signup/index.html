@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f6fa">
+  <title>Create an account · Flexoverse</title>
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body data-page="signup">
+  <div id="site-header"></div>
+  <div class="page-layout">
+    <aside id="left-sidebar"></aside>
+    <main class="main-column auth-page">
+      <section class="auth-page-card card">
+        <p class="overline">JOIN YOUR CIRCLE</p>
+        <h1>Create your account</h1>
+        <p class="muted">Make a home for the people and moments that matter.</p>
+        <form id="signup-form" class="auth-page-form">
+          <label>Your name<input name="name" type="text" required autocomplete="name" maxlength="80" placeholder="Your name"></label>
+          <label>Username<div class="input-with-prefix"><span>@</span><input name="username" id="signup-username" type="text" required minlength="3" maxlength="30" pattern="[A-Za-z0-9]+" autocomplete="username" placeholder="yourname"></div><small id="username-hint">Use 3–30 letters or numbers. Numbers are optional.</small></label>
+          <label>Email address<input name="email" type="email" required autocomplete="email" placeholder="you@example.com"></label>
+          <label>Password<input name="password" type="password" required minlength="6" autocomplete="new-password" placeholder="At least 6 characters"></label>
+          <p class="auth-success" id="signup-message" role="status"></p>
+          <button class="button button-primary" type="submit">Create account</button>
+        </form>
+        <p class="auth-page-switch">Already have an account? <a id="switch-to-login" href="/login/">Sign in</a></p>
+      </section>
+    </main>
+    <aside id="right-sidebar"></aside>
+  </div>
+  <nav id="mobile-nav"></nav>
+  <div id="modal-root"></div>
+  <div id="toast" role="status"></div>
+  <script type="module" src="../assets/app.js"></script>
+</body>
+</html>
