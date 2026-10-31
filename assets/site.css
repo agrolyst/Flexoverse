@@ -148,3 +148,41 @@ body{min-width:320px;font-size:15px;line-height:1.5}
   .auth-page-card{padding:22px 18px}
   .auth-page-card h1{font-size:24px}
 }
+
+/* Left navigation: profile identity, clear destinations, and a calmer active state */
+.left-sidebar{gap:16px}
+.mini-profile{border:1px solid #e7e9f0;border-radius:18px;box-shadow:0 12px 30px rgba(25,34,55,.06)}
+.mini-profile-link{display:block;color:inherit;text-decoration:none}
+.mini-cover{height:86px;overflow:hidden;background:linear-gradient(125deg,#d9ddff 0%,#e9def8 52%,#f5e4dc 100%);position:relative}
+.mini-cover:before,.mini-cover:after{content:"";position:absolute;border:1px solid rgba(255,255,255,.55);border-radius:50%}
+.mini-cover:before{width:118px;height:118px;right:17px;top:-61px}
+.mini-cover:after{width:78px;height:78px;right:37px;top:-42px}
+.mini-profile-body{display:flex;align-items:flex-end;gap:11px;padding:0 15px;margin-top:-28px;position:relative}
+.mini-profile-body .avatar{width:56px;height:56px;border:4px solid #fff;box-shadow:0 3px 10px rgba(23,32,47,.12);font-size:15px}
+.mini-profile-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px;padding-bottom:5px}
+.mini-profile-copy strong{display:block;overflow:hidden;margin:0;color:var(--ink);font:700 14px/1.25 Manrope,sans-serif;text-overflow:ellipsis;white-space:nowrap}
+.mini-profile-copy small{display:block;overflow:hidden;margin:0;color:#8791a1;font-size:12px;text-overflow:ellipsis;white-space:nowrap}
+.mini-profile-action{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:14px 15px 0;padding:11px 0 14px;border-top:1px solid #edf0f4;color:#5d56d5;font-size:12px;font-weight:700}
+.mini-profile-action svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.side-menu{gap:4px;padding:8px;border:1px solid #e7e9f0;border-radius:18px;background:#fff;box-shadow:0 10px 28px rgba(25,34,55,.045)}
+.side-label{margin:0;padding:10px 11px 7px;color:#929bab;font-size:10px;font-weight:800;letter-spacing:1.25px}
+.side-menu a{display:flex;align-items:center;gap:11px;height:46px;padding:0 10px;border-radius:12px;color:#5e6878;font-size:14px;font-weight:600;transition:background .16s ease,color .16s ease,transform .16s ease}
+.side-menu a:hover{background:#f6f6fb;color:#433da8;transform:translateX(2px)}
+.side-menu a.active{background:#efeeff;color:#5149cc;box-shadow:inset 3px 0 #655ce8;font-weight:700}
+.side-glyph{display:grid;width:34px;height:34px;flex:none;place-items:center;border-radius:10px;background:#f6f7fa;color:#687487}
+.side-glyph svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.side-menu a.active .side-glyph{background:#fff;color:#655ce8;box-shadow:0 2px 7px rgba(34,40,73,.08)}
+.side-link-label{min-width:0;flex:1}
+.side-count{display:inline-flex;align-items:center;justify-content:center;min-width:23px;height:23px;margin-left:auto;padding:0 7px;border-radius:999px;background:#f1f2f5;color:#738093;font-size:11px;font-weight:700}
+.side-footer{display:flex;flex-direction:column;gap:6px;padding:2px 12px;color:#8791a1;font-size:11px;line-height:1.5}
+.side-footer small{color:#a0a8b4;font-size:11px}
+@media(min-width:761px) and (max-width:980px){
+  .side-menu{padding:6px}
+  .side-menu a{gap:8px;padding:0 7px;font-size:13px}
+  .side-glyph{width:31px;height:31px}
+  .mini-profile-body{gap:8px;padding:0 11px}
+  .mini-profile-body .avatar{width:48px;height:48px}
+  .mini-profile-copy strong{font-size:12px}
+  .mini-profile-copy small{font-size:10px}
+  .mini-profile-action{margin-right:11px;margin-left:11px;font-size:11px}
+}
