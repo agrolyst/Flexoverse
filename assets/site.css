@@ -309,3 +309,11 @@ body{min-width:320px;font-size:15px;line-height:1.5}
   .mobile-nav-icon svg{width:19px;height:19px}
   .mobile-nav a small{font-size:9px}
 }
+
+/* Keep every sidebar destination reachable on shorter desktop windows. */
+@media(min-width:761px){
+  .left-sidebar{position:sticky;top:88px;max-height:calc(100vh - 104px);max-height:calc(100dvh - 104px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#d9dce6 transparent}
+  .left-sidebar::-webkit-scrollbar{width:5px}
+  .left-sidebar::-webkit-scrollbar-thumb{border-radius:999px;background:#d9dce6}
+  .left-sidebar::-webkit-scrollbar-track{background:transparent}
+}
