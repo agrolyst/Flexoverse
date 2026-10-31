@@ -197,3 +197,33 @@ body{min-width:320px;font-size:15px;line-height:1.5}
 .app-loader-label{color:#707a8b;font-size:13px;font-weight:600;letter-spacing:.15px}
 @keyframes flexoverse-loader-spin{to{transform:rotate(1turn)}}
 @media(prefers-reduced-motion:reduce){.app-loader-symbol:before,.app-loader-symbol:after{animation-duration:4s}.app-loader{transition:none}}
+
+.feed-sort-label{padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;color:#697487;font-size:12px;font-weight:600}
+.feed-state{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:24px;color:var(--muted);font-size:14px}
+.feed-state strong{color:var(--ink);font:700 16px Manrope,sans-serif}
+.empty-feed{display:flex;flex-direction:column;align-items:center;gap:10px;padding:42px 24px;text-align:center}
+.empty-feed-icon{display:grid;width:48px;height:48px;place-items:center;border-radius:15px;background:var(--brand-soft);color:var(--brand);font-size:24px}
+.empty-feed h3{margin:5px 0 0;color:var(--ink);font:700 19px Manrope,sans-serif}
+.empty-feed p{max-width:360px;margin:0 0 7px;color:var(--muted);font-size:14px;line-height:1.55}
+.community-rail-card h3{margin:7px 0;color:var(--ink);font:700 17px Manrope,sans-serif}
+.community-rail-card p{margin:0 0 15px;color:var(--muted);font-size:13px;line-height:1.55}
+.community-rail-card .button{font-size:12px}
+.rail-kicker{color:#8b86c8;font-size:10px;font-weight:800;letter-spacing:1.2px}
+.post-comments{margin-top:14px;padding-top:14px;border-top:1px solid #eef0f4}
+.comment-list{display:flex;flex-direction:column;gap:11px}
+.comment-item{position:relative;padding:11px 13px;border-radius:11px;background:#f7f8fb}
+.comment-item strong{color:#344052;font-size:13px}
+.comment-item p{margin:5px 0;color:#566173;font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.comment-item small,.comment-state{color:#8993a2;font-size:12px}
+.comment-state{margin:0;padding:8px 2px}
+.comment-form{display:flex;gap:9px;margin-top:12px}
+.comment-form input{flex:1;min-width:0;padding:10px 13px;border:1px solid var(--line);border-radius:999px;outline-color:#aaa5f5;font-size:13px}
+.comment-form .button{padding:9px 14px}
+.comment-signin{margin:12px 0 0;color:var(--muted);font-size:13px}
+.comment-signin a{color:var(--brand);font-weight:700}
+@media(max-width:760px){
+  .feed-sort-label{font-size:11px;padding:7px 9px}
+  .empty-feed{padding:34px 18px}
+  .community-rail-card h3{font-size:16px}
+  .comment-form input{font-size:12px}
+}
