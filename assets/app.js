@@ -106,7 +106,7 @@ async function initialize() {
   if(page==='profile')await loadProfilePage()
   if(page==='settings'&&profile){document.querySelector('#full-name').value=profile.full_name||'';document.querySelector('#username-field').value=profile.username||'';document.querySelector('#bio-field').value=profile.bio||'';document.querySelector('#public-profile').checked=profile.is_public;document.querySelector('#profile-link').textContent=`/${profile.username}`}
   bindEvents()
-  supabase.auth.onAuthStateChange((_event,next)=>{session=next;location.reload()})
+  supabase.auth.onAuthStateChange((event,next)=>{session=next;if(event==='SIGNED_IN'||event==='SIGNED_OUT')location.reload()})
 }
 
 function bindEvents() {
@@ -134,4 +134,3 @@ function bindEvents() {
 }
 
 initialize().catch(error=>{console.error(error);toast('Could not connect. Refresh and try again.')})
-
