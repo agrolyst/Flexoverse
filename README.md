@@ -9,6 +9,10 @@ Flexoverse is a responsive social app starter. It uses one `src/app.js` entry po
 3. `.env.local` is configured for the Flexoverse Supabase project on this machine. For another environment, copy `.env.example` to `.env.local` and set the project URL and publishable key.
 4. Use a deployment host with SPA rewrites enabled for clean profile links such as `/theirusername`. Vercel and Netlify rewrite configuration is included.
 
+## Deploy on Render
+
+Create the site from this repository using the `render.yaml` Blueprint, or set the Static Site Build Command to `npm install && npm run build` and Publish Directory to `dist`. The Blueprint also includes Supabase's public publishable key and the rewrite needed for `/username` pages.
+
 The public publishable key is safe for frontend use when paired with row-level security. Never put a Supabase service-role or secret key in browser code or a public repository.
 
 ## Supabase
