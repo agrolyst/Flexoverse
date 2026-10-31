@@ -2,11 +2,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0'
 
 const supabase = createClient('https://gkgjfbusdyiohiztwuec.supabase.co', 'sb_publishable_Kmm1YLrnBwDKV_1xO2DjNw_e4SzSZly')
 const page = document.body.dataset.page
-const demoPosts = [
-  { id: 'demo-1', name: 'Maya Chen', username: 'mayachen', initials: 'MC', color: 'peach', time: '18 min ago', content: 'Found this little corner of the city on my walk today. A reminder that slowing down is sometimes the whole point. 🌿', image: 'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1200&q=85', likes: 28, comments: 6 },
-  { id: 'demo-2', name: 'Jordan Lee', username: 'jordandoes', initials: 'JL', color: 'lavender', time: '1 hr ago', content: 'Sunday recipe experiment: crispy potatoes, a little lemon, and enough herbs to make the kitchen smell like summer. Sharing the recipe soon 🍋', likes: 14, comments: 3 },
-  { id: 'demo-3', name: 'Amara Okafor', username: 'amarawrites', initials: 'AO', color: 'mint', time: '3 hrs ago', content: 'A small win: finally finished the book that has been living on my nightstand since April. What are you reading lately?', likes: 42, comments: 11 },
-]
 let session = null
 let profile = null
 let liked = new Set()
@@ -21,6 +16,7 @@ const myUsername = () => profile?.username || session?.user?.user_metadata?.user
 const avatar = (name, color = 'blue', url = '') => url ? `<img class="avatar ${color}" src="${esc(url)}" alt="">` : `<span class="avatar avatar-${color}">${esc(name)}</span>`
 const pageUrl = () => '/' + myUsername()
 const toast = message => { const el = document.querySelector('#toast'); if (!el) return; el.textContent = message; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2500) }
+const relationCount = value => { const raw=Array.isArray(value)?value[0]?.count:value?.count??value; const count=Number(raw??0); return Number.isFinite(count)?count:0 }
 
 function mountShell() {
   const navItems = [['home','⌂','Home','/'],['friends','♙','Friends','/friends/'],['reels','▶','Reels','/reels/'],['chats','▤','Chats','/chats/'],['notifications','♧','Notifications','/notifications/'],['settings','⚙','Settings','/settings/']]
@@ -38,27 +34,71 @@ function mountShell() {
   const sidebarHandle=session?'@'+myUsername():'Sign in to set up your profile'
   const sidebarAvatar=avatar(session?initials(myName()):'FX','blue',profile?.avatar_url)
   document.querySelector('#left-sidebar').innerHTML = `<section class="mini-profile"><a href="${session?esc(pageUrl()):'/login/'}" class="mini-profile-link"><span class="mini-cover" aria-hidden="true"></span><span class="mini-profile-body">${sidebarAvatar}<span class="mini-profile-copy"><strong>${esc(sidebarName)}</strong><small>${esc(sidebarHandle)}</small></span></span><span class="mini-profile-action">${session?'View your profile':'Sign in to personalize'}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a></section><nav class="side-menu" aria-label="Primary navigation"><span class="side-label">YOUR SPACE</span>${shellLinks}</nav><footer class="side-footer"><span>About · Privacy · Terms</span><small>© 2026 Flexoverse</small></footer>`
-  document.querySelector('#right-sidebar').innerHTML = `<section class="right-card card"><div class="right-title"><h3>People to know</h3><a href="/friends/">See all</a></div><p class="right-subtitle">A few people you may know</p>${[['Nia Williams','NW','mint'],['Ethan Brooks','EB','peach'],['Sofia Martinez','SM','lavender']].map(p=>`<div class="suggested-person">${avatar(p[1],p[2])}<span class="suggested-info"><strong>${p[0]}</strong><small>2 mutual friends</small></span><button class="add-person" data-toast="Find people in Friends">＋</button></div>`).join('')}</section><section class="right-card card"><div class="right-title"><h3>Coming up</h3><button data-toast="Events are coming soon">Calendar →</button></div><p class="right-subtitle">Things happening around your circle</p><div class="event-line"><span class="event-date"><strong>08</strong><small>NOV</small></span><span class="event-info"><strong>Saturday farmers market</strong><small>Riverside Park · 9:00 AM</small></span></div><div class="event-line"><span class="event-date"><strong>14</strong><small>NOV</small></span><span class="event-info"><strong>Friends book club</strong><small>Juniper Coffee · 6:30 PM</small></span></div></section><section class="right-prompt"><span>✦ A LITTLE PROMPT</span><p>What’s something small that made you smile this week?</p><button data-prompt>Answer this →</button></section>`
+  document.querySelector('#right-sidebar').innerHTML = `<section class="right-card card community-rail-card"><span class="rail-kicker">COMMUNITY</span><h3>Find your people</h3><p>Connect with friends and keep up with what they share.</p><a class="button button-soft" href="/friends/">Explore friends <span>→</span></a></section><section class="right-card card community-rail-card"><span class="rail-kicker">MESSAGES</span><h3>Keep in touch</h3><p>Private conversations are here for your accepted friends.</p><a class="text-link" href="/chats/">Open chats <span>→</span></a></section>`
   document.querySelector('#mobile-nav').className = 'mobile-nav'
   document.querySelector('#mobile-nav').innerHTML = navItems.filter(([key])=>key!=='notifications').map(([key,glyph,label,url])=>`<a class="${page===key?'active':''}" href="${url}"><span>${glyph}</span><small>${label}</small></a>`).join('')
   document.querySelector('#modal-root').innerHTML = ''
 }
 
 function postCard(p) {
-  const user = p.profiles || {}
+  const user = Array.isArray(p.profiles) ? p.profiles[0] || {} : p.profiles || {}
   const name = p.name || user.full_name || 'Flexoverse member'
   const handle = p.username || user.username || 'member'
-  const image = p.image || p.image_path || user.avatar_url
-  const id = esc(p.id)
-  const count = Number(p.likes?.[0]?.count ?? p.likes ?? 0)
-  return `<article class="post card"><div class="post-top">${avatar(p.initials||initials(name),p.color||'blue',p.avatar_url||user.avatar_url)}<div class="post-user"><a href="/${esc(handle)}"><strong>${esc(name)}</strong></a><small>@${esc(handle)} · ${esc(p.time||new Date(p.created_at||Date.now()).toLocaleDateString())}</small></div><button class="more-button" data-toast="More post options">···</button></div><p class="post-text">${esc(p.content)}</p>${image?`<img class="post-photo" src="${esc(image)}" alt="Post image">`:''}<div class="post-meta"><span>♡ ${count} people</span><span>${p.comments||0} comments</span></div><div class="post-actions"><button data-like="${id}">♡ <span>Like</span></button><button data-comment="${id}">▱ <span>Comment</span></button><button data-share>↗ <span>Share</span></button></div></article>`
+  const image = p.image || p.image_path || ''
+  const id = String(p.id)
+  const safeId = esc(id)
+  const likeCount = relationCount(p.likes)
+  const commentCount = relationCount(p.comments)
+  const isLiked = liked.has(id)
+  const timestamp = timeAgo(p.created_at)
+  return `<article class="post card" id="post-${safeId}" data-post="${safeId}"><div class="post-top">${avatar(p.initials||initials(name),p.color||'blue',p.avatar_url||user.avatar_url)}<div class="post-user"><a href="/${encodeURIComponent(handle)}"><strong>${esc(name)}</strong></a><small>@${esc(handle)} · ${esc(timestamp)}</small></div><button class="more-button" data-toast="More post options" aria-label="Post options">···</button></div><p class="post-text">${esc(p.content)}</p>${image?`<img class="post-photo" src="${esc(image)}" alt="Post image">`:''}<div class="post-meta"><span data-like-count="${safeId}" data-count="${likeCount}">♡ ${likeCount} ${likeCount===1?'person':'people'}</span><span data-comment-count="${safeId}">${commentCount} ${commentCount===1?'comment':'comments'}</span></div><div class="post-actions"><button data-like="${safeId}" class="${isLiked?'liked':''}" aria-pressed="${isLiked}">${isLiked?'♥':'♡'} <span>${isLiked?'Liked':'Like'}</span></button><button data-comment="${safeId}" aria-expanded="false">▱ <span>Comment</span></button><button data-share>↗ <span>Share</span></button></div><section class="post-comments" data-comments-panel hidden><div class="comment-list" data-comment-list>Open comments to load them.</div>${session?`<form class="comment-form" data-comment-form="${safeId}"><input name="content" maxlength="1000" required placeholder="Write a comment…" aria-label="Write a comment"><button class="button button-primary" type="submit">Send</button></form>`:`<p class="comment-signin"><a href="/login/">Sign in</a> to join the conversation.</p>`}</section></article>`
+}
+
+function timeAgo(value) {
+  if (!value) return 'just now'
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000))
+  if (!Number.isFinite(seconds)) return 'just now'
+  if (seconds < 60) return 'just now'
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`
+  return new Date(value).toLocaleDateString()
 }
 
 async function loadHome() {
-  if (!session) return
-  const {data,error}=await supabase.from('posts').select('id,user_id,content,image_path,created_at,profiles(full_name,username,avatar_url),likes(count)').order('created_at',{ascending:false}).limit(30)
-  if (error) return toast(error.message)
-  document.querySelector('#feed-list').innerHTML=data.length?data.map(postCard).join():'<div class="empty-inline card">Your feed is ready. Add friends and share your first post.</div>'
+  const feed = document.querySelector('#feed-list')
+  if (!feed) return
+  feed.innerHTML = '<div class="feed-state card">Loading posts from the community…</div>'
+  const {data,error}=await supabase.from('posts').select('id,user_id,content,image_path,created_at,profiles(full_name,username,avatar_url),likes(count),comments(count)').order('created_at',{ascending:false}).limit(30)
+  if (error) {
+    console.error('Could not load public posts:', error)
+    feed.innerHTML = '<div class="feed-state card"><strong>Posts could not load</strong><span>Check your connection and try again.</span><button class="button button-outline" data-retry-feed>Try again</button></div>'
+    return
+  }
+  const posts = data || []
+  liked = new Set()
+  if (session && posts.length) {
+    const {data:myLikes,error:likesError}=await supabase.from('likes').select('post_id').eq('user_id',session.user.id).in('post_id',posts.map(post=>post.id))
+    if (!likesError) liked = new Set((myLikes || []).map(row=>String(row.post_id)))
+  }
+  feed.innerHTML = posts.length ? posts.map(postCard).join('') : '<section class="empty-feed card"><span class="empty-feed-icon">✦</span><h3>No posts yet</h3><p>There are no public posts in the community yet. Share the first one.</p><a class="button button-primary" href="/create/">Create a post</a></section>'
+}
+
+async function loadComments(postId, article) {
+  const list = article.querySelector('[data-comment-list]')
+  if (!list) return
+  list.innerHTML = '<p class="comment-state">Loading comments…</p>'
+  const {data,error}=await supabase.from('comments').select('id,content,created_at,profiles(full_name,username)').eq('post_id',postId).order('created_at',{ascending:true}).limit(30)
+  if (error) {
+    console.error('Could not load comments:', error)
+    list.innerHTML = '<p class="comment-state">Comments could not load. Please try again.</p>'
+    return
+  }
+  const comments = data || []
+  const profile = row => Array.isArray(row.profiles) ? row.profiles[0] || {} : row.profiles || {}
+  list.innerHTML = comments.length ? comments.map(row=>{const author=profile(row);return `<article class="comment-item"><strong>${esc(author.full_name||author.username||'Flexoverse member')}</strong><p>${esc(row.content)}</p><small>${esc(timeAgo(row.created_at))}</small></article>`}).join('') : '<p class="comment-state">No comments yet. Start the conversation.</p>'
+  const count = article.querySelector('[data-comment-count]')
+  if (count) count.textContent = `${comments.length} ${comments.length===1?'comment':'comments'}`
 }
 
 async function loadFriends() {
@@ -120,6 +160,7 @@ async function initialize() {
   const signupLink=document.querySelector('#switch-to-signup');if(signupLink)signupLink.href=authPageHref('signup')
   const loginLink=document.querySelector('#switch-to-login');if(loginLink)loginLink.href=authPageHref('login')
   mountShell()
+  const composerAvatar=document.querySelector('[data-user-avatar]');if(composerAvatar)composerAvatar.outerHTML=avatar(session?initials(myName()):'FX','blue',profile?.avatar_url)
   if(page==='home')await loadHome()
   if(page==='friends')await loadFriends()
   if(page==='profile')await loadProfilePage()
@@ -136,7 +177,64 @@ function bindEvents() {
   document.querySelector('#signout')?.addEventListener('click',()=>supabase.auth.signOut())
   document.querySelector('#post-form')?.addEventListener('submit',async e=>{e.preventDefault();if(!session){openAuth();return}const content=String(new FormData(e.currentTarget).get('content')||'').trim();if(!content)return;const submit=e.currentTarget.querySelector('[type="submit"]');submit.disabled=true;submit.textContent='Sharing…';const {error}=await supabase.from('posts').insert({user_id:session.user.id,content});if(error){submit.disabled=false;submit.textContent='Share post';return toast(error.message)}toast('Your post was shared.');e.currentTarget.reset();if(page==='create'){setTimeout(()=>location.href='/',700)}else{submit.disabled=false;submit.textContent='Share post';await loadHome()}})
   document.querySelector('#post-content')?.addEventListener('input',e=>{const count=document.querySelector('#post-count');if(count)count.textContent=`${e.target.value.length} / 2000`})
-  document.querySelector('#feed-list')?.addEventListener('click',async e=>{const btn=e.target.closest('[data-like]');if(btn){if(!session)return openAuth();const {error}=await supabase.from('likes').insert({post_id:btn.dataset.like,user_id:session.user.id});if(error&&error.code!=='23505')toast(error.message);else{btn.classList.add('liked');toast('You liked this post.')}}if(e.target.closest('[data-comment]'))toast('Comments are coming next.');if(e.target.closest('[data-share]')){await navigator.clipboard?.writeText(location.href);toast('Link copied.')}})
+  document.querySelector('#feed-list')?.addEventListener('click',async e=>{
+    if(e.target.closest('[data-retry-feed]'))return loadHome()
+    const likeButton=e.target.closest('[data-like]')
+    if(likeButton){
+      if(!session)return openAuth()
+      const postId=likeButton.dataset.like
+      const wasLiked=liked.has(postId)
+      likeButton.disabled=true
+      const result=wasLiked
+        ?await supabase.from('likes').delete().eq('post_id',postId).eq('user_id',session.user.id)
+        :await supabase.from('likes').insert({post_id:postId,user_id:session.user.id})
+      likeButton.disabled=false
+      if(result.error){
+        if(result.error.code==='23505'&&!wasLiked){liked.add(postId);likeButton.classList.add('liked');likeButton.setAttribute('aria-pressed','true');likeButton.innerHTML='♥ <span>Liked</span>';return}
+        toast(result.error.message);return
+      }
+      if(wasLiked)liked.delete(postId);else liked.add(postId)
+      likeButton.classList.toggle('liked',!wasLiked)
+      likeButton.setAttribute('aria-pressed',String(!wasLiked))
+      likeButton.innerHTML=`${wasLiked?'♡':'♥'} <span>${wasLiked?'Like':'Liked'}</span>`
+      const total=likeButton.closest('.post')?.querySelector('[data-like-count]')
+      if(total){const count=Math.max(0,Number(total.dataset.count||0)+(wasLiked?-1:1));total.dataset.count=String(count);total.textContent=`♡ ${count} ${count===1?'person':'people'}`}
+      return
+    }
+    const commentButton=e.target.closest('[data-comment]')
+    if(commentButton){
+      const article=commentButton.closest('.post')
+      const panel=article?.querySelector('[data-comments-panel]')
+      if(!panel)return
+      panel.hidden=!panel.hidden
+      commentButton.setAttribute('aria-expanded',String(!panel.hidden))
+      if(!panel.hidden)await loadComments(commentButton.dataset.comment,article)
+      return
+    }
+    const shareButton=e.target.closest('[data-share]')
+    if(shareButton){
+      const post=shareButton.closest('.post')
+      const postUrl=`${location.origin}/#${post?.id||''}`
+      try{await navigator.clipboard.writeText(postUrl);toast('Post link copied.')}catch{toast('Copy this post link from your browser address bar.')}
+    }
+  })
+  document.querySelector('#feed-list')?.addEventListener('submit',async e=>{
+    const form=e.target.closest('[data-comment-form]')
+    if(!form)return
+    e.preventDefault()
+    if(!session)return openAuth()
+    const content=String(new FormData(form).get('content')||'').trim()
+    if(!content)return
+    const postId=form.dataset.commentForm
+    const article=form.closest('.post')
+    const submit=form.querySelector('[type="submit"]')
+    submit.disabled=true
+    const {error}=await supabase.from('comments').insert({post_id:postId,user_id:session.user.id,content})
+    submit.disabled=false
+    if(error){toast(error.message);return}
+    form.reset()
+    await loadComments(postId,article)
+  })
   document.querySelector('#suggestions-list')?.addEventListener('click',e=>{const b=e.target.closest('[data-request]');if(b)sendFriendRequest(b.dataset.request)})
   document.querySelector('#requests-list')?.addEventListener('click',async e=>{const accept=e.target.closest('[data-accept]');const ignore=e.target.closest('[data-ignore]');if(accept){const {error}=await supabase.from('friend_requests').update({status:'accepted'}).eq('id',accept.dataset.accept);if(error)toast(error.message);else{await loadFriends();toast('You’re friends now.')}}if(ignore){await supabase.from('friend_requests').delete().eq('id',ignore.dataset.ignore);await loadFriends()}})
   document.querySelector('#profile-form')?.addEventListener('submit',async e=>{e.preventDefault();if(!session)return openAuth();const f=new FormData(e.currentTarget);const username=String(f.get('username')).trim().toLowerCase();if(!/^[a-z0-9]{3,30}$/.test(username))return toast('Use 3–30 letters or numbers for your username.');const {error}=await supabase.from('profiles').update({username,full_name:f.get('full_name'),bio:f.get('bio'),is_public:document.querySelector('#public-profile').checked}).eq('id',session.user.id);if(error)return toast(error.code==='23505'?'That username is taken. Try adding a number.':error.message);await supabase.auth.updateUser({data:{username}});toast('Profile saved.');document.querySelector('#profile-link').textContent=`/${username}`})
@@ -145,7 +243,6 @@ function bindEvents() {
   document.querySelector('#global-search')?.addEventListener('keydown',e=>{if(e.key==='Enter'){const value=e.target.value.trim().replace(/^@/,'').toLowerCase();if(value)location.href=`/${encodeURIComponent(value)}`}})
   document.querySelectorAll('[data-toast]').forEach(b=>b.addEventListener('click',()=>toast(b.dataset.toast)))
   document.querySelectorAll('[data-friend-request]').forEach(b=>b.addEventListener('click',()=>session?toast('Find a person in search to send a friend request.'):openAuth()))
-  document.querySelector('[data-prompt]')?.addEventListener('click',()=>{location.href='/create/'})
   document.querySelector('#notification-action')?.addEventListener('click',openAuth)
   window.addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){e.preventDefault();document.querySelector('#global-search')?.focus()}if(e.key==='Escape')document.querySelectorAll('.modal-backdrop').forEach(m=>m.hidden=true)})
 }
@@ -163,7 +260,7 @@ function showAppLoader() {
 const loaderStartedAt=performance.now()
 const appLoader=showAppLoader()
 initialize()
-  .catch(error=>{console.error(error);toast('Could not connect. Refresh and try again.')})
+  .catch(error=>{console.error(error);const feed=document.querySelector('#feed-list');if(feed)feed.innerHTML='<div class="feed-state card"><strong>The feed is unavailable</strong><span>Check your connection and refresh the page.</span></div>';toast('Could not connect. Refresh and try again.')})
   .finally(()=>{
     const minimumTime=320
     const remaining=Math.max(0,minimumTime-(performance.now()-loaderStartedAt))
