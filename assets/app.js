@@ -19,6 +19,7 @@ let chatRealtimeChannel = null
 let notificationItems = []
 let notificationFilter = 'all'
 let notificationRealtimeChannel = null
+let notificationDisplayPreferences = {in_app_enabled:true,friend_requests:true,post_likes:true,post_comments:true}
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
 const initials = s => String(s || 'You').split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map(x => x[0]).join('').toUpperCase()
@@ -48,7 +49,7 @@ const relationCount = value => { const raw=Array.isArray(value)?value[0]?.count:
 
 function mountShell() {
   const navItems = [['home','Home','/'],['friends','Friends','/friends/'],['reels','Reels','/reels/'],['chats','Chats','/chats/'],['notifications','Notifications','/notifications/'],['settings','Settings','/settings/']]
-  const activePage=key=>page===key||(key==='reels'&&page==='reel-create')
+  const activePage=key=>page===key||(key==='reels'&&page==='reel-create')||(key==='settings'&&page.startsWith('settings-'))
   const brandIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.8 19a5.2 5.2 0 0 1 10.4 0v1H2.8zM14 15.3a4.4 4.4 0 0 1 7.2 3.4v1h-6"/></svg>'
   const searchIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.3 4.3"/></svg>'
   const signoutIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg>'
@@ -65,7 +66,7 @@ function mountShell() {
   const sidebarName=session?myName():'Your space'
   const sidebarHandle=session?'@'+myUsername():'Sign in to set up your profile'
   const sidebarAvatar=avatar(session?initials(myName()):'FX','blue',profile?.avatar_url)
-  document.querySelector('#left-sidebar').innerHTML = `<section class="mini-profile"><a href="${session?esc(pageUrl()):'/login/'}" class="mini-profile-link"><span class="mini-cover" aria-hidden="true"></span><span class="mini-profile-body">${sidebarAvatar}<span class="mini-profile-copy"><strong>${esc(sidebarName)}</strong><small>${esc(sidebarHandle)}</small></span></span><span class="mini-profile-action">${session?'View your profile':'Sign in to personalize'}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a></section><nav class="side-menu" aria-label="Primary navigation"><span class="side-label">YOUR SPACE</span>${shellLinks}</nav><footer class="side-footer"><span>About · Privacy · Terms</span><small>© 2026 Flexoverse</small></footer>`
+  document.querySelector('#left-sidebar').innerHTML = `<section class="mini-profile"><a href="${session?esc(pageUrl()):'/login/'}" class="mini-profile-link"><span class="mini-cover" aria-hidden="true"></span><span class="mini-profile-body">${sidebarAvatar}<span class="mini-profile-copy"><strong>${esc(sidebarName)}</strong><small>${esc(sidebarHandle)}</small></span></span><span class="mini-profile-action">${session?'View your profile':'Sign in to personalize'}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a></section><nav class="side-menu" aria-label="Primary navigation"><span class="side-label">YOUR SPACE</span>${shellLinks}</nav><footer class="side-footer"><nav aria-label="Information"><a href="/how-it-works/">How it works</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><a href="/help/">Help</a></nav><small>© 2026 Flexoverse</small></footer>`
   document.querySelector('#right-sidebar').innerHTML = `<section class="right-card card community-rail-card"><span class="rail-kicker">COMMUNITY</span><h3>Find your people</h3><p>Connect with friends and keep up with what they share.</p><a class="button button-soft" href="/friends/">Explore friends <span>→</span></a></section><section class="right-card card community-rail-card"><span class="rail-kicker">MESSAGES</span><h3>Keep in touch</h3><p>Private conversations are here for your accepted friends.</p><a class="text-link" href="/chats/">Open chats <span>→</span></a></section>`
   document.querySelector('#mobile-nav').className = 'mobile-nav'
   document.querySelector('#mobile-nav').innerHTML = navItems.filter(([key])=>key!=='notifications').map(([key,label,url])=>`<a class="${activePage(key)?'active':''}" aria-label="${label}" aria-current="${activePage(key)?'page':'false'}" href="${url}"><span class="mobile-nav-icon">${sidebarIcons[key]}</span><small>${label}</small></a>`).join('')
@@ -519,16 +520,17 @@ function notificationMessage(item) {
 function renderNotifications() {
   const list=document.querySelector('#notifications-list')
   if(!list)return
-  const unread=notificationItems.filter(item=>!item.is_read).length
-  const requests=notificationItems.filter(item=>item.type==='friend_request'&&item.pending_request).length
+  const shown=notificationItems.filter(notificationIsVisible)
+  const unread=shown.filter(item=>!item.is_read).length
+  const requests=shown.filter(item=>item.type==='friend_request'&&item.pending_request).length
   const unreadCount=document.querySelector('#notification-unread-count');if(unreadCount)unreadCount.textContent=String(unread)
   const requestCount=document.querySelector('#notification-request-count');if(requestCount)requestCount.textContent=String(requests)
   const markButton=document.querySelector('#notifications-mark-read');if(markButton)markButton.disabled=unread===0
   document.querySelectorAll('[data-notification-filter]').forEach(tab=>{const active=tab.dataset.notificationFilter===notificationFilter;tab.classList.toggle('active',active);tab.setAttribute('aria-selected',String(active))})
-  let visible=notificationItems
+  let visible=shown
   if(notificationFilter==='unread')visible=visible.filter(item=>!item.is_read)
   if(notificationFilter==='friend_request')visible=visible.filter(item=>item.type==='friend_request'&&item.pending_request)
-  if(!visible.length){const title=notificationFilter==='unread'?'You’re all caught up':notificationFilter==='friend_request'?'No pending friend requests':'Nothing new yet';const body=notificationFilter==='unread'?'New activity will appear here when something happens.':notificationFilter==='friend_request'?'New friend requests will appear here.':'Friend requests and post activity will show up here.';list.innerHTML=`<div class="notification-empty"><span class="notification-empty-icon">${notificationIcon(notificationFilter==='friend_request'?'friend_request':'friend_accepted')}</span><strong>${title}</strong><p>${body}</p>${session?'<a class="button button-soft" href="/friends/">Explore friends</a>':'<a class="button button-primary" href="/login/">Sign in</a>'}</div>`;return}
+  if(!visible.length){const title=notificationFilter==='unread'?'You’re all caught up':notificationFilter==='friend_request'?'No pending friend requests':shown.length?'No activity in this view':'Nothing new yet';const body=!notificationDisplayPreferences.in_app_enabled?'In-app notifications are hidden by your settings.':!shown.length?'Your notification settings currently hide these activity types.':notificationFilter==='unread'?'New activity will appear here when something happens.':notificationFilter==='friend_request'?'New friend requests will appear here.':'Friend requests and post activity will show up here.';list.innerHTML=`<div class="notification-empty"><span class="notification-empty-icon">${notificationIcon(notificationFilter==='friend_request'?'friend_request':'friend_accepted')}</span><strong>${title}</strong><p>${body}</p>${session?'<a class="button button-soft" href="/friends/">Explore friends</a>':'<a class="button button-primary" href="/login/">Sign in</a>'}</div>`;return}
   list.innerHTML=visible.map(item=>{const description=notificationMessage(item),actorUrl=item.actor?.username?`/${encodeURIComponent(item.actor.username)}`:'/friends/';const pending=item.type==='friend_request'&&item.pending_request;const targetUrl=item.type==='post_like'||item.type==='post_comment'?`/#post-${encodeURIComponent(item.target_id||'')}`:item.type==='friend_accepted'?'/chats/':actorUrl;return `<article class="notification-item ${item.is_read?'':'unread-item'}" data-notification-id="${esc(item.id)}">${avatar(initials(description.actor),'blue',item.actor?.avatar_url)}<div class="notification-copy"><span><strong><a href="${esc(actorUrl)}" data-mark-notification="${esc(item.id)}">${esc(description.actor)}</a></strong> ${esc(description.text)}</span>${item.preview?`<span class="notification-preview">“${esc(item.preview)}”</span>`:''}<small>${esc(timeAgo(item.created_at))}</small><span class="notification-kind">${notificationIcon(item.type)}${esc(description.action)}</span></div><div class="notification-actions">${pending?`<button class="button button-primary" type="button" data-accept-notification="${esc(item.target_id)}" data-notification="${esc(item.id)}">Accept</button><button class="notification-dismiss" type="button" data-ignore-notification="${esc(item.target_id)}" data-notification="${esc(item.id)}" aria-label="Ignore friend request"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>`:`<a class="button button-outline" href="${esc(targetUrl)}" data-mark-notification="${esc(item.id)}">${item.type==='post_like'||item.type==='post_comment'?'View post':item.type==='friend_accepted'?'Open chats':'View profile'}</a>`}</div>${item.is_read?'':'<span class="unread-dot" aria-label="Unread"></span>'}</article>`}).join('')
 }
 
@@ -545,14 +547,34 @@ async function loadNotifications() {
   renderNotifications()
 }
 
+function notificationIsVisible(item){
+  const prefs=notificationDisplayPreferences
+  if(!prefs.in_app_enabled)return false
+  if(item.type==='friend_request'||item.type==='friend_accepted')return prefs.friend_requests
+  if(item.type==='post_like')return prefs.post_likes
+  if(item.type==='post_comment')return prefs.post_comments
+  return true
+}
+
+async function loadNotificationPreferences(){
+  if(!session){notificationDisplayPreferences={in_app_enabled:true,friend_requests:true,post_likes:true,post_comments:true};return}
+  const {data,error}=await supabase.from('notification_preferences').select('in_app_enabled,friend_requests,post_likes,post_comments').eq('user_id',session.user.id).maybeSingle()
+  if(error){console.warn('Could not load notification display preferences:',error.message);return}
+  notificationDisplayPreferences={...notificationDisplayPreferences,...(data||{})}
+}
+
 async function loadNotificationCount() {
   const badge=document.querySelector('#header-notification-count')
   if(!badge)return
   if(!session){badge.hidden=true;return}
-  const {count,error}=await supabase.from('notifications').select('id',{count:'exact',head:true}).eq('recipient_id',session.user.id).eq('is_read',false)
-  if(error){console.warn('Could not load notification count:',error.message);badge.hidden=true;return}
-  badge.textContent=count>99?'99+':String(count||0)
-  badge.hidden=!count
+  if(!notificationDisplayPreferences.in_app_enabled){badge.hidden=true;return}
+  const counts=[]
+  const requests=notificationDisplayPreferences.friend_requests?['friend_request','friend_accepted']:[]
+  const categories=[requests,notificationDisplayPreferences.post_likes?['post_like']:[],notificationDisplayPreferences.post_comments?['post_comment']:[]].filter(types=>types.length)
+  for(const types of categories){const {count,error}=await supabase.from('notifications').select('id',{count:'exact',head:true}).eq('recipient_id',session.user.id).eq('is_read',false).in('type',types);if(error){console.warn('Could not load notification count:',error.message);badge.hidden=true;return}counts.push(count||0)}
+  const total=counts.reduce((sum,count)=>sum+count,0)
+  badge.textContent=total>99?'99+':String(total)
+  badge.hidden=!total
 }
 
 function subscribeToNotificationUpdates() {
@@ -590,7 +612,7 @@ function bindChatPageEvents() {
 
 function bindNotificationPageEvents() {
   document.querySelectorAll('[data-notification-filter]').forEach(tab=>tab.addEventListener('click',()=>{notificationFilter=tab.dataset.notificationFilter;renderNotifications()}))
-  document.querySelector('#notifications-mark-read')?.addEventListener('click',async()=>{if(!session)return;const {error}=await supabase.from('notifications').update({is_read:true}).eq('recipient_id',session.user.id).eq('is_read',false);if(error)return toast(error.message,'error');notificationItems.forEach(item=>item.is_read=true);renderNotifications();await loadNotificationCount();toast('All caught up.','success')})
+  document.querySelector('#notifications-mark-read')?.addEventListener('click',async()=>{if(!session)return;const unread=notificationItems.filter(item=>!item.is_read&&notificationIsVisible(item));if(!unread.length)return;const {error}=await supabase.from('notifications').update({is_read:true}).eq('recipient_id',session.user.id).eq('is_read',false).in('id',unread.map(item=>item.id));if(error)return toast(error.message,'error');unread.forEach(item=>item.is_read=true);renderNotifications();await loadNotificationCount();toast('All caught up.','success')})
   document.querySelector('#notifications-list')?.addEventListener('click',async e=>{
     if(e.target.closest('[data-retry-notifications]'))return loadNotifications()
     const accept=e.target.closest('[data-accept-notification]')
@@ -602,7 +624,171 @@ function bindNotificationPageEvents() {
   })
 }
 
+const settingsSections={
+  profile:{title:'Profile information',description:'Update the details people see when they visit your profile.'},
+  privacy:{title:'Privacy & discovery',description:'Choose who can see your profile and review how discovery works.'},
+  content:{title:'Content & audience',description:'Share posts and reels with the audience you intend.'},
+  notifications:{title:'Notifications',description:'Choose which activity creates an in-app notification.'},
+  blocked:{title:'Blocked accounts',description:'Review accounts you have blocked and change that choice.'},
+  security:{title:'Account & security',description:'Review your sign-in email and password recovery options.'},
+  membership:{title:'Membership & storage',description:'See what is available now and what is planned.'},
+  verification:{title:'Verification',description:'Learn about profile verification on Flexoverse.'},
+  business:{title:'Business profile',description:'Information for organizations and businesses on Flexoverse.'},
+  appearance:{title:'Appearance',description:'Choose how Flexoverse looks on this device.'},
+  accessibility:{title:'Accessibility',description:'Adjust reading comfort and motion preferences.'},
+  account:{title:'Account data',description:'Review your account and sign-out options.'}
+}
+const settingsIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>'
+const settingSwitch=(id,title,description,checked=false,disabled=false)=>`<label class="setting-switch"><span><strong>${title}</strong><small>${description}</small></span><input id="${id}" type="checkbox" ${checked?'checked':''} ${disabled?'disabled':''}><i aria-hidden="true"></i></label>`
+
+function applySavedPreferences(){
+  const theme=localStorage.getItem('flexoverse-theme')||'system'
+  document.documentElement.dataset.theme=theme
+  document.documentElement.dataset.textSize=localStorage.getItem('flexoverse-text-size')||'standard'
+  document.documentElement.classList.toggle('reduce-motion',localStorage.getItem('flexoverse-reduce-motion')==='true')
+}
+
+function settingPanel(title,description,body){return `<section class="settings-panel card"><header class="settings-panel-head"><div><h2>${title}</h2><p class="muted">${description}</p></div></header>${body}</section>`}
+
+async function loadBlockedAccounts(root){
+  const list=root.querySelector('#blocked-account-list')
+  if(!list||!session)return
+  list.innerHTML='<div class="feed-state">Loading blocked accounts…</div>'
+  const {data,error}=await supabase.from('user_blocks').select('blocked_id,created_at,blocked:profiles!user_blocks_blocked_id_fkey(id,username,full_name,avatar_url)').eq('blocker_id',session.user.id).order('created_at',{ascending:false})
+  if(error){console.error('Could not load blocked accounts:',error);list.innerHTML='<div class="settings-empty"><strong>Blocked accounts could not load</strong><p>Please refresh and try again.</p></div>';return}
+  const rows=data||[]
+  list.innerHTML=rows.length?rows.map(row=>{const user=Array.isArray(row.blocked)?row.blocked[0]||{}:row.blocked||{};const name=user.full_name||user.username||`Blocked profile · ${String(row.blocked_id).slice(0,8)}`;return `<article class="blocked-account" data-blocked-row="${esc(row.blocked_id)}">${avatar(initials(name), 'blue',user.avatar_url)}<span><strong>${esc(name)}</strong><small>${user.username?'@'+esc(user.username)+' · ':''}blocked ${esc(timeAgo(row.created_at))}</small></span><button class="button button-outline" type="button" data-unblock="${esc(row.blocked_id)}">Unblock</button></article>`}).join(''):'<div class="settings-empty"><strong>No blocked accounts</strong><p>Accounts you block will appear here.</p></div>'
+}
+
+async function renderSettingsSection(){
+  const root=document.querySelector('#settings-content')
+  if(!root)return
+  const key=page.replace('settings-','')
+  const meta=settingsSections[key]
+  if(!meta)return
+  document.title=`${meta.title} · Settings · Flexoverse`
+  if(!session){root.innerHTML=`<section class="settings-panel card"><p class="overline">SIGN IN REQUIRED</p><h1>${meta.title}</h1><p class="muted">Sign in to view and update your account settings.</p><a class="button button-primary" href="/login/?next=${encodeURIComponent(location.pathname)}">Sign in</a></section>`;return}
+  let content=''
+  if(key==='profile'){
+    content=settingPanel('Profile details','Your username is also your public Flexoverse address.',`<form id="profile-form" class="settings-form"><label class="form-label">Full name<input id="full-name" name="full_name" maxlength="80" required value="${esc(profile?.full_name||'')}"></label><label class="form-label">Username<span class="input-with-prefix"><span>@</span><input id="username-field" name="username" minlength="3" maxlength="30" pattern="[a-z0-9]+" required value="${esc(profile?.username||'')}"></span><small>Use 3–30 lowercase letters or numbers. Numbers are optional.</small></label><label class="form-label">Bio<textarea name="bio" maxlength="300" rows="4" placeholder="A little about you">${esc(profile?.bio||'')}</textarea><small>Up to 300 characters.</small></label><p class="profile-url">Your profile link: <strong id="profile-link">/${esc(profile?.username||myUsername())}</strong></p><div class="settings-form-actions"><button class="button button-primary" type="submit">Save changes</button></div></form>`)
+  }else if(key==='privacy'){
+    content=settingPanel('Profile visibility','Choose whether your profile details are public or limited to accepted friends.',`${settingSwitch('public-profile','Public profile','Anyone can view your profile details.',profile?.is_public!==false)}<div class="settings-note settings-note-warning"><strong>Public posts may remain visible</strong><p>In the current database setup, posts marked public can still be viewed when a profile is private. Avoid sharing sensitive content publicly. Full private-post enforcement needs an additional security-policy update.</p></div><div class="settings-note"><strong>Search engine visibility</strong><p>Google indexing is not enabled for this account yet. Flexoverse plans to make public profile indexing available to eligible verified accounts and subscribed business profiles. Search engines decide when and whether to list a page.</p><span class="pending-pill">Not available yet</span></div><div class="settings-note settings-note-soft"><strong>Blocking</strong><p>Blocked accounts cannot start a conversation with you. You can review your list at any time.</p><a class="text-link" href="/settings/blocked/">Manage blocked accounts ${settingsIcon}</a></div>`)
+  }else if(key==='content'){
+    content=settingPanel('Sharing on Flexoverse','Posts and reels are shared from their own pages.',`<div class="settings-feature-row"><span class="settings-feature-icon">${sidebarContentIcon('post')}</span><span><strong>Write a post</strong><small>Share an update or photo with the community.</small></span><a class="button button-soft" href="/create/">Create post</a></div><div class="settings-feature-row"><span class="settings-feature-icon">${sidebarContentIcon('reel')}</span><span><strong>Publish a reel</strong><small>Upload a short video to the public reels feed.</small></span><a class="button button-soft" href="/reels/create/">Create reel</a></div><div class="settings-note"><strong>Who can see your content?</strong><p>Public posts and reels can be viewed by anyone. Your profile visibility controls profile discovery. Audience controls for individual posts are not available yet.</p><a class="text-link" href="/settings/privacy/">Review profile privacy ${settingsIcon}</a></div>`)
+  }else if(key==='notifications'){
+    const {data:preferences,error}=await supabase.from('notification_preferences').select('in_app_enabled,friend_requests,post_likes,post_comments').eq('user_id',session.user.id).maybeSingle()
+    if(error){console.error('Could not load notification preferences:',error);content=settingPanel('In-app activity','Manage the notification types Flexoverse records.',`<div class="settings-empty"><strong>Notification preferences are unavailable</strong><p>Apply the settings migration in <code>supabase/settings_preferences.sql</code> and refresh this page.</p></div>`)}
+    else{
+      const p=preferences||{in_app_enabled:true,friend_requests:true,post_likes:true,post_comments:true}
+      content=settingPanel('In-app activity','Choose which activity appears in your notification inbox.',`${settingSwitch('notify-enabled','Show in-app notifications','Hide all activity from your inbox on Flexoverse.',p.in_app_enabled)}<div class="settings-divider"></div>${settingSwitch('notify-friends','Friend requests','Show sent and accepted friend request activity.',p.friend_requests)}${settingSwitch('notify-likes','Post likes','Show when someone likes one of your posts.',p.post_likes)}${settingSwitch('notify-comments','Post comments','Show when someone comments on one of your posts.',p.post_comments)}<p class="settings-footnote">These controls filter what appears in your inbox. Activity records generated by the current app may still be stored in Supabase.</p>`)
+    }
+  }else if(key==='blocked'){
+    content=settingPanel('People you have blocked','You can unblock someone here. They may be able to interact with you again afterward.','<div id="blocked-account-list" class="blocked-account-list"><div class="feed-state">Loading blocked accounts…</div></div>')
+  }else if(key==='security'){
+    const verified=session.user.email_confirmed_at
+    content=settingPanel('Sign-in details','Your account uses the email address below to sign in.',`<div class="settings-detail-row"><span><small>Email address</small><strong>${esc(session.user.email||'Not available')}</strong></span><span class="${verified?'status-pill status-good':'status-pill'}">${verified?'Verified':'Not verified'}</span></div><div class="settings-note"><strong>Password recovery</strong><p>Send a password reset link to your sign-in email.</p><button id="send-password-reset" class="button button-outline" type="button" ${session.user.email?'':'disabled'}>Send reset link</button></div><p class="settings-footnote">For your safety, use a unique password and do not share sign-in links.</p>`)
+  }else if(key==='membership'){
+    content=settingPanel('Membership status','Paid plans and storage upgrades are not active in this version.',`<div class="coming-soon-card"><span class="plan-tag">FLEXOVERSE MEMBERSHIP</span><h3>Membership is on the way</h3><p>When plans launch, available benefits and prices will be shown here before you subscribe.</p></div><ul class="settings-benefit-list"><li>Expanded media storage with clear limits</li><li>Subscription status and billing controls</li><li>Business discovery benefits where eligible</li><li>Verification applications reviewed by Flexoverse</li></ul><span class="pending-pill">Not available yet</span>`)
+  }else if(key==='verification'){
+    content=settingPanel('Profile verification','Verification is not available yet.',`<div class="settings-note"><strong>How verification will work</strong><p>Eligible people will be able to submit an application for review. A badge will only appear after Flexoverse confirms an account’s identity and authenticity.</p></div><div class="settings-note settings-note-soft"><strong>No badge is active from this page</strong><p>Flexoverse will publish eligibility and review details before applications open.</p><span class="pending-pill">Applications not open</span></div>`)
+  }else if(key==='business'){
+    content=settingPanel('Business profiles','Business subscriptions and public business listings are not available yet.',`<div class="settings-note"><strong>Planned for businesses</strong><p>Business profiles are intended to help organizations present their services and connect with the community. Subscription terms, discovery options, and any Google indexing eligibility will be displayed before launch.</p></div><a class="button button-soft" href="/help/">Read the Help Center</a>`)
+  }else if(key==='appearance'){
+    const theme=localStorage.getItem('flexoverse-theme')||'system'
+    content=settingPanel('Theme','This preference is saved on this device.',`<div class="theme-options" role="radiogroup" aria-label="Color theme">${[['light','Light','A bright, clear interface'],['dark','Dark','A darker interface for low light'],['system','Use device setting','Follow your device appearance']].map(([value,label,desc])=>`<label class="theme-option ${theme===value?'selected':''}"><input type="radio" name="theme" value="${value}" ${theme===value?'checked':''}><span class="theme-preview theme-${value}" aria-hidden="true"></span><span><strong>${label}</strong><small>${desc}</small></span></label>`).join('')}</div>`)
+  }else if(key==='accessibility'){
+    const size=localStorage.getItem('flexoverse-text-size')||'standard'
+    const reduced=localStorage.getItem('flexoverse-reduce-motion')==='true'
+    content=settingPanel('Reading comfort','These preferences are saved on this device.',`<label class="form-label">Text size<select id="text-size" class="settings-select"><option value="standard" ${size==='standard'?'selected':''}>Standard</option><option value="large" ${size==='large'?'selected':''}>Large</option><option value="larger" ${size==='larger'?'selected':''}>Extra large</option></select></label>${settingSwitch('reduce-motion','Reduce motion','Limit non-essential movement and transitions.',reduced)}<p class="settings-footnote">Your device’s own reduced-motion preference is also respected.</p>`)
+  }else if(key==='account'){
+    content=settingPanel('Your Flexoverse account','Manage your current sign-in session.',`<div class="settings-detail-row"><span><small>Signed in as</small><strong>${esc(session.user.email||myUsername())}</strong></span></div><div class="settings-note"><strong>Sign out</strong><p>This signs out this browser on this device.</p><button id="settings-signout" class="button button-outline" type="button">Sign out</button></div><div class="settings-note settings-note-warning"><strong>Account deletion</strong><p>Self-serve account deletion is not available yet. Add the Flexoverse privacy contact email before offering requests through this page.</p></div>`)
+  }
+  root.innerHTML=`<header class="settings-section-heading"><div><p class="overline">SETTINGS</p><h1>${meta.title}</h1><p class="muted">${meta.description}</p></div></header><div class="settings-content">${content}</div>`
+  if(key==='blocked')await loadBlockedAccounts(root)
+}
+
+function sidebarContentIcon(kind){return kind==='post'?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m10 8 6 4-6 4z"/></svg>'}
+
+const guidePages={
+  'getting-started':{title:'Getting started',intro:'Set up your account, meet people, and find your way around Flexoverse.',steps:['Create an account with your email, a password, and an available username.','Complete your profile with your name and a short bio.','Use Friends to send or respond to requests.','Share a post or explore the public Reels feed.'],links:[['Edit your profile','/settings/profile/'],['Explore friends','/friends/']]},
+  profile:{title:'Your profile',intro:'Your profile contains your name, username, bio, and the posts you have shared.',steps:['Open Settings → Profile information to update your details.','Your profile URL uses your username, for example /yourname.','Use Privacy & discovery to choose public or friend visibility.'],links:[['Profile settings','/settings/profile/'],['Privacy settings','/settings/privacy/']]},
+  posts:{title:'Posts and photos',intro:'Write an update or add a photo from the dedicated post page.',steps:['Choose Create post from Home or Settings → Content & audience.','Write your message and attach a photo if the option is available.','Review your text and share it.','Public posts can be seen by anyone; individual audience controls are not available yet.'],links:[['Create a post','/create/'],['Content settings','/settings/content/']]},
+  friends:{title:'Friends and requests',intro:'Friend requests help you connect with people you know.',steps:['Search for a person by username in the top search field.','Open Friends to send a request or respond to one you received.','Accepted friends can access friend-only profile content.','Use Blocked accounts in Settings to manage people you blocked.'],links:[['Open Friends','/friends/'],['Blocked accounts','/settings/blocked/']]},
+  chats:{title:'Chats',intro:'Direct chats are available to signed-in friends.',steps:['Open Chats and choose a conversation or start one with an accepted friend.','Messages are stored in Flexoverse’s Supabase database.','Only members of that conversation can access its messages through the app.','Avoid sending highly sensitive information in chat.'],links:[['Open Chats','/chats/'],['Privacy settings','/settings/privacy/']]},
+  reels:{title:'Reels',intro:'Reels are short videos shared with the public feed.',steps:['Open Reels and choose Create reel.','Select a video that meets the file limits shown on the upload page.','Add a caption and publish when ready.','The current app stores reel videos in private Supabase Storage and uses signed links for playback.'],links:[['Explore Reels','/reels/'],['Create a reel','/reels/create/']]},
+  privacy:{title:'Privacy and blocking',intro:'Use the privacy controls to choose profile visibility and manage blocks.',steps:['A public profile can be viewed by anyone.','A private profile is intended to be visible to you and accepted friends.','Blocking helps prevent a person from starting a conversation with you.','Search engine indexing is not currently available for this account.'],links:[['Privacy settings','/settings/privacy/'],['Blocked accounts','/settings/blocked/']]},
+  membership:{title:'Membership and verification',intro:'Paid subscriptions, storage upgrades, and verification applications have not launched yet.',steps:['You will see plan features and prices before any subscription is offered.','Verification will require a review; purchasing a plan will not automatically grant a badge.','Any Google discovery option for eligible verified profiles or subscribed businesses will be explained before launch.'],links:[['Membership settings','/settings/membership/'],['Verification settings','/settings/verification/']]}
+}
+
+function renderInfoPage(){
+  const root=document.querySelector('#info-content')
+  if(!root)return
+  const article=(title,eyebrow,updated,body)=>`<article class="info-article card"><p class="overline">${eyebrow}</p><h1>${title}</h1><p class="info-updated">Last updated: October 31, 2026</p>${updated?`<div class="draft-banner"><strong>Draft for review</strong><span>Complete the privacy contact email and review this page before launch.</span></div>`:''}<div class="info-body">${body}</div><a class="settings-back-link" href="/settings/">Back to Settings</a></article>`
+  if(page==='privacy'){
+    document.title='Privacy Policy · Flexoverse'
+    root.innerHTML=article('Privacy Policy','YOUR PRIVACY',true,`<p>This draft describes how Flexoverse handles information in the current app. It is intended as a product explanation and needs legal review before launch.</p><h2>Information we handle</h2><ul><li><strong>Account information:</strong> email address for sign-in, username, display name, profile bio, avatar, and profile visibility.</li><li><strong>Content:</strong> posts, photos, comments, likes, and reels you choose to share.</li><li><strong>Messages:</strong> message text and conversation membership for direct chats.</li><li><strong>Activity:</strong> friend requests and accepted requests, likes, comments, notification read status, and timestamps.</li><li><strong>Technical information:</strong> the app and its infrastructure may process information needed to authenticate requests, store content, and protect service reliability. The exact logs and retention periods need to be documented before launch.</li></ul><h2>How the app uses information</h2><p>Flexoverse uses account information to sign you in, display your profile, connect you with friends, show content, deliver notifications, and operate chats and reels. Data is stored in the Supabase project used by this app. Reels are stored in a private storage bucket and are delivered using temporary signed playback URLs.</p><h2>Who can see your information</h2><p>Public profiles and public posts are intended to be viewable by anyone. Private profiles are intended for you and accepted friends, but a post marked public may remain viewable when its author’s profile is private. Direct chat messages are available to conversation participants in the app. Flexoverse staff or infrastructure providers may process information when needed to operate, secure, or support the service. Public content can be copied or captured by people who can view it.</p><h2>Your choices</h2><p>You can edit profile information, change profile visibility, block accounts, and adjust which activity appears in your notification inbox. The current notification preferences filter the inbox display; activity notifications may still be stored. Some features described as upcoming—such as paid plans, verification applications, and search-engine indexing—are not active yet.</p><h2>Retention and account closure</h2><p>The current app does not include self-serve account deletion or a published retention schedule. Before launch, Flexoverse should define deletion workflows, backup retention, and how to submit data-rights requests.</p><h2>Privacy rights and contact</h2><p>Depending on where you live, data-protection laws may give you rights over your personal information. In Nigeria, the <a href="https://ndpc.gov.ng/download/nigeria-data-protection-act-2023" target="_blank" rel="noopener noreferrer">Nigeria Data Protection Act 2023</a> establishes a framework for protecting personal data and data-subject rights; see also the <a href="https://ndpc.gov.ng/faqs/" target="_blank" rel="noopener noreferrer">NDPC FAQs</a>. Contact: <strong>[Add a privacy contact email before launch]</strong>.</p><p>We will update this policy when the service or its data practices change. Read the <a href="/terms/">Terms &amp; Policies</a> and the <a href="/help/">Help Center</a>.</p>`)
+  }else if(page==='terms'){
+    document.title='Terms & Policies · Flexoverse'
+    root.innerHTML=article('Terms & Policies','COMMUNITY GUIDELINES',true,`<p>This draft explains the basic expectations for using Flexoverse. Have it reviewed and complete the operator and contact details before launch.</p><h2>Using Flexoverse</h2><p>Use an account you control and provide a username that follows the on-screen rules. Keep your sign-in details private. You are responsible for activity on your account and for the content you choose to share.</p><h2>Content and permissions</h2><p>You retain rights to content you create. When you post or upload content, you give Flexoverse permission to store, process, and display it as needed to operate the features you choose, such as showing a post in a feed or playing a reel. Share only content you have the right to use.</p><h2>Respect and safety</h2><p>Do not use Flexoverse to threaten, harass, impersonate, violate another person’s rights, distribute unlawful content, or interfere with the service. Do not attempt to access another person’s account or private conversations. Use blocking and reporting tools where available.</p><h2>Visibility and messages</h2><p>Public posts and reels may be viewed beyond your friend circle. Private profile settings are intended to limit profile access to accepted friends. Direct chats are intended for conversation participants, but the service does not promise end-to-end encryption. Do not use chat for information that requires that protection.</p><h2>Plans and verification</h2><p>Paid subscriptions, storage upgrades, and verification applications are not currently active. Flexoverse will present pricing, benefits, eligibility, and cancellation terms before offering paid plans. A subscription will not itself guarantee verification.</p><h2>Availability and changes</h2><p>Features may change as the service develops. Flexoverse may restrict or suspend accounts for serious misuse, subject to applicable law and any process provided by the service. These draft terms do not replace rights you have under applicable law.</p><h2>Contact</h2><p>Contact: <strong>[Add a Flexoverse contact email before launch]</strong>.</p>`)
+  }else if(page==='how-it-works'){
+    document.title='How Flexoverse works · Flexoverse'
+    root.innerHTML=`<header class="info-hero"><p class="overline">A QUICK TOUR</p><h1>How Flexoverse works</h1><p>Share updates, connect with friends, and keep conversations in one place.</p></header><div class="info-card-grid">${[['01','Build your profile','Choose a username, add a name and bio, then set your profile visibility.','/settings/profile/'],['02','Find your circle','Search for people and send friend requests. Accepted friends can start chats.','/friends/'],['03','Share updates','Write a post or upload a short reel. Public posts and reels can be seen beyond your friends.','/create/'],['04','Chat privately','Messages are available to the people in that conversation. Messages are stored in Supabase; the app does not currently provide end-to-end encryption.','/chats/'],['05','Stay in control','Adjust notifications, change privacy, block accounts, or sign out through Settings.','/settings/']].map(([n,t,d,u])=>`<a class="info-step card" href="${u}"><span>${n}</span><div><h2>${t}</h2><p>${d}</p></div>${settingsIcon}</a>`).join('')}</div><p class="info-footnote">Paid membership, verification applications, storage upgrades, and Google indexing are planned features and are not active in this version.</p>`
+  }else if(page==='help'){
+    document.title='Help Center · Flexoverse'
+    root.innerHTML=`<header class="info-hero"><p class="overline">FLEXOVERSE HELP</p><h1>What can we help you with?</h1><p>Short guides to help you get started and manage your account.</p></header><div class="help-guide-grid">${Object.entries(guidePages).map(([slug,guide])=>`<a class="help-guide-card card" href="/help/guides/${slug}/"><span class="guide-icon">${sidebarContentIcon(slug==='reels'?'reel':'post')}</span><span><strong>${guide.title}</strong><small>${guide.intro}</small></span>${settingsIcon}</a>`).join('')}</div><section class="help-contact card"><strong>Still need help?</strong><p>Flexoverse’s support contact has not been set yet. The operator should add a contact email before launch.</p></section>`
+  }else if(page==='help-guide'){
+    const guide=guidePages[document.body.dataset.guide]
+    if(!guide){root.innerHTML='<div class="settings-empty card"><strong>Guide not found</strong><p>Choose a guide from the Help Center.</p><a class="text-link" href="/help/">Open Help Center</a></div>';return}
+    document.title=`${guide.title} · Help Center · Flexoverse`
+    root.innerHTML=`<article class="info-article card"><a class="settings-back-link" href="/help/">← Help Center</a><p class="overline">HELP CENTER</p><h1>${guide.title}</h1><p class="info-lede">${guide.intro}</p><ol class="guide-steps">${guide.steps.map(step=>`<li>${step}</li>`).join('')}</ol><div class="guide-related"><h2>Related pages</h2>${guide.links.map(([label,url])=>`<a class="settings-item" href="${url}"><strong>${label}</strong>${settingsIcon}</a>`).join('')}</div></article>`
+  }
+}
+
+function bindSettingsEvents(){
+  document.querySelector('#profile-form')?.addEventListener('submit',async e=>{
+    e.preventDefault()
+    if(!session)return openAuth()
+    const form=e.currentTarget,fields=new FormData(form),username=String(fields.get('username')||'').trim().toLowerCase(),fullName=String(fields.get('full_name')||'').trim(),bio=String(fields.get('bio')||'').trim(),button=form.querySelector('[type="submit"]')
+    if(!/^[a-z0-9]{3,30}$/.test(username))return toast('Use 3–30 lowercase letters or numbers for your username.','error')
+    button.disabled=true;button.textContent='Saving…'
+    const {data,error}=await supabase.from('profiles').update({username,full_name:fullName,bio}).eq('id',session.user.id).select('id,username,full_name,bio,avatar_url,is_public,search_index_enabled').single()
+    button.disabled=false;button.textContent='Save changes'
+    if(error)return toast(error.code==='23505'?'That username is taken. Try another one.':error.message,'error')
+    profile=data;await supabase.auth.updateUser({data:{username,full_name:fullName}});mountShell();toast('Profile details saved.','success')
+  })
+  document.querySelector('#username-field')?.addEventListener('input',e=>{e.target.value=e.target.value.toLowerCase().replace(/[^a-z0-9]/g,'');const link=document.querySelector('#profile-link');if(link)link.textContent=`/${e.target.value}`})
+  document.querySelector('#public-profile')?.addEventListener('change',async e=>{
+    e.target.disabled=true
+    const {data,error}=await supabase.from('profiles').update({is_public:e.target.checked}).eq('id',session.user.id).select('id,username,full_name,bio,avatar_url,is_public,search_index_enabled').single()
+    e.target.disabled=false
+    if(error){e.target.checked=!e.target.checked;toast(error.message,'error');return}
+    profile=data;toast(e.target.checked?'Your profile is public.':'Your profile is private.','success')
+  })
+  document.querySelector('#settings-content')?.addEventListener('change',async e=>{
+    const input=e.target
+    if(input.matches('#notify-enabled,#notify-friends,#notify-likes,#notify-comments')){
+      if(!session)return openAuth()
+      const fields={in_app_enabled:document.querySelector('#notify-enabled')?.checked??true,friend_requests:document.querySelector('#notify-friends')?.checked??true,post_likes:document.querySelector('#notify-likes')?.checked??true,post_comments:document.querySelector('#notify-comments')?.checked??true}
+      document.querySelectorAll('#notify-enabled,#notify-friends,#notify-likes,#notify-comments').forEach(control=>control.disabled=true)
+      const {error}=await supabase.from('notification_preferences').upsert({user_id:session.user.id,...fields},{onConflict:'user_id'})
+      document.querySelectorAll('#notify-enabled,#notify-friends,#notify-likes,#notify-comments').forEach(control=>control.disabled=false)
+      if(error){toast(error.message,'error');return}
+      notificationDisplayPreferences=fields
+      if(page==='notifications')renderNotifications()
+      await loadNotificationCount()
+      toast('Notification display preferences saved.','success')
+    }
+    if(input.matches('input[name="theme"]')){localStorage.setItem('flexoverse-theme',input.value);applySavedPreferences();document.querySelectorAll('.theme-option').forEach(option=>option.classList.toggle('selected',option.querySelector('input')===input))}
+    if(input.matches('#text-size')){localStorage.setItem('flexoverse-text-size',input.value);applySavedPreferences()}
+    if(input.matches('#reduce-motion')){localStorage.setItem('flexoverse-reduce-motion',String(input.checked));applySavedPreferences()}
+  })
+  document.querySelector('#blocked-account-list')?.addEventListener('click',async e=>{const button=e.target.closest('[data-unblock]');if(!button)return;button.disabled=true;const {error}=await supabase.from('user_blocks').delete().eq('blocker_id',session.user.id).eq('blocked_id',button.dataset.unblock);if(error){button.disabled=false;toast(error.message,'error');return}button.closest('[data-blocked-row]')?.remove();if(!document.querySelector('[data-blocked-row]'))document.querySelector('#blocked-account-list').innerHTML='<div class="settings-empty"><strong>No blocked accounts</strong><p>Accounts you block will appear here.</p></div>';toast('Account unblocked.','success')})
+  document.querySelector('#send-password-reset')?.addEventListener('click',async e=>{e.currentTarget.disabled=true;const {error}=await supabase.auth.resetPasswordForEmail(session.user.email,{redirectTo:`${location.origin}/settings/security/`});e.currentTarget.disabled=false;if(error)return toast(error.message,'error');toast('Password reset link sent.','success')})
+  document.querySelector('#settings-signout')?.addEventListener('click',async e=>{e.currentTarget.disabled=true;const {error}=await supabase.auth.signOut();if(error){e.currentTarget.disabled=false;toast(error.message,'error')}})
+}
+
 async function initialize() {
+  applySavedPreferences()
   mountShell()
   const {data}=await supabase.auth.getSession();session=data.session
   if(session){const {data:row}=await supabase.from('profiles').select('id,username,full_name,bio,avatar_url,is_public').eq('id',session.user.id).maybeSingle();profile=row}
@@ -610,7 +796,7 @@ async function initialize() {
   const signupLink=document.querySelector('#switch-to-signup');if(signupLink)signupLink.href=authPageHref('signup')
   const loginLink=document.querySelector('#switch-to-login');if(loginLink)loginLink.href=authPageHref('login')
   mountShell()
-  if(session){await loadNotificationCount();subscribeToNotificationUpdates()}
+  if(session){await loadNotificationPreferences();await loadNotificationCount();subscribeToNotificationUpdates()}
   const composerAvatar=document.querySelector('[data-user-avatar]');if(composerAvatar)composerAvatar.outerHTML=avatar(session?initials(myName()):'FX','blue',profile?.avatar_url)
   if(page==='home')await loadHome()
   if(page==='friends')await loadFriends()
@@ -620,8 +806,10 @@ async function initialize() {
   if(page==='profile')await loadProfilePage()
   if(page==='reel-create')prepareReelComposer()
   if(page==='create'){const name=document.querySelector('#post-author-name');if(name)name.textContent=myName();const handle=document.querySelector('#post-author-handle');if(handle)handle.textContent='@'+myUsername();const photo=document.querySelector('#post-author-avatar');if(photo)photo.outerHTML=avatar(initials(myName()),'blue',profile?.avatar_url)}
-  if(page==='settings'&&profile){document.querySelector('#full-name').value=profile.full_name||'';document.querySelector('#username-field').value=profile.username||'';document.querySelector('#bio-field').value=profile.bio||'';document.querySelector('#public-profile').checked=profile.is_public;document.querySelector('#profile-link').textContent=`/${profile.username}`}
+  if(page.startsWith('settings-'))await renderSettingsSection()
+  if(['privacy','terms','how-it-works','help','help-guide'].includes(page))renderInfoPage()
   bindEvents()
+  bindSettingsEvents()
   supabase.auth.onAuthStateChange((event,next)=>{session=next;if(event==='SIGNED_OUT')location.reload()})
 }
 
@@ -703,8 +891,6 @@ function bindEvents() {
   viewerRoot?.addEventListener('touchstart',e=>{viewerTouchY=e.changedTouches[0]?.clientY??null},{passive:true})
   viewerRoot?.addEventListener('touchend',e=>{if(viewerTouchY===null)return;const delta=viewerTouchY-(e.changedTouches[0]?.clientY??viewerTouchY);viewerTouchY=null;if(Math.abs(delta)>70)stepReelViewer(delta>0?1:-1)},{passive:true})
   document.querySelectorAll('[data-profile-tab]').forEach(tab=>tab.addEventListener('click',()=>{const selected=tab.dataset.profileTab;document.querySelectorAll('[data-profile-tab]').forEach(item=>{const active=item===tab;item.classList.toggle('active',active);item.setAttribute('aria-selected',String(active))});document.querySelectorAll('.profile-panel').forEach(panel=>{panel.hidden=panel.id!==`profile-panel-${selected}`})}))
-  document.querySelector('#profile-form')?.addEventListener('submit',async e=>{e.preventDefault();if(!session)return openAuth();const f=new FormData(e.currentTarget);const username=String(f.get('username')).trim().toLowerCase();if(!/^[a-z0-9]{3,30}$/.test(username))return toast('Use 3–30 letters or numbers for your username.','error');const {error}=await supabase.from('profiles').update({username,full_name:f.get('full_name'),bio:f.get('bio'),is_public:document.querySelector('#public-profile').checked}).eq('id',session.user.id);if(error)return toast(error.code==='23505'?'That username is taken. Try adding a number.':error.message,'error');await supabase.auth.updateUser({data:{username}});toast('Profile saved.','success');document.querySelector('#profile-link').textContent=`/${username}`})
-  document.querySelector('#username-field')?.addEventListener('input',e=>{e.target.value=e.target.value.toLowerCase().replace(/[^a-z0-9]/g,'');document.querySelector('#profile-link').textContent=`/${e.target.value}`})
   bindChatPageEvents()
   bindNotificationPageEvents()
   document.querySelector('#global-search')?.addEventListener('keydown',e=>{if(e.key==='Enter'){const value=e.target.value.trim().replace(/^@/,'').toLowerCase();if(value)location.href=`/${encodeURIComponent(value)}`}})
@@ -733,3 +919,4 @@ initialize()
     const remaining=Math.max(0,minimumTime-(performance.now()-loaderStartedAt))
     setTimeout(()=>{appLoader.classList.add('is-hidden');setTimeout(()=>appLoader.remove(),240)},remaining)
   })
+
