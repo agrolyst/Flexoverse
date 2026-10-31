@@ -673,7 +673,7 @@ async function renderSettingsSection(){
   let content=''
   if(key==='profile'){
     const {data:privateDetails}=await supabase.from('private_profile_details').select('address').eq('user_id',session.user.id).maybeSingle()
-    content=settingPanel('Profile details','Your username is also your public Flexoverse address.',`<form id="profile-form" class="settings-form"><label class="form-label">Full name<input id="full-name" name="full_name" maxlength="80" required value="${esc(profile?.full_name||'')}"></label><label class="form-label">Username<span class="input-with-prefix"><span>@</span><input id="username-field" name="username" minlength="3" maxlength="30" pattern="[a-z0-9]+" required value="${esc(profile?.username||'')}"></span><small>Use 3–30 lowercase letters or numbers. Numbers are optional.</small></label><label class="form-label">Bio<textarea name="bio" maxlength="300" rows="4" placeholder="A little about you">${esc(profile?.bio||'')}</textarea><small>Up to 300 characters.</small></label><label class="form-label">Address or general location<input name="address" maxlength="300" autocomplete="street-address" value="${esc(privateDetails?.address||'')}" placeholder="City, region, or mailing address"><small>This information is private and visible only to your signed-in account.</small></label><p class="profile-url">Your profile link: <strong id="profile-link">/${esc(profile?.username||myUsername())}</strong></p><div class="settings-form-actions"><button class="button button-primary" type="submit">Save changes</button></div></form>`)
+    content=settingPanel('Profile details','Your username is also your public Flexoverse address.',`<div class="profile-photo-settings"><div class="profile-photo-settings-preview" id="profile-avatar-preview"></div><div class="profile-photo-settings-copy"><strong>Profile photo</strong><p>Shown beside your bio, posts, and chats.</p><input id="profile-photo-input" type="file" accept="image/jpeg,image/png,image/webp,image/avif" hidden><button class="button button-soft" id="profile-photo-button" type="button">Add or change photo</button><small>JPG, PNG, WebP, or AVIF. Up to 5 MB.</small><span id="profile-photo-status" aria-live="polite"></span></div></div><form id="profile-form" class="settings-form"><label class="form-label">Full name<input id="full-name" name="full_name" maxlength="80" required value="${esc(profile?.full_name||'')}"></label><label class="form-label">Username<span class="input-with-prefix"><span>@</span><input id="username-field" name="username" minlength="3" maxlength="30" pattern="[a-z0-9]+" required value="${esc(profile?.username||'')}"></span><small>Use 3–30 lowercase letters or numbers. Numbers are optional.</small></label><label class="form-label">Bio<textarea name="bio" maxlength="300" rows="4" placeholder="A little about you">${esc(profile?.bio||'')}</textarea><small>Up to 300 characters.</small></label><label class="form-label">Address or general location<input name="address" maxlength="300" autocomplete="street-address" value="${esc(privateDetails?.address||'')}" placeholder="City, region, or mailing address"><small>This information is private and visible only to your signed-in account.</small></label><p class="profile-url">Your profile link: <strong id="profile-link">/${esc(profile?.username||myUsername())}</strong></p><div class="settings-form-actions"><button class="button button-primary" type="submit">Save changes</button></div></form>`)
   }else if(key==='privacy'){
     content=settingPanel('Profile visibility','Choose whether your profile details are public or limited to accepted friends.',`${settingSwitch('public-profile','Public profile','Anyone can view your profile details.',profile?.is_public!==false)}<div class="settings-note settings-note-warning"><strong>Public posts may remain visible</strong><p>In the current database setup, posts marked public can still be viewed when a profile is private. Avoid sharing sensitive content publicly. Full private-post enforcement needs an additional security-policy update.</p></div><div class="settings-note"><strong>Search engine visibility</strong><p>Google indexing is not enabled for this account yet. Flexoverse plans to make public profile indexing available to eligible verified accounts and subscribed business profiles. Search engines decide when and whether to list a page.</p><span class="pending-pill">Not available yet</span></div><div class="settings-note settings-note-soft"><strong>Blocking</strong><p>Blocked accounts cannot start a conversation with you. You can review your list at any time.</p><a class="text-link" href="/settings/blocked/">Manage blocked accounts ${settingsIcon}</a></div>`)
   }else if(key==='content'){
@@ -707,6 +707,7 @@ async function renderSettingsSection(){
     content=settingPanel('Your Flexoverse account','Manage your current sign-in session.',`<div class="settings-detail-row"><span><small>Signed in as</small><strong>${esc(session.user.email||myUsername())}</strong></span></div><div class="settings-note"><strong>Sign out</strong><p>This signs out this browser on this device.</p><button id="settings-signout" class="button button-outline" type="button">Sign out</button></div><div class="settings-note settings-note-warning"><strong>Account deletion</strong><p>Self-serve account deletion is not available yet. Add the Flexoverse privacy contact email before offering requests through this page.</p></div>`)
   }
   root.innerHTML=`<header class="settings-section-heading"><div><p class="overline">SETTINGS</p><h1>${meta.title}</h1><p class="muted">${meta.description}</p></div></header><div class="settings-content">${content}</div>`
+  if(key==='profile'){const preview=root.querySelector('#profile-avatar-preview');if(preview)preview.innerHTML=avatar(initials(myName()),'blue',profile?.avatar_url)}
   if(key==='blocked')await loadBlockedAccounts(root)
 }
 
@@ -795,6 +796,57 @@ function bindProfileCompletionEvents(){
   })
 }
 
+function ownAvatarStoragePath(url,userId){
+  if(!url)return ''
+  try{
+    const pathname=new URL(url,location.origin).pathname
+    const marker='/storage/v1/object/public/avatars/'
+    const start=pathname.indexOf(marker)
+    if(start<0)return ''
+    const path=decodeURIComponent(pathname.slice(start+marker.length))
+    return path.startsWith(`${userId}/`)?path:''
+  }catch{return ''}
+}
+
+async function saveProfilePhoto(file){
+  if(!file||!session)return
+  const input=document.querySelector('#profile-photo-input')
+  const mimeToExtension={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/avif':'avif'}
+  const extensionToMime={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',avif:'image/avif'}
+  const extension=String(file.name||'').split('.').pop()?.toLowerCase()
+  const mime=file.type||extensionToMime[extension]
+  if(!mimeToExtension[mime]||extensionToMime[extension]&&extensionToMime[extension]!==mime){if(input)input.value='';toast('Choose a JPG, PNG, WebP, or AVIF image.','error');return}
+  if(file.size>5*1024*1024){if(input)input.value='';toast('Choose an image smaller than 5 MB.','error');return}
+  const button=document.querySelector('#profile-photo-button')
+  const status=document.querySelector('#profile-photo-status')
+  const oldPath=ownAvatarStoragePath(profile?.avatar_url,session.user.id)
+  if(button){button.disabled=true;button.textContent='Uploading…'}
+  if(status)status.textContent='Uploading your profile photo…'
+  const path=`${session.user.id}/${Date.now()}-${Math.random().toString(36).slice(2,10)}.${mimeToExtension[mime]}`
+  const storage=supabase.storage.from('avatars')
+  try{
+    const {data:stored,error:uploadError}=await storage.upload(path,file,{cacheControl:'3600',upsert:false,contentType:mime})
+    if(uploadError)throw uploadError
+    const {data:{publicUrl}}=storage.getPublicUrl(stored.path)
+    const {data,error:profileError}=await supabase.from('profiles').update({avatar_url:publicUrl}).eq('id',session.user.id).select('id,username,full_name,bio,avatar_url,is_public,search_index_enabled').single()
+    if(profileError){await storage.remove([stored.path]);throw profileError}
+    profile=data
+    const preview=document.querySelector('#profile-avatar-preview')
+    if(preview)preview.innerHTML=avatar(initials(myName()),'blue',profile.avatar_url)
+    if(oldPath&&oldPath!==stored.path){const {error:removeError}=await storage.remove([oldPath]);if(removeError)console.warn('Could not remove the previous profile photo:',removeError.message)}
+    mountShell()
+    if(status)status.textContent='Your photo is saved and appears on your profile, posts, and chats.'
+    toast('Profile photo updated.','success')
+  }catch(error){
+    console.error('Could not save profile photo:',error)
+    if(status)status.textContent='The photo could not be saved. Please try again.'
+    toast(error.message||'The photo could not be saved. Please try again.','error')
+  }finally{
+    if(button){button.disabled=false;button.textContent=profile?.avatar_url?'Change photo':'Add photo'}
+    if(input)input.value=''
+  }
+}
+
 function bindSettingsEvents(){
   document.querySelector('#profile-form')?.addEventListener('submit',async e=>{
     e.preventDefault()
@@ -809,6 +861,8 @@ function bindSettingsEvents(){
     if(addressError)return toast(`Profile saved, but the private address could not be saved: ${addressError.message}`,'error')
     profile=data;await supabase.auth.updateUser({data:{username,full_name:fullName}});mountShell();toast('Profile details saved.','success')
   })
+  document.querySelector('#profile-photo-button')?.addEventListener('click',()=>document.querySelector('#profile-photo-input')?.click())
+  document.querySelector('#profile-photo-input')?.addEventListener('change',e=>saveProfilePhoto(e.currentTarget.files?.[0]))
   document.querySelector('#username-field')?.addEventListener('input',e=>{e.target.value=e.target.value.toLowerCase().replace(/[^a-z0-9]/g,'');const link=document.querySelector('#profile-link');if(link)link.textContent=`/${e.target.value}`})
   document.querySelector('#public-profile')?.addEventListener('change',async e=>{
     e.target.disabled=true
