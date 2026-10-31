@@ -5,6 +5,7 @@ Flexoverse is a multi-page static social app. Home, Friends, Reels, Chats, Notif
 ## Pages
 
 - `/` — Home feed and post composer
+- `/create/` — dedicated page for writing and sharing a post
 - `/friends/` — requests, suggestions, and friends
 - `/reels/` — full-height short-video preview
 - `/chats/` — inbox and conversation layout
@@ -19,4 +20,3 @@ The pages are plain HTML and can be served as static files. The shared app scrip
 The database schema and row-level security policies are in `supabase/setup.sql` and have been applied to project `gkgjfbusdyiohiztwuec`. Sign-in, username availability, public profile reads, post creation, likes, friend requests, and profile settings use Supabase. Reels and notifications are visual previews, and the chat screen still needs its live message queries and Realtime subscription connected.
 
 Usernames are lowercase letters and numbers, 3–30 characters. Numbers are optional and only needed when the preferred username is already taken.
-
