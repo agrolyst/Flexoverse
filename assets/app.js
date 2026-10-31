@@ -150,4 +150,22 @@ function bindEvents() {
   window.addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){e.preventDefault();document.querySelector('#global-search')?.focus()}if(e.key==='Escape')document.querySelectorAll('.modal-backdrop').forEach(m=>m.hidden=true)})
 }
 
-initialize().catch(error=>{console.error(error);toast('Could not connect. Refresh and try again.')})
+function showAppLoader() {
+  const loader=document.createElement('div')
+  loader.className='app-loader'
+  loader.setAttribute('role','status')
+  loader.setAttribute('aria-live','polite')
+  loader.innerHTML='<div class="app-loader-content"><span class="app-loader-symbol" aria-hidden="true"><span class="logo-mark">f</span></span><span class="app-loader-label">Getting your circle ready</span></div>'
+  document.body.append(loader)
+  return loader
+}
+
+const loaderStartedAt=performance.now()
+const appLoader=showAppLoader()
+initialize()
+  .catch(error=>{console.error(error);toast('Could not connect. Refresh and try again.')})
+  .finally(()=>{
+    const minimumTime=320
+    const remaining=Math.max(0,minimumTime-(performance.now()-loaderStartedAt))
+    setTimeout(()=>{appLoader.classList.add('is-hidden');setTimeout(()=>appLoader.remove(),240)},remaining)
+  })
