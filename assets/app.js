@@ -8,6 +8,7 @@ let liked = new Set()
 let acceptedFriends = []
 let friendRequests = []
 let profileRecord = null
+let toastTimer = null
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
 const initials = s => String(s || 'You').split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map(x => x[0]).join('').toUpperCase()
@@ -15,7 +16,24 @@ const myName = () => profile?.full_name || session?.user?.user_metadata?.full_na
 const myUsername = () => profile?.username || session?.user?.user_metadata?.username || 'yourname'
 const avatar = (name, color = 'blue', url = '') => url ? `<img class="avatar ${color}" src="${esc(url)}" alt="">` : `<span class="avatar avatar-${color}">${esc(name)}</span>`
 const pageUrl = () => '/' + myUsername()
-const toast = message => { const el = document.querySelector('#toast'); if (!el) return; el.textContent = message; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2500) }
+const toast = (message,type='info') => {
+  const el=document.querySelector('#toast')
+  if(!el)return
+  const icons={
+    success:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>',
+    error:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg>',
+    info:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg>'
+  }
+  const tone=['success','error','info'].includes(type)?type:'info'
+  el.dataset.type=tone
+  el.setAttribute('role',tone==='error'?'alert':'status')
+  el.setAttribute('aria-live',tone==='error'?'assertive':'polite')
+  el.setAttribute('aria-atomic','true')
+  el.innerHTML=`<span class="toast-icon">${icons[tone]}</span><span class="toast-message">${esc(message)}</span>`
+  el.classList.add('show')
+  clearTimeout(toastTimer)
+  toastTimer=setTimeout(()=>el.classList.remove('show'),tone==='error'?5000:3500)
+}
 const relationCount = value => { const raw=Array.isArray(value)?value[0]?.count:value?.count??value; const count=Number(raw??0); return Number.isFinite(count)?count:0 }
 
 function mountShell() {
@@ -104,7 +122,7 @@ async function loadComments(postId, article) {
 async function loadFriends() {
   if(!session)return
   const {data,error}=await supabase.from('friend_requests').select('id,from_user_id,to_user_id,status,created_at').or(`from_user_id.eq.${session.user.id},to_user_id.eq.${session.user.id}`).order('created_at',{ascending:false})
-  if(error)return toast(error.message)
+  if(error)return toast(error.message,'error')
   friendRequests=(data||[]).filter(r=>r.status==='pending'&&r.to_user_id===session.user.id)
   acceptedFriends=(data||[]).filter(r=>r.status==='accepted').map(r=>r.from_user_id===session.user.id?r.to_user_id:r.from_user_id)
   const ids=[...new Set([...friendRequests.map(r=>r.from_user_id),...acceptedFriends])]
@@ -149,7 +167,8 @@ function openAuth() { location.href=authPageHref('login') }
 async function sendFriendRequest(id) {
   if(!session)return openAuth()
   const {error}=await supabase.from('friend_requests').insert({from_user_id:session.user.id,to_user_id:id})
-  toast(error?(error.code==='23505'?'A request already exists.':error.message):'Friend request sent.')
+  if(error){toast(error.code==='23505'?'A request already exists.':error.message,error.code==='23505'?'info':'error');return}
+  toast('Friend request sent.','success')
 }
 
 async function initialize() {
@@ -172,10 +191,10 @@ async function initialize() {
 
 function bindEvents() {
   document.querySelector('#signup-username')?.addEventListener('input',async e=>{const value=e.target.value.toLowerCase().replace(/[^a-z0-9]/g,'');e.target.value=value;const hint=document.querySelector('#username-hint');if(!/^[a-z0-9]{3,30}$/.test(value)){hint.textContent='Use 3–30 letters or numbers.';return}hint.textContent='Checking availability…';const {data,error}=await supabase.from('profiles').select('username').eq('username',value).maybeSingle();hint.textContent=error?'Could not check yet.':data?'Taken — try adding a number.':'Available ✓'})
-  document.querySelector('#login-form')?.addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const {error}=await supabase.auth.signInWithPassword({email:f.get('email'),password:f.get('password')});if(error)return toast(error.message);location.replace(authReturnPath())})
-  document.querySelector('#signup-form')?.addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const username=String(f.get('username')||'').toLowerCase();if(!/^[a-z0-9]{3,30}$/.test(username))return toast('Use 3–30 letters or numbers for your username.');const {data,error}=await supabase.auth.signUp({email:f.get('email'),password:f.get('password'),options:{data:{full_name:f.get('name'),username}}});if(error)return toast(error.message);if(data.session){location.replace(authReturnPath());return}const message=document.querySelector('#signup-message');if(message)message.textContent='Account created. Check your email to confirm it, then sign in.'})
+  document.querySelector('#login-form')?.addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const {error}=await supabase.auth.signInWithPassword({email:f.get('email'),password:f.get('password')});if(error)return toast(error.message,'error');location.replace(authReturnPath())})
+  document.querySelector('#signup-form')?.addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const username=String(f.get('username')||'').toLowerCase();if(!/^[a-z0-9]{3,30}$/.test(username))return toast('Use 3–30 letters or numbers for your username.','error');const {data,error}=await supabase.auth.signUp({email:f.get('email'),password:f.get('password'),options:{data:{full_name:f.get('name'),username}}});if(error)return toast(error.message,'error');if(data.session){location.replace(authReturnPath());return}const message=document.querySelector('#signup-message');if(message)message.textContent='Account created. Check your email to confirm it, then sign in.'})
   document.querySelector('#signout')?.addEventListener('click',()=>supabase.auth.signOut())
-  document.querySelector('#post-form')?.addEventListener('submit',async e=>{e.preventDefault();if(!session){openAuth();return}const content=String(new FormData(e.currentTarget).get('content')||'').trim();if(!content)return;const submit=e.currentTarget.querySelector('[type="submit"]');submit.disabled=true;submit.textContent='Sharing…';const {error}=await supabase.from('posts').insert({user_id:session.user.id,content});if(error){submit.disabled=false;submit.textContent='Share post';return toast(error.message)}toast('Your post was shared.');e.currentTarget.reset();if(page==='create'){setTimeout(()=>location.href='/',700)}else{submit.disabled=false;submit.textContent='Share post';await loadHome()}})
+  document.querySelector('#post-form')?.addEventListener('submit',async e=>{e.preventDefault();if(!session){openAuth();return}const content=String(new FormData(e.currentTarget).get('content')||'').trim();if(!content)return;const submit=e.currentTarget.querySelector('[type="submit"]');submit.disabled=true;submit.textContent='Sharing…';const {error}=await supabase.from('posts').insert({user_id:session.user.id,content});if(error){submit.disabled=false;submit.textContent='Share post';return toast(error.message,'error')}toast('Your post was shared.','success');e.currentTarget.reset();if(page==='create'){setTimeout(()=>location.href='/',700)}else{submit.disabled=false;submit.textContent='Share post';await loadHome()}})
   document.querySelector('#post-content')?.addEventListener('input',e=>{const count=document.querySelector('#post-count');if(count)count.textContent=`${e.target.value.length} / 2000`})
   document.querySelector('#feed-list')?.addEventListener('click',async e=>{
     if(e.target.closest('[data-retry-feed]'))return loadHome()
@@ -191,7 +210,7 @@ function bindEvents() {
       likeButton.disabled=false
       if(result.error){
         if(result.error.code==='23505'&&!wasLiked){liked.add(postId);likeButton.classList.add('liked');likeButton.setAttribute('aria-pressed','true');likeButton.innerHTML='♥ <span>Liked</span>';return}
-        toast(result.error.message);return
+        toast(result.error.message,'error');return
       }
       if(wasLiked)liked.delete(postId);else liked.add(postId)
       likeButton.classList.toggle('liked',!wasLiked)
@@ -199,6 +218,7 @@ function bindEvents() {
       likeButton.innerHTML=`${wasLiked?'♡':'♥'} <span>${wasLiked?'Like':'Liked'}</span>`
       const total=likeButton.closest('.post')?.querySelector('[data-like-count]')
       if(total){const count=Math.max(0,Number(total.dataset.count||0)+(wasLiked?-1:1));total.dataset.count=String(count);total.textContent=`♡ ${count} ${count===1?'person':'people'}`}
+      toast(wasLiked?'Like removed.':'You liked this post.','success')
       return
     }
     const commentButton=e.target.closest('[data-comment]')
@@ -215,7 +235,7 @@ function bindEvents() {
     if(shareButton){
       const post=shareButton.closest('.post')
       const postUrl=`${location.origin}/#${post?.id||''}`
-      try{await navigator.clipboard.writeText(postUrl);toast('Post link copied.')}catch{toast('Copy this post link from your browser address bar.')}
+      try{await navigator.clipboard.writeText(postUrl);toast('Post link copied.','success')}catch{toast('Copy this post link from your browser address bar.')}
     }
   })
   document.querySelector('#feed-list')?.addEventListener('submit',async e=>{
@@ -231,13 +251,14 @@ function bindEvents() {
     submit.disabled=true
     const {error}=await supabase.from('comments').insert({post_id:postId,user_id:session.user.id,content})
     submit.disabled=false
-    if(error){toast(error.message);return}
+    if(error){toast(error.message,'error');return}
     form.reset()
     await loadComments(postId,article)
+    toast('Comment added.','success')
   })
   document.querySelector('#suggestions-list')?.addEventListener('click',e=>{const b=e.target.closest('[data-request]');if(b)sendFriendRequest(b.dataset.request)})
-  document.querySelector('#requests-list')?.addEventListener('click',async e=>{const accept=e.target.closest('[data-accept]');const ignore=e.target.closest('[data-ignore]');if(accept){const {error}=await supabase.from('friend_requests').update({status:'accepted'}).eq('id',accept.dataset.accept);if(error)toast(error.message);else{await loadFriends();toast('You’re friends now.')}}if(ignore){await supabase.from('friend_requests').delete().eq('id',ignore.dataset.ignore);await loadFriends()}})
-  document.querySelector('#profile-form')?.addEventListener('submit',async e=>{e.preventDefault();if(!session)return openAuth();const f=new FormData(e.currentTarget);const username=String(f.get('username')).trim().toLowerCase();if(!/^[a-z0-9]{3,30}$/.test(username))return toast('Use 3–30 letters or numbers for your username.');const {error}=await supabase.from('profiles').update({username,full_name:f.get('full_name'),bio:f.get('bio'),is_public:document.querySelector('#public-profile').checked}).eq('id',session.user.id);if(error)return toast(error.code==='23505'?'That username is taken. Try adding a number.':error.message);await supabase.auth.updateUser({data:{username}});toast('Profile saved.');document.querySelector('#profile-link').textContent=`/${username}`})
+  document.querySelector('#requests-list')?.addEventListener('click',async e=>{const accept=e.target.closest('[data-accept]');const ignore=e.target.closest('[data-ignore]');if(accept){const {error}=await supabase.from('friend_requests').update({status:'accepted'}).eq('id',accept.dataset.accept);if(error)toast(error.message,'error');else{await loadFriends();toast('You’re friends now.','success')}}if(ignore){const {error}=await supabase.from('friend_requests').delete().eq('id',ignore.dataset.ignore);if(error)toast(error.message,'error');else await loadFriends()}})
+  document.querySelector('#profile-form')?.addEventListener('submit',async e=>{e.preventDefault();if(!session)return openAuth();const f=new FormData(e.currentTarget);const username=String(f.get('username')).trim().toLowerCase();if(!/^[a-z0-9]{3,30}$/.test(username))return toast('Use 3–30 letters or numbers for your username.','error');const {error}=await supabase.from('profiles').update({username,full_name:f.get('full_name'),bio:f.get('bio'),is_public:document.querySelector('#public-profile').checked}).eq('id',session.user.id);if(error)return toast(error.code==='23505'?'That username is taken. Try adding a number.':error.message,'error');await supabase.auth.updateUser({data:{username}});toast('Profile saved.','success');document.querySelector('#profile-link').textContent=`/${username}`})
   document.querySelector('#username-field')?.addEventListener('input',e=>{e.target.value=e.target.value.toLowerCase().replace(/[^a-z0-9]/g,'');document.querySelector('#profile-link').textContent=`/${e.target.value}`})
   document.querySelector('#message-form')?.addEventListener('submit',e=>{e.preventDefault();toast('Chat messages are being connected next.')})
   document.querySelector('#global-search')?.addEventListener('keydown',e=>{if(e.key==='Enter'){const value=e.target.value.trim().replace(/^@/,'').toLowerCase();if(value)location.href=`/${encodeURIComponent(value)}`}})
@@ -260,7 +281,7 @@ function showAppLoader() {
 const loaderStartedAt=performance.now()
 const appLoader=showAppLoader()
 initialize()
-  .catch(error=>{console.error(error);const feed=document.querySelector('#feed-list');if(feed)feed.innerHTML='<div class="feed-state card"><strong>The feed is unavailable</strong><span>Check your connection and refresh the page.</span></div>';toast('Could not connect. Refresh and try again.')})
+  .catch(error=>{console.error(error);const feed=document.querySelector('#feed-list');if(feed)feed.innerHTML='<div class="feed-state card"><strong>The feed is unavailable</strong><span>Check your connection and refresh the page.</span></div>';toast('Could not connect. Refresh and try again.','error')})
   .finally(()=>{
     const minimumTime=320
     const remaining=Math.max(0,minimumTime-(performance.now()-loaderStartedAt))
