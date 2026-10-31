@@ -16,6 +16,12 @@ create table public.posts (
  content text not null check (char_length(content) between 1 and 2000), image_path text,
  is_public boolean not null default true, created_at timestamptz not null default now(), updated_at timestamptz not null default now()
 );
+create table public.reels (
+ id uuid primary key default gen_random_uuid(), user_id uuid not null references public.profiles(id) on delete cascade,
+ caption text not null default '' check (char_length(caption) <= 500),
+ video_path text not null unique check (char_length(video_path) between 1 and 512),
+ is_public boolean not null default true, created_at timestamptz not null default now()
+);
 create table public.likes (
  post_id uuid not null references public.posts(id) on delete cascade,
  user_id uuid not null references public.profiles(id) on delete cascade,
@@ -69,12 +75,15 @@ create table public.messages (
 );
 create index posts_feed_idx on public.posts(created_at desc);
 create index posts_author_idx on public.posts(user_id,created_at desc);
+create index reels_feed_idx on public.reels(created_at desc);
+create index reels_author_idx on public.reels(user_id,created_at desc);
 create index comments_post_idx on public.comments(post_id,created_at);
 create index friend_requests_recipient_idx on public.friend_requests(to_user_id,status,created_at desc);
 create index messages_conversation_idx on public.messages(conversation_id,created_at);
 
 alter table public.profiles enable row level security;
 alter table public.posts enable row level security;
+alter table public.reels enable row level security;
 alter table public.likes enable row level security;
 alter table public.comments enable row level security;
 alter table public.friend_requests enable row level security;
@@ -91,12 +100,35 @@ create policy "Users update their own profile" on public.profiles for update to 
 using ((select auth.uid())=id) with check ((select auth.uid())=id);
 create policy "Public posts are readable" on public.posts for select to anon,authenticated
 using (is_public or user_id=(select auth.uid()));
+create policy "Public can read public reels" on public.reels for select to anon,authenticated
+using (
+ user_id=(select auth.uid())
+ or (is_public and exists(select 1 from public.profiles p where p.id=user_id and p.is_public))
+);
+create policy "Users create their own reels" on public.reels for insert to authenticated
+with check ((select auth.uid())=user_id and split_part(video_path,'/',1)=(select auth.uid())::text);
+create policy "Users delete their own reels" on public.reels for delete to authenticated
+using ((select auth.uid())=user_id);
 create policy "Users create their own posts" on public.posts for insert to authenticated
 with check ((select auth.uid())=user_id);
 create policy "Users update their own posts" on public.posts for update to authenticated
 using ((select auth.uid())=user_id) with check ((select auth.uid())=user_id);
 create policy "Users delete their own posts" on public.posts for delete to authenticated
 using ((select auth.uid())=user_id);
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
+values('reels','reels',false,52428800,array['video/mp4','video/webm','video/quicktime']);
+create policy "Read public reel videos and own videos" on storage.objects for select to anon,authenticated
+using (
+ bucket_id='reels'
+ and (
+  (storage.foldername(name))[1]=(select auth.uid())::text
+  or exists(select 1 from public.reels r join public.profiles p on p.id=r.user_id where r.video_path=name and r.is_public and p.is_public)
+ )
+);
+create policy "Users upload reel videos to their own folder" on storage.objects for insert to authenticated
+with check (bucket_id='reels' and (storage.foldername(name))[1]=(select auth.uid())::text);
+create policy "Users delete reel videos from their own folder" on storage.objects for delete to authenticated
+using (bucket_id='reels' and (storage.foldername(name))[1]=(select auth.uid())::text);
 create policy "Likes on readable posts are visible" on public.likes for select to anon,authenticated
 using (exists(select 1 from public.posts p where p.id=post_id and (p.is_public or p.user_id=(select auth.uid()))));
 create policy "Users like as themselves" on public.likes for insert to authenticated
@@ -160,9 +192,10 @@ using ((select auth.uid())=sender_id);
 
 -- Supabase changed default Data API exposure on 2026-10-30. Grant only the needed roles.
 revoke all on table public.profiles,public.posts,public.likes,public.comments,public.friend_requests,
- public.user_blocks,public.conversations,public.conversation_members,public.messages from public;
-grant select on table public.profiles,public.posts,public.likes,public.comments to anon;
+ public.reels,public.user_blocks,public.conversations,public.conversation_members,public.messages from public;
+grant select on table public.profiles,public.posts,public.reels,public.likes,public.comments to anon;
 grant select,insert,delete on table public.profiles to authenticated;
+grant select,insert,delete on table public.reels to authenticated;
 grant update (username,full_name,bio,avatar_url,is_public) on table public.profiles to authenticated;
 grant select,insert,update,delete on table public.posts,public.likes,public.comments,
  public.friend_requests,public.user_blocks,public.conversations,public.conversation_members,public.messages to authenticated;
@@ -197,4 +230,3 @@ create index if not exists conversations_creator_idx on public.conversations(cre
 create index if not exists likes_user_idx on public.likes(user_id);
 create index if not exists messages_sender_idx on public.messages(sender_id);
 create index if not exists user_blocks_blocked_idx on public.user_blocks(blocked_id);
-
