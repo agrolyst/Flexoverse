@@ -4,3 +4,106 @@
 @media(max-width:760px){body{padding-bottom:68px}.site-header{height:62px;padding:0 15px;gap:13px}.wordmark{min-width:auto;font-size:17px}.logo-mark{width:30px;height:30px}.header-search{flex:1;width:auto;height:35px}.top-navigation{display:none}.header-actions{gap:8px}.user-control>span:not(.avatar){display:none}.page-layout{display:block;padding:20px 14px 30px}.left-sidebar,.right-sidebar{display:none}.main-column{max-width:660px;margin:0 auto}.mobile-nav{height:64px;position:fixed;z-index:15;display:flex;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #e8eaf0;justify-content:space-around;padding-bottom:env(safe-area-inset-bottom)}.mobile-nav a{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:3px;color:#818b99}.mobile-nav a span{font-size:18px}.mobile-nav a small{font-size:7px}.mobile-nav a.active{color:var(--brand)}.welcome-row h1,.page-intro h1{font-size:22px}.stories-row{gap:10px}.story{flex-basis:61px}.story-art{height:57px;width:57px}.people-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.reels-feed{height:calc(100vh - 220px);min-height:480px}.reel-card{min-width:73%;max-width:340px}.chat-layout{height:calc(100vh - 200px);min-height:420px;grid-template-columns:100px minmax(0,1fr)}.chat-inbox{padding:8px 4px}.conversation{flex-direction:column;text-align:center;gap:4px;padding:8px 2px}.conversation .avatar{width:32px;height:32px}.conversation-text{width:100%;flex:none}.conversation-text strong{font-size:7px}.conversation-text small,.conversation time{display:none}.unread{right:11px;bottom:10px}.chat-room-head{padding:0 9px}.chat-history{padding:10px}.message{font-size:8px}.privacy-hint{font-size:7px}.settings-layout{display:block}.settings-menu{flex-direction:row;overflow:auto;margin-bottom:10px}.settings-menu a{white-space:nowrap}.settings-content{gap:10px}.profile-banner{height:125px}.profile-summary{padding:0 12px 12px;gap:10px}.profile-summary .avatar{height:64px;width:64px}.profile-summary-text{padding-top:34px}.profile-summary-text h1{font-size:14px}.profile-summary .button{font-size:8px;padding:8px;margin-top:34px}.profile-summary-text .overline{font-size:6px}}
 @media(max-width:460px){.page-layout{padding:17px 10px}.welcome-row{margin-bottom:16px}.welcome-row .button{font-size:8px;padding:9px}.composer{padding:13px}.composer-tools{gap:10px}.composer-tools>button:not(.button){font-size:8px}.composer-tools .button{font-size:8px}.post{padding:14px}.people-grid{gap:8px}.person-content{padding-left:7px;padding-right:7px}.friend-request-row{flex-wrap:wrap}.request-actions{margin-left:auto}.reels-feed{height:calc(100vh - 205px);min-height:430px}.reel-card{min-width:83%}.notification-tabs{gap:12px;padding:0 10px}.notification-tabs button{font-size:8px}.notification-quick .button{padding:7px}.settings-panel{padding:12px}.settings-panel-head h2{font-size:11px}.profile-summary .avatar{height:54px;width:54px}.profile-summary-text{padding-top:31px}.profile-summary .button{padding:7px 8px}.profile-summary-text h1{font-size:12px}}
 
+/* Readable type scale and responsive refinements */
+:root{--shadow:0 10px 32px rgba(22,31,55,.06)}
+html{font-size:16px;scroll-behavior:smooth}
+body{min-width:320px;font-size:15px;line-height:1.5}
+.site-header{gap:30px}
+.header-search input,.top-navigation a,.user-control,.login-link,.button,.select-button,.side-menu a,.text-link{font-size:13px}
+.header-search{width:270px}
+.wordmark{font-size:21px}
+.user-control .avatar{width:36px;height:36px}
+.mini-profile-body strong{font-size:14px}
+.mini-profile-body span,.side-footer{font-size:12px}
+.side-label,.side-count{font-size:11px}
+.side-menu a{height:44px}
+.welcome-row h1,.page-intro h1{font-size:30px;line-height:1.2;letter-spacing:-1px}
+.overline{font-size:11px;letter-spacing:1.35px}
+.muted,.section-heading .muted,.feed-head .muted{font-size:14px;line-height:1.5}
+.button{padding:11px 15px}
+.composer-input{font-size:14px;height:44px}
+.composer-tools>button:not(.button){font-size:13px}
+.section-heading h2,.feed-head h2,.page-section h2{font-size:17px}
+.story{font-size:12px;flex-basis:76px}
+.story-art{width:68px;height:68px}
+.post{padding:19px 20px}
+.post-user strong{font-size:14px}
+.post-user small,.post-meta{font-size:12px}
+.post-text{font-size:15px;line-height:1.7}
+.post-actions button{font-size:13px}
+.right-title h3{font-size:16px}
+.right-title a,.right-title button,.right-subtitle,.suggested-info small,.event-info small,.right-prompt button{font-size:12px}
+.suggested-info strong,.event-info strong{font-size:13px}
+.page-intro{margin-bottom:24px}
+.page-intro .muted{margin-top:8px}
+.friend-request-row,.friend-list-row,.person-card,.notification-row,.conversation-text strong{font-size:14px}
+.friend-request-row small,.friend-list-row small,.person-content small,.notification-row small,.conversation-text small,.conversation time{font-size:12px}
+.chat-room-head strong{font-size:14px}
+.chat-room-head small,.privacy-hint,.message small{font-size:12px}
+.message{font-size:14px;line-height:1.55}
+.message-composer input,.inbox-search input{font-size:14px}
+.settings-menu a,.form-label,.form-label input,.form-label textarea{font-size:14px}
+.form-label small,.profile-url,.switch-row small,.search-eligibility small,.pending-pill{font-size:12px;line-height:1.5}
+.switch-row strong,.search-eligibility strong{font-size:13px}
+.membership-preview h3{font-size:18px}
+.membership-preview p{font-size:13px}
+.plan-tag{font-size:11px}
+.profile-summary-text h1{font-size:24px}
+.profile-summary-text .overline{font-size:10px}
+.profile-summary-text .muted,.profile-bio{font-size:14px}
+.profile-tabs a{font-size:13px}
+.auth-modal h2{font-size:23px}
+.auth-modal>p,.auth-modal label,.auth-modal input,.auth-switch{font-size:14px}
+.auth-modal .overline{font-size:11px}
+.toast{font-size:13px}
+@media(min-width:761px) and (max-width:1180px){
+  .site-header{padding:0 28px;gap:20px}
+  .wordmark{min-width:170px}
+  .header-search{width:220px}
+  .top-navigation{gap:16px}
+  .top-navigation a{font-size:12px}
+  .page-layout{grid-template-columns:200px minmax(0,700px);gap:28px;padding:28px}
+}
+@media(max-width:760px){
+  body{font-size:14px}
+  .site-header{height:64px;padding:0 16px;gap:12px}
+  .wordmark{font-size:18px}
+  .header-search{height:38px;min-width:0}
+  .header-search input{font-size:13px}
+  .header-actions{gap:7px}
+  .page-layout{padding:22px 16px 32px}
+  .welcome-row h1,.page-intro h1{font-size:25px}
+  .welcome-row .button{font-size:12px;padding:10px 12px}
+  .muted,.section-heading .muted,.feed-head .muted{font-size:13px}
+  .story{font-size:11px;flex-basis:68px}
+  .story-art{width:60px;height:60px}
+  .post{padding:16px}
+  .post-text{font-size:14px}
+  .post-user strong{font-size:13px}
+  .post-user small,.post-meta{font-size:11px}
+  .composer-tools>button:not(.button){font-size:11px}
+  .composer-tools .button{font-size:11px}
+  .mobile-nav a small{font-size:10px}
+  .settings-menu a{font-size:12px}
+  .profile-summary-text h1{font-size:19px}
+  .profile-summary-text .muted,.profile-bio{font-size:12px}
+  .profile-summary .button{font-size:11px}
+  .conversation-text strong{font-size:11px}
+  .conversation-text small,.conversation time{font-size:10px}
+  .message{font-size:12px}
+  .privacy-hint,.message small{font-size:10px}
+}
+@media(max-width:460px){
+  .page-layout{padding:18px 12px 30px}
+  .welcome-row h1,.page-intro h1{font-size:23px}
+  .welcome-row .button{font-size:11px}
+  .post{padding:14px}
+  .composer-tools{gap:8px}
+  .composer-tools>button:not(.button),.composer-tools .button{font-size:10px}
+  .people-grid{gap:10px}
+  .settings-panel{padding:14px}
+  .notification-tabs button{font-size:11px}
+  .profile-summary .avatar{width:56px;height:56px}
+  .profile-summary-text h1{font-size:17px}
+}
+
