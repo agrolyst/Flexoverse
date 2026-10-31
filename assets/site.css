@@ -1023,3 +1023,21 @@ html[data-theme="dark"] .profile-completion-card .auth-page-form>label>textarea{
   .text-button svg{width:13px;height:13px}
 }
 
+/* Keep the shared shell inside the real mobile viewport at normal zoom. */
+@media(max-width:760px){
+  html,body{width:100%;min-width:0;max-width:100%;overflow-x:clip}
+  #site-header,.site-header,.page-layout,.main-column{min-width:0;max-width:100%}
+  .site-header{width:100%;gap:clamp(7px,2.6vw,12px);padding-inline:clamp(10px,3.5vw,14px)}
+  .wordmark{flex:0 1 auto;min-width:0;gap:7px;white-space:nowrap}
+  .header-search{flex:1 1 0;width:auto;min-width:0;max-width:none}
+  .header-search input{width:100%;min-width:0}
+  .header-actions{flex:0 0 auto;min-width:0;gap:4px}
+  .user-control{flex:0 0 auto;min-width:0}
+  .page-layout{width:100%;margin:0;padding-right:14px;padding-left:14px}
+  .main-column{width:100%;margin-right:auto;margin-left:auto}
+  #mobile-nav.mobile-nav{width:100%;max-width:100%;box-sizing:border-box}
+}
+@media(max-width:390px){
+  .wordmark>span:not(.logo-mark){display:none}
+}
+
