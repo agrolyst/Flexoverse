@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f6fa">
+  <meta name="description" content="Finish setting up your Flexoverse profile. Add an optional private address or skip for now.">
+  <title>Complete your profile · Flexoverse</title>
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="standalone-auth-page" data-page="complete-profile">
+  <div id="site-header"></div>
+  <div class="page-layout">
+    <aside id="left-sidebar"></aside>
+    <main class="main-column auth-page">
+      <section class="auth-page-card card profile-completion-card">
+        <div id="profile-completion-guest" hidden>
+          <p class="overline">PROFILE SETUP</p>
+          <h1>Sign in to continue</h1>
+          <p class="muted">Sign in to finish your profile, or return to the homepage.</p>
+          <a class="button button-primary" href="/login/?next=%2Fcomplete-profile%2F">Sign in</a>
+        </div>
+        <div id="profile-completion-content">
+          <p class="overline">ONE LAST STEP</p>
+          <h1>Complete your profile</h1>
+          <p class="muted">Add a few details so friends can recognize you. You can skip this and finish later.</p>
+          <form id="complete-profile-form" class="auth-page-form">
+            <label>Your name<input id="completion-name" name="full_name" type="text" required autocomplete="name" maxlength="80" placeholder="Your name"></label>
+            <label>Username<div class="input-with-prefix"><span>@</span><input id="completion-username" name="username" type="text" required minlength="3" maxlength="30" pattern="[a-z0-9]+" autocomplete="username" placeholder="yourname"></div><small>3–30 lowercase letters or numbers. Numbers are optional.</small></label>
+            <label>About you <span class="optional-label">Optional</span><textarea name="bio" maxlength="300" rows="3" placeholder="A short introduction"></textarea></label>
+            <label>Address or general location <span class="optional-label">Optional</span><input id="completion-address" name="address" type="text" maxlength="300" autocomplete="street-address" placeholder="City, region, or mailing address"><small>This is private and visible only to your signed-in account.</small></label>
+            <p class="auth-success" id="completion-message" role="status"></p>
+            <div class="profile-completion-actions">
+              <button class="button button-outline" type="button" id="skip-profile-completion">Skip for now</button>
+              <button class="button button-primary" type="submit">Save and continue</button>
+            </div>
+          </form>
+          <p class="auth-page-switch">You can change your profile details later in <a href="/settings/profile/">Settings</a>.</p>
+        </div>
+      </section>
+    </main>
+    <aside id="right-sidebar"></aside>
+  </div>
+  <nav id="mobile-nav"></nav>
+  <div id="modal-root"></div>
+  <div id="toast" role="status"></div>
+  <script type="module" src="../assets/app.js"></script>
+</body>
+</html>
