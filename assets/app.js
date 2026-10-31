@@ -168,7 +168,7 @@ async function loadFriends() {
 
   const {data:suggestions,error:suggestionError}=await supabase.from('profiles').select('id,username,full_name,avatar_url').eq('is_public',true).neq('id',session.user.id).limit(24)
   if(suggestionError){toast(suggestionError.message,'error');suggestionsList.innerHTML=friendEmptyState('Could not find people','Check your connection and try again.','<button class="button button-outline" data-retry-friends>Try again</button>');return}
-  const exclude=new Set([...friendRequests.map(r=>r.from_user_id),...acceptedIds,...sentIds,session.user.id])
+  const exclude=new Set([...friendRequests.map(r=>r.from_user_id),...acceptedIds,session.user.id])
   const filtered=(suggestions||[]).filter(p=>!exclude.has(p.id))
   const requestIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>'
   const sentIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>'
