@@ -19,6 +19,6 @@ The pages are plain HTML and can be served as static files. The shared app scrip
 
 ## Supabase status
 
-The database schema and row-level security policies are in `supabase/setup.sql` and have been applied to project `gkgjfbusdyiohiztwuec`. Sign-in, username availability, public profile reads, post creation, likes, friend requests, and profile settings use Supabase. Reels and notifications are visual previews, and the chat screen still needs its live message queries and Realtime subscription connected.
+The database schema and row-level security policies are in `supabase/setup.sql` and have been applied to project `gkgjfbusdyiohiztwuec`. The home feed loads real public posts from Supabase for signed-in and signed-out visitors, with a real empty state when no posts exist. Post creation, likes, comments, friend requests, public profile reads, and profile settings use Supabase. Reels and notifications are visual previews, and the chat screen still needs its live message queries and Realtime subscription connected.
 
 Usernames are lowercase letters and numbers, 3–30 characters. Numbers are optional and only needed when the preferred username is already taken.
