@@ -1,1 +1,41 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f6fa"><title>Notifications · Flexoverse</title><link rel="stylesheet" href="../assets/site.css"></head><body data-page="notifications"><div id="site-header"></div><div class="page-layout"><aside id="left-sidebar"></aside><main class="main-column"><section class="page-intro"><p class="overline">YOUR ACTIVITY</p><h1>Notifications</h1><p class="muted">The latest from your Flexoverse community.</p></section><section class="card notifications-card"><div class="notification-tabs"><button class="active">All activity</button><button>Friend requests <span class="count-badge">2</span></button><button>Mentions</button></div><div class="notification-list"><article class="notification-item unread-item"><span class="avatar avatar-peach">TA</span><p><strong>Tobi Adeyemi</strong> sent you a friend request.<small>12 minutes ago</small></p><div class="notification-quick"><button class="button button-primary" data-toast="Friend request accepted">Accept</button><button class="icon-more" aria-label="Dismiss">×</button></div><span class="unread-dot"></span></article><article class="notification-item"><span class="avatar avatar-lavender">MC</span><p><strong>Maya Chen</strong> and 4 others liked your post.<small>1 hour ago</small></p><span class="activity-icon">♡</span></article><article class="notification-item"><span class="avatar avatar-mint">AO</span><p><strong>Amara Okafor</strong> commented on your post: “I love this idea!”<small>Yesterday</small></p><span class="activity-icon">▱</span></article><article class="notification-item"><span class="avatar avatar-blue">JL</span><p><strong>Jordan Lee</strong> shared a new reel.<small>Yesterday</small></p><span class="activity-icon">▶</span></article></div></section></main><aside id="right-sidebar"></aside></div><nav id="mobile-nav"></nav><div id="modal-root"></div><div id="toast" role="status"></div><script type="module" src="../assets/app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f6fa">
+  <meta name="description" content="See friend requests and activity from your Flexoverse community.">
+  <title>Notifications · Flexoverse</title>
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body data-page="notifications">
+  <div id="site-header"></div>
+  <div class="page-layout">
+    <aside id="left-sidebar"></aside>
+    <main class="main-column notifications-page">
+      <section class="notifications-heading">
+        <div>
+          <p class="overline">YOUR ACTIVITY</p>
+          <h1>Notifications</h1>
+          <p class="muted">Friend requests and the latest activity around your posts.</p>
+        </div>
+        <button class="text-button" id="notifications-mark-read" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><span>Mark all as read</span></button>
+      </section>
+      <section class="notifications-card card" aria-label="Your notifications">
+        <nav class="notification-tabs" role="tablist" aria-label="Filter notifications">
+          <button class="active" id="notification-tab-all" type="button" role="tab" aria-selected="true" data-notification-filter="all">All activity</button>
+          <button id="notification-tab-unread" type="button" role="tab" aria-selected="false" data-notification-filter="unread">Unread <span class="count-badge" id="notification-unread-count">0</span></button>
+          <button id="notification-tab-friends" type="button" role="tab" aria-selected="false" data-notification-filter="friend_request">Friend requests <span class="count-badge" id="notification-request-count">0</span></button>
+        </nav>
+        <div class="notification-list" id="notifications-list" aria-live="polite"><div class="notification-loading"><span class="friends-loading-dot"></span>Loading your activity</div></div>
+      </section>
+      <p class="notifications-footnote">You can manage what appears here in your account settings.</p>
+    </main>
+    <aside id="right-sidebar"></aside>
+  </div>
+  <nav id="mobile-nav"></nav>
+  <div id="modal-root"></div>
+  <div id="toast" role="status"></div>
+  <script type="module" src="../assets/app.js"></script>
+</body>
+</html>
