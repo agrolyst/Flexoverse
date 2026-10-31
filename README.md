@@ -6,6 +6,8 @@ Flexoverse is a multi-page static social app. Home, Friends, Reels, Chats, Notif
 
 - `/` — Home feed and post composer
 - `/create/` — dedicated page for writing and sharing a post
+- `/login/` — standalone sign-in page
+- `/signup/` — standalone account creation page
 - `/friends/` — requests, suggestions, and friends
 - `/reels/` — full-height short-video preview
 - `/chats/` — inbox and conversation layout
