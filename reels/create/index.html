@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f6fa">
+  <meta name="description" content="Share a short video with your Flexoverse community.">
+  <title>Create a reel · Flexoverse</title>
+  <link rel="stylesheet" href="../../assets/site.css">
+</head>
+<body data-page="reel-create">
+  <div id="site-header"></div>
+  <div class="page-layout">
+    <aside id="left-sidebar"></aside>
+    <main class="main-column reel-create-page">
+      <a class="reel-back-link" href="/reels/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12"/></svg><span>Back to reels</span></a>
+      <section class="reel-create-heading">
+        <p class="overline">SHARE A MOMENT</p>
+        <h1>Create a reel</h1>
+        <p class="muted">Choose a short video and add a caption for your community.</p>
+      </section>
+      <form id="reel-form" class="reel-create-card card">
+        <label class="reel-upload-zone" for="reel-video-file" id="reel-upload-zone">
+          <video id="reel-video-preview" class="reel-upload-preview" playsinline controls hidden></video>
+          <span class="reel-upload-prompt" id="reel-upload-prompt"><span class="reel-upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9 5 3-5 3z"/><path d="M12 2v4m-2-2h4"/></svg></span><strong>Choose a video</strong><small>MP4, WebM or MOV · up to 50 MB</small></span>
+          <input id="reel-video-file" name="video" type="file" accept="video/mp4,video/webm,video/quicktime" required aria-describedby="reel-video-help">
+        </label>
+        <p class="reel-field-help" id="reel-video-help">For the best viewing experience, use a vertical video.</p>
+        <label class="reel-caption-label" for="reel-caption">Caption <span>Optional</span></label>
+        <textarea id="reel-caption" name="caption" maxlength="500" placeholder="Add a few words about this moment…"></textarea>
+        <div class="reel-caption-meta"><span>Keep it kind and community-friendly.</span><span id="reel-caption-count">0 / 500</span></div>
+        <div class="reel-upload-progress" id="reel-upload-progress" hidden><div class="reel-progress-track"><span id="reel-progress-bar"></span></div><small id="reel-progress-label">Preparing upload…</small></div>
+        <div class="reel-create-actions"><a class="button button-outline" href="/reels/">Cancel</a><button class="button button-primary" id="reel-submit" type="submit" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><span>Share reel</span></button></div>
+      </form>
+      <p class="reel-create-note">Your reel will be available to the public community. Make sure you have permission to share everything in your video.</p>
+    </main>
+    <aside id="right-sidebar"></aside>
+  </div>
+  <nav id="mobile-nav"></nav>
+  <div id="modal-root"></div>
+  <div id="toast" role="status"></div>
+  <script type="module" src="../../assets/app.js"></script>
+</body>
+</html>
