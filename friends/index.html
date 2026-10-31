@@ -1,1 +1,84 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f6fa"><title>Friends · Flexoverse</title><link rel="stylesheet" href="../assets/site.css"></head><body data-page="friends"><div id="site-header"></div><div class="page-layout"><aside id="left-sidebar"></aside><main class="main-column"><section class="page-intro"><p class="overline">YOUR PEOPLE</p><h1>Friends</h1><p class="muted">Make your circle a little bigger.</p></section><section class="card page-section"><div class="section-heading"><div><h2>Friend requests <span class="count-badge" id="request-count">0</span></h2><p class="muted">People who would like to connect</p></div><a class="text-link" href="#suggestions">Discover people →</a></div><div id="requests-list" class="request-list"><div class="empty-inline">Your new friend requests will appear here.</div></div></section><section class="page-section" id="suggestions"><div class="section-heading"><div><h2>People you may know</h2><p class="muted">Good people to add to your circle</p></div><button class="icon-more" aria-label="More">···</button></div><div class="people-grid" id="suggestions-list"><article class="person-card card"><div class="person-cover cover-mint"></div><div class="person-content"><div class="avatar avatar-mint person-avatar">NW</div><strong>Nia Williams</strong><small>@niawilliams · 2 mutual friends</small><button class="button button-outline" data-friend-request>Add friend</button></div></article><article class="person-card card"><div class="person-cover cover-peach"></div><div class="person-content"><div class="avatar avatar-peach person-avatar">EB</div><strong>Ethan Brooks</strong><small>@ethanbrooks · 3 mutual friends</small><button class="button button-outline" data-friend-request>Add friend</button></div></article><article class="person-card card"><div class="person-cover cover-violet"></div><div class="person-content"><div class="avatar avatar-lavender person-avatar">SM</div><strong>Sofia Martinez</strong><small>@sofiamartinez · 1 mutual friend</small><button class="button button-outline" data-friend-request>Add friend</button></div></article></div></section><section class="page-section"><div class="section-heading"><div><h2>Your friends</h2><p class="muted">Your accepted connections</p></div><span class="count-badge" id="friends-count">0</span></div><div class="card friend-list" id="friends-list"><div class="empty-inline">Your friends will appear here once you connect.</div></div></section></main><aside id="right-sidebar"></aside></div><nav id="mobile-nav"></nav><div id="modal-root"></div><div id="toast" role="status"></div><script type="module" src="../assets/app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f6fa">
+  <meta name="description" content="Find people, manage friend requests, and keep up with your Flexoverse circle.">
+  <title>Friends · Flexoverse</title>
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body data-page="friends">
+  <div id="site-header"></div>
+  <div class="page-layout">
+    <aside id="left-sidebar"></aside>
+    <main class="main-column friends-page">
+      <section class="friends-hero">
+        <div class="friends-hero-copy">
+          <span class="friends-hero-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.8 19a5.2 5.2 0 0 1 10.4 0v1H2.8zM14 15.3a4.4 4.4 0 0 1 7.2 3.4v1h-6"/></svg></span>
+          <div>
+            <p class="overline">YOUR COMMUNITY</p>
+            <h1>Your friends</h1>
+            <p class="muted">Find your people and keep your circle close.</p>
+          </div>
+        </div>
+        <a class="button button-primary friends-hero-cta" href="#discover"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.3 4.3"/></svg><span>Discover people</span></a>
+      </section>
+
+      <section class="friends-overview" aria-label="Friend overview">
+        <a class="friends-stat-card" href="#connections">
+          <span class="friends-stat-icon friends-stat-icon-violet" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.8 19a5.2 5.2 0 0 1 10.4 0v1H2.8zM14 15.3a4.4 4.4 0 0 1 7.2 3.4v1h-6"/></svg></span>
+          <span class="friends-stat-copy"><strong id="friends-count">0</strong><small>Friends in your circle</small></span>
+          <svg class="friends-stat-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <a class="friends-stat-card" href="#requests">
+          <span class="friends-stat-icon friends-stat-icon-peach" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M19 8v6M16 11h6"/></svg></span>
+          <span class="friends-stat-copy"><strong id="request-count">0</strong><small>Requests to review</small></span>
+          <svg class="friends-stat-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </section>
+
+      <nav class="friends-tabs" aria-label="Friends page sections">
+        <a href="#requests">Requests</a>
+        <a href="#discover">Discover</a>
+        <a href="#connections">Your friends</a>
+      </nav>
+
+      <section class="friends-panel card" id="requests" aria-labelledby="requests-title">
+        <div class="friends-section-heading">
+          <div><p class="friends-eyebrow">INCOMING</p><h2 id="requests-title">Friend requests</h2><p>Review people who want to connect with you.</p></div>
+          <span class="friends-count-pill" id="request-section-count">0</span>
+        </div>
+        <div id="requests-list" class="friends-request-list" aria-live="polite">
+          <div class="friends-loading" role="status"><span class="friends-loading-dot"></span>Loading friend requests</div>
+        </div>
+      </section>
+
+      <section class="friends-discover" id="discover" aria-labelledby="discover-title">
+        <div class="friends-section-heading friends-section-heading-outside">
+          <div><p class="friends-eyebrow">GROW YOUR CIRCLE</p><h2 id="discover-title">People you may know</h2><p>Connect with people in the Flexoverse community.</p></div>
+          <label class="friends-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.3 4.3"/></svg><input id="discover-search" data-friends-filter="#suggestions-list" data-filter-items=".friend-person-card" placeholder="Search people" aria-label="Search people to add"></label>
+        </div>
+        <div class="friends-grid" id="suggestions-list" aria-live="polite">
+          <div class="friends-loading friends-loading-card" role="status"><span class="friends-loading-dot"></span>Finding people for you</div>
+        </div>
+      </section>
+
+      <section class="friends-panel card friends-connections" id="connections" aria-labelledby="connections-title">
+        <div class="friends-section-heading">
+          <div><p class="friends-eyebrow">YOUR CIRCLE</p><h2 id="connections-title">Your friends</h2><p>Your accepted connections, all in one place.</p></div>
+          <label class="friends-search friends-search-compact"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.3 4.3"/></svg><input id="friends-search" data-friends-filter="#friends-list" data-filter-items=".friend-contact" placeholder="Find a friend" aria-label="Search your friends"></label>
+        </div>
+        <div class="friends-list" id="friends-list" aria-live="polite">
+          <div class="friends-loading" role="status"><span class="friends-loading-dot"></span>Loading your friends</div>
+        </div>
+      </section>
+    </main>
+    <aside id="right-sidebar"></aside>
+  </div>
+  <nav id="mobile-nav"></nav>
+  <div id="modal-root"></div>
+  <div id="toast" role="status"></div>
+  <script type="module" src="../assets/app.js"></script>
+</body>
+</html>
