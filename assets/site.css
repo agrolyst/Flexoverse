@@ -199,6 +199,8 @@ body{min-width:320px;font-size:15px;line-height:1.5}
 @media(prefers-reduced-motion:reduce){.app-loader-symbol:before,.app-loader-symbol:after{animation-duration:4s}.app-loader{transition:none}}
 
 .feed-sort-label{padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;color:#697487;font-size:12px;font-weight:600}
+.button-icon{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.composer-hint{color:#7d8797;font-size:13px}
 .feed-state{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:24px;color:var(--muted);font-size:14px}
 .feed-state strong{color:var(--ink);font:700 16px Manrope,sans-serif}
 .empty-feed{display:flex;flex-direction:column;align-items:center;gap:10px;padding:42px 24px;text-align:center}
@@ -226,4 +228,16 @@ body{min-width:320px;font-size:15px;line-height:1.5}
   .empty-feed{padding:34px 18px}
   .community-rail-card h3{font-size:16px}
   .comment-form input{font-size:12px}
+  #toast{bottom:calc(78px + env(safe-area-inset-bottom))}
 }
+#toast{position:fixed;z-index:1200;left:50%;bottom:24px;display:flex;align-items:center;gap:12px;width:min(440px,calc(100vw - 32px));padding:13px 15px;border:1px solid #e3e7ee;border-radius:14px;background:#fff;color:#374255;box-shadow:0 16px 42px rgba(20,28,45,.16);opacity:0;visibility:hidden;pointer-events:none;transform:translate(-50%,14px);transition:opacity .2s ease,transform .2s ease,visibility .2s ease}
+#toast.show{opacity:1;visibility:visible;pointer-events:auto;transform:translate(-50%,0)}
+#toast[data-type="success"]{border-color:#cdebdc;background:#f4fcf7;color:#246b4c}
+#toast[data-type="error"]{border-color:#f2d0cc;background:#fff7f6;color:#a13f36}
+#toast[data-type="info"]{border-color:#dce3f2;background:#f7f9ff;color:#465474}
+.toast-icon{display:grid;width:34px;height:34px;flex:none;place-items:center;border-radius:11px;background:#e9f7ef;color:#2d8a60}
+#toast[data-type="error"] .toast-icon{background:#fde9e7;color:#b34a40}
+#toast[data-type="info"] .toast-icon{background:#eaf0ff;color:#5968b4}
+.toast-icon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.toast-message{font-size:13px;font-weight:600;line-height:1.5;overflow-wrap:anywhere}
+@media(prefers-reduced-motion:reduce){#toast{transition:none}}
