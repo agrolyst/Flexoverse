@@ -12,6 +12,13 @@ let toastTimer = null
 let reelItems = []
 let reelViewerIndex = -1
 let reelPreviewObserver = null
+let chatItems = []
+let activeConversationId = null
+let activeChatMessages = []
+let chatRealtimeChannel = null
+let notificationItems = []
+let notificationFilter = 'all'
+let notificationRealtimeChannel = null
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
 const initials = s => String(s || 'You').split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map(x => x[0]).join('').toUpperCase()
@@ -54,7 +61,7 @@ function mountShell() {
     settings:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.8-.7a8 8 0 0 1-1.7 1l-.3 1.9h-2.8l-.3-1.9a8 8 0 0 1-1.7-1l-1.8.7-1.4-2.4 1.4-1.1a7 7 0 0 1 0-2l-1.4-1.1 1.4-2.4 1.8.7a8 8 0 0 1 1.7-1l.3-1.9h2.8l.3 1.9a8 8 0 0 1 1.7 1l1.8-.7 1.4 2.4-1.4 1.1a7 7 0 0 1 0 2Z" transform="translate(-1 -1)"/></svg>'
   }
   const shellLinks = navItems.map(([key,label,url]) => `<a class="${activePage(key)?'active':''}" aria-current="${activePage(key)?'page':'false'}" href="${url}"><span class="side-glyph">${sidebarIcons[key]}</span><span class="side-link-label">${label}</span>${key==='friends'?'<span class="side-count" id="friend-count">0</span>':''}</a>`).join('')
-  document.querySelector('#site-header').innerHTML = `<header class="site-header"><a class="wordmark" href="/" aria-label="Flexoverse home"><span class="logo-mark">${brandIcon}</span><span>Flexoverse</span></a><label class="header-search"><span class="search-icon">${searchIcon}</span><input id="global-search" placeholder="Search people" aria-label="Search people"><kbd class="search-shortcut">/</kbd></label><nav class="top-navigation" aria-label="Main navigation">${navItems.slice(0,4).map(([key,label,url])=>`<a class="${activePage(key)?'active':''}" aria-current="${activePage(key)?'page':'false'}" aria-label="${label}" href="${url}"><span class="nav-glyph">${sidebarIcons[key]}</span><span class="nav-label">${label}</span></a>`).join('')}</nav><div class="header-actions"><a class="header-icon" href="/notifications/" aria-label="Notifications">${sidebarIcons.notifications}</a>${session?`<a class="user-control" href="${esc(pageUrl())}">${avatar(initials(myName()),'blue',profile?.avatar_url)}<span>${esc(myName())}</span></a><button class="header-icon" id="signout" aria-label="Sign out">${signoutIcon}</button>`:'<a class="login-link" href="/login/">Sign in</a>'}</div></header>`
+  document.querySelector('#site-header').innerHTML = `<header class="site-header"><a class="wordmark" href="/" aria-label="Flexoverse home"><span class="logo-mark">${brandIcon}</span><span>Flexoverse</span></a><label class="header-search"><span class="search-icon">${searchIcon}</span><input id="global-search" placeholder="Search people" aria-label="Search people"><kbd class="search-shortcut">/</kbd></label><nav class="top-navigation" aria-label="Main navigation">${navItems.slice(0,4).map(([key,label,url])=>`<a class="${activePage(key)?'active':''}" aria-current="${activePage(key)?'page':'false'}" aria-label="${label}" href="${url}"><span class="nav-glyph">${sidebarIcons[key]}</span><span class="nav-label">${label}</span></a>`).join('')}</nav><div class="header-actions"><a class="header-icon" id="notifications-link" href="/notifications/" aria-label="Notifications">${sidebarIcons.notifications}<span class="notification-count" id="header-notification-count" hidden>0</span></a>${session?`<a class="user-control" href="${esc(pageUrl())}">${avatar(initials(myName()),'blue',profile?.avatar_url)}<span>${esc(myName())}</span></a><button class="header-icon" id="signout" aria-label="Sign out">${signoutIcon}</button>`:'<a class="login-link" href="/login/">Sign in</a>'}</div></header>`
   const sidebarName=session?myName():'Your space'
   const sidebarHandle=session?'@'+myUsername():'Sign in to set up your profile'
   const sidebarAvatar=avatar(session?initials(myName()):'FX','blue',profile?.avatar_url)
@@ -107,6 +114,7 @@ async function loadHome() {
     if (!likesError) liked = new Set((myLikes || []).map(row=>String(row.post_id)))
   }
   feed.innerHTML = posts.length ? posts.map(postCard).join('') : '<section class="empty-feed card"><span class="empty-feed-icon">✦</span><h3>No posts yet</h3><p>There are no public posts in the community yet. Share the first one.</p><a class="button button-primary" href="/create/">Create a post</a></section>'
+  if(location.hash.startsWith('#post-'))requestAnimationFrame(()=>document.getElementById(location.hash.slice(1))?.scrollIntoView({behavior:'smooth',block:'start'}))
 }
 
 async function loadComments(postId, article) {
@@ -361,6 +369,239 @@ async function sendFriendRequest(id) {
   return true
 }
 
+function chatTime(value) {
+  if(!value)return ''
+  const date=new Date(value)
+  const now=new Date()
+  if(date.toDateString()===now.toDateString())return new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'}).format(date)
+  const yesterday=new Date(now);yesterday.setDate(now.getDate()-1)
+  if(date.toDateString()===yesterday.toDateString())return 'Yesterday'
+  if((now-date)<6*86400000)return new Intl.DateTimeFormat(undefined,{weekday:'short'}).format(date)
+  return new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric'}).format(date)
+}
+
+function chatDay(value) {
+  if(!value)return ''
+  const date=new Date(value),now=new Date(),yesterday=new Date(now)
+  if(date.toDateString()===now.toDateString())return 'TODAY'
+  yesterday.setDate(now.getDate()-1)
+  if(date.toDateString()===yesterday.toDateString())return 'YESTERDAY'
+  return new Intl.DateTimeFormat(undefined,{weekday:'long',month:'long',day:'numeric'}).format(date).toUpperCase()
+}
+
+function renderChatList() {
+  const list=document.querySelector('#conversation-list')
+  if(!list)return
+  const search=document.querySelector('#conversation-search')?.value.trim().toLowerCase()||''
+  const visible=chatItems.filter(item=>`${item.peer_name} ${item.peer_username}`.toLowerCase().includes(search))
+  const total=document.querySelector('#chat-total');if(total)total.textContent=String(chatItems.length)
+  if(!visible.length){
+    list.innerHTML=chatItems.length?'<div class="conversation-empty"><strong>No chats found</strong><p>Try searching with another name.</p></div>':'<div class="conversation-empty"><strong>Your inbox is quiet</strong><p>Start a private conversation with one of your friends.</p><button class="button button-soft" type="button" data-chat-new>Start a chat</button></div>'
+    return
+  }
+  list.innerHTML=visible.map(item=>{const active=item.conversation_id===activeConversationId;const unread=item.unread_count>0;const preview=item.last_message?(item.last_sender_id===session?.user?.id?`You: ${item.last_message}`:item.last_message):'Start the conversation';return `<button class="conversation ${active?'active':''} ${unread?'unread-conversation':''}" type="button" data-conversation-id="${esc(item.conversation_id)}" aria-current="${active?'true':'false'}">${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<span class="conversation-text"><strong>${esc(item.peer_name)}</strong><small>${esc(preview)}</small></span><time>${esc(chatTime(item.last_message_at||item.created_at))}</time>${unread?'<i class="unread" aria-label="Unread messages"></i>':''}</button>`}).join('')
+}
+
+function renderChatWelcome(message='Choose a chat to catch up or start a new conversation with a friend.') {
+  const room=document.querySelector('#chat-room')
+  if(!room)return
+  document.querySelector('#chat-layout')?.classList.remove('has-active-conversation')
+  room.innerHTML=`<div class="chat-welcome"><span class="chat-welcome-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.7 8.7 0 0 1-4-.95L3 21l1.95-5.5A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg></span><strong>${session?'Your conversations, all in one place':'Sign in to see your messages'}</strong><p>${esc(message)}</p>${session?'<button class="button button-soft" type="button" data-chat-new>Start a conversation</button>':'<a class="button button-primary" href="/login/">Sign in</a>'}</div>`
+}
+
+function renderChatRoom(item,messages=activeChatMessages) {
+  const room=document.querySelector('#chat-room')
+  if(!room||!item)return
+  document.querySelector('#chat-layout')?.classList.add('has-active-conversation')
+  const groups=[]
+  let priorDay=''
+  for(const message of messages){const day=chatDay(message.created_at);if(day!==priorDay){groups.push(`<p class="chat-day-divider">${esc(day)}</p>`);priorDay=day}const own=message.sender_id===session?.user?.id;groups.push(`<div class="message ${own?'sent':'received'}" data-message-id="${esc(message.id)}">${esc(message.content)}<small>${esc(new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'}).format(new Date(message.created_at)))}</small></div>`)}
+  room.innerHTML=`<header class="chat-room-head"><button class="chat-room-back" type="button" data-chat-back aria-label="Back to conversations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12"/></svg></button>${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<div class="chat-room-person"><strong>${esc(item.peer_name)}</strong><small><span class="status-dot"></span> Your friend</small></div><a class="chat-room-profile" href="/${encodeURIComponent(item.peer_username||'') }" aria-label="View ${esc(item.peer_name)}’s profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a></header><div class="chat-history" id="chat-history" role="log" aria-live="polite" aria-label="Conversation with ${esc(item.peer_name)}">${groups.join('')||'<p class="chat-history-empty">Say hello and start the conversation.</p>'}</div><form class="message-composer" id="message-form"><input name="message" maxlength="4000" required autocomplete="off" placeholder="Write a message…" aria-label="Write a message"><button class="send-button" aria-label="Send message" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button></form>`
+  const history=document.querySelector('#chat-history');if(history)history.scrollTop=history.scrollHeight
+}
+
+async function markConversationRead(conversationId) {
+  if(!session||!conversationId)return
+  const readAt=new Date().toISOString()
+  const {error}=await supabase.from('conversation_members').update({last_read_at:readAt}).eq('conversation_id',conversationId).eq('user_id',session.user.id)
+  if(error){console.warn('Could not update message read state:',error.message);return}
+  const item=chatItems.find(chat=>chat.conversation_id===conversationId)
+  if(item){item.last_read_at=readAt;item.unread_count=0}
+  renderChatList()
+}
+
+async function selectConversation(conversationId,updateUrl=true) {
+  const item=chatItems.find(chat=>chat.conversation_id===conversationId)
+  if(!item)return
+  activeConversationId=conversationId
+  activeChatMessages=[]
+  renderChatList()
+  const room=document.querySelector('#chat-room')
+  if(room)room.innerHTML=`<header class="chat-room-head"><button class="chat-room-back" type="button" data-chat-back aria-label="Back to conversations"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6M9 12h12"/></svg></button>${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<div class="chat-room-person"><strong>${esc(item.peer_name)}</strong><small><span class="status-dot"></span> Your friend</small></div></header><div class="chat-history" id="chat-history"><div class="chat-loading"><span class="friends-loading-dot"></span>Loading messages</div></div>`
+  document.querySelector('#chat-layout')?.classList.add('has-active-conversation')
+  if(updateUrl)history.replaceState(null,'',`/chats/?id=${encodeURIComponent(conversationId)}`)
+  const {data,error}=await supabase.from('messages').select('id,conversation_id,sender_id,content,created_at').eq('conversation_id',conversationId).order('created_at',{ascending:false}).limit(100)
+  if(activeConversationId!==conversationId)return
+  if(error){toast('Messages could not load. Try selecting this chat again.','error');renderChatRoom(item,[]);return}
+  activeChatMessages=(data||[]).reverse()
+  renderChatRoom(item)
+  await markConversationRead(conversationId)
+}
+
+function handleChatMessage(message) {
+  const item=chatItems.find(chat=>chat.conversation_id===message.conversation_id)
+  if(!item||item.last_message_id===message.id)return
+  item.last_message=message.content
+  item.last_message_id=message.id
+  item.last_message_at=message.created_at
+  item.last_sender_id=message.sender_id
+  if(message.sender_id!==session?.user?.id&&activeConversationId!==message.conversation_id)item.unread_count=Number(item.unread_count||0)+1
+  renderChatList()
+  if(activeConversationId===message.conversation_id){
+    if(!activeChatMessages.some(row=>row.id===message.id))activeChatMessages.push(message)
+    const history=document.querySelector('#chat-history')
+    const wasNearBottom=history&&history.scrollHeight-history.scrollTop-history.clientHeight<100
+    renderChatRoom(item)
+    if(message.sender_id!==session?.user?.id)markConversationRead(message.conversation_id)
+    else if(wasNearBottom){const updatedHistory=document.querySelector('#chat-history');if(updatedHistory)updatedHistory.scrollTop=updatedHistory.scrollHeight}
+  }
+}
+
+function subscribeToChatInbox() {
+  if(!session)return
+  if(chatRealtimeChannel)supabase.removeChannel(chatRealtimeChannel)
+  chatRealtimeChannel=supabase.channel(`chat-inbox-${session.user.id}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},payload=>handleChatMessage(payload.new)).subscribe()
+}
+
+async function loadChats(preferredConversation='') {
+  const list=document.querySelector('#conversation-list')
+  if(!list)return
+  if(!session){list.innerHTML='<div class="conversation-empty"><strong>Sign in to see your chats</strong><p>Your conversations will be waiting for you here.</p><a class="button button-primary" href="/login/">Sign in</a></div>';renderChatWelcome('Sign in to catch up with friends and continue your conversations.');return}
+  list.innerHTML='<div class="chat-loading"><span class="friends-loading-dot"></span>Loading conversations</div>'
+  const {data,error}=await supabase.rpc('list_my_conversations')
+  if(error){console.error('Could not load conversations:',error);list.innerHTML='<div class="conversation-empty"><strong>Your chats could not load</strong><p>Check your connection and try again.</p><button class="button button-outline" type="button" data-retry-chats>Try again</button></div>';return}
+  chatItems=(data||[]).map(row=>({...row,peer_name:row.peer_name||row.peer_username||'Flexoverse friend',peer_username:row.peer_username||'member',unread_count:Number(row.unread_count||0)}))
+  renderChatList()
+  subscribeToChatInbox()
+  const requested=preferredConversation||new URLSearchParams(location.search).get('id')
+  if(requested&&chatItems.some(item=>item.conversation_id===requested)){await selectConversation(requested,false);return}
+  if(!chatItems.length)renderChatWelcome('Start a private conversation with an accepted friend. Your messages stay in your inbox.');
+  else renderChatWelcome()
+}
+
+async function openNewChatDialog() {
+  if(!session)return openAuth()
+  const root=document.querySelector('#modal-root')
+  if(!root)return
+  root.innerHTML='<div class="modal-backdrop" data-chat-modal-backdrop><section class="chat-new-modal" role="dialog" aria-modal="true" aria-labelledby="chat-modal-title"><header class="chat-new-modal-head"><div><h2 id="chat-modal-title">New message</h2><p>Choose a friend to start a private chat.</p></div><button class="chat-modal-close" type="button" data-close-chat-modal aria-label="Close"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header><div class="chat-friend-list"><div class="chat-loading"><span class="friends-loading-dot"></span>Finding your friends</div></div></section></div>'
+  const friendList=root.querySelector('.chat-friend-list')
+  const {data:requests,error}=await supabase.from('friend_requests').select('from_user_id,to_user_id').eq('status','accepted').or(`from_user_id.eq.${session.user.id},to_user_id.eq.${session.user.id}`)
+  if(error){friendList.innerHTML='<div class="chat-modal-empty"><strong>Friends could not load</strong><p>Try again in a moment.</p></div>';return}
+  const ids=[...new Set((requests||[]).map(row=>row.from_user_id===session.user.id?row.to_user_id:row.from_user_id))]
+  if(!ids.length){friendList.innerHTML='<div class="chat-modal-empty"><strong>Make a connection first</strong><p>You can start a chat after someone accepts your friend request.</p><a class="button button-soft" href="/friends/">Find friends</a></div>';return}
+  const {data:friends,error:friendsError}=await supabase.from('profiles').select('id,username,full_name,avatar_url').in('id',ids).order('full_name')
+  if(friendsError){friendList.innerHTML='<div class="chat-modal-empty"><strong>Friends could not load</strong><p>Try again in a moment.</p></div>';return}
+  friendList.innerHTML=(friends||[]).map(friend=>`<button class="chat-friend-choice" type="button" data-start-chat="${esc(friend.id)}">${avatar(initials(friend.full_name||friend.username),'blue',friend.avatar_url)}<span><strong>${esc(friend.full_name||friend.username)}</strong><small>@${esc(friend.username)}</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>`).join('')||'<div class="chat-modal-empty"><strong>No friends available</strong><p>Try adding a friend before starting a chat.</p></div>'
+}
+
+function notificationIcon(type) {
+  const icons={friend_request:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M19 8v6m-3-3h6"/></svg>',friend_accepted:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>',post_like:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg>',post_comment:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.7 8.7 0 0 1-4-.95L3 21l1.95-5.5A8.5 8.5 0 1 1 21 11.5Z"/></svg>'}
+  return icons[type]||'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>'
+}
+
+function notificationMessage(item) {
+  const actor=item.actor?.full_name||item.actor?.username||'A Flexoverse member'
+  const text={friend_request:'sent you a friend request.',friend_accepted:'accepted your friend request.',post_like:'liked your post.',post_comment:'commented on your post.'}[item.type]||'shared an update with you.'
+  const action={friend_request:'Friend request',friend_accepted:'Friend request accepted',post_like:'Post like',post_comment:'Post comment'}[item.type]||'Activity'
+  return {actor,text,action}
+}
+
+function renderNotifications() {
+  const list=document.querySelector('#notifications-list')
+  if(!list)return
+  const unread=notificationItems.filter(item=>!item.is_read).length
+  const requests=notificationItems.filter(item=>item.type==='friend_request'&&item.pending_request).length
+  const unreadCount=document.querySelector('#notification-unread-count');if(unreadCount)unreadCount.textContent=String(unread)
+  const requestCount=document.querySelector('#notification-request-count');if(requestCount)requestCount.textContent=String(requests)
+  const markButton=document.querySelector('#notifications-mark-read');if(markButton)markButton.disabled=unread===0
+  document.querySelectorAll('[data-notification-filter]').forEach(tab=>{const active=tab.dataset.notificationFilter===notificationFilter;tab.classList.toggle('active',active);tab.setAttribute('aria-selected',String(active))})
+  let visible=notificationItems
+  if(notificationFilter==='unread')visible=visible.filter(item=>!item.is_read)
+  if(notificationFilter==='friend_request')visible=visible.filter(item=>item.type==='friend_request'&&item.pending_request)
+  if(!visible.length){const title=notificationFilter==='unread'?'You’re all caught up':notificationFilter==='friend_request'?'No pending friend requests':'Nothing new yet';const body=notificationFilter==='unread'?'New activity will appear here when something happens.':notificationFilter==='friend_request'?'New friend requests will appear here.':'Friend requests and post activity will show up here.';list.innerHTML=`<div class="notification-empty"><span class="notification-empty-icon">${notificationIcon(notificationFilter==='friend_request'?'friend_request':'friend_accepted')}</span><strong>${title}</strong><p>${body}</p>${session?'<a class="button button-soft" href="/friends/">Explore friends</a>':'<a class="button button-primary" href="/login/">Sign in</a>'}</div>`;return}
+  list.innerHTML=visible.map(item=>{const description=notificationMessage(item),actorUrl=item.actor?.username?`/${encodeURIComponent(item.actor.username)}`:'/friends/';const pending=item.type==='friend_request'&&item.pending_request;const targetUrl=item.type==='post_like'||item.type==='post_comment'?`/#post-${encodeURIComponent(item.target_id||'')}`:item.type==='friend_accepted'?'/chats/':actorUrl;return `<article class="notification-item ${item.is_read?'':'unread-item'}" data-notification-id="${esc(item.id)}">${avatar(initials(description.actor),'blue',item.actor?.avatar_url)}<div class="notification-copy"><span><strong><a href="${esc(actorUrl)}" data-mark-notification="${esc(item.id)}">${esc(description.actor)}</a></strong> ${esc(description.text)}</span>${item.preview?`<span class="notification-preview">“${esc(item.preview)}”</span>`:''}<small>${esc(timeAgo(item.created_at))}</small><span class="notification-kind">${notificationIcon(item.type)}${esc(description.action)}</span></div><div class="notification-actions">${pending?`<button class="button button-primary" type="button" data-accept-notification="${esc(item.target_id)}" data-notification="${esc(item.id)}">Accept</button><button class="notification-dismiss" type="button" data-ignore-notification="${esc(item.target_id)}" data-notification="${esc(item.id)}" aria-label="Ignore friend request"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>`:`<a class="button button-outline" href="${esc(targetUrl)}" data-mark-notification="${esc(item.id)}">${item.type==='post_like'||item.type==='post_comment'?'View post':item.type==='friend_accepted'?'Open chats':'View profile'}</a>`}</div>${item.is_read?'':'<span class="unread-dot" aria-label="Unread"></span>'}</article>`}).join('')
+}
+
+async function loadNotifications() {
+  const list=document.querySelector('#notifications-list')
+  if(!list)return
+  if(!session){notificationItems=[];renderNotifications();return}
+  list.innerHTML='<div class="notification-loading"><span class="friends-loading-dot"></span>Loading your activity</div>'
+  const {data,error}=await supabase.from('notifications').select('id,recipient_id,actor_id,type,target_id,preview,is_read,created_at,actor:profiles!notifications_actor_id_fkey(full_name,username,avatar_url)').eq('recipient_id',session.user.id).order('created_at',{ascending:false}).limit(100)
+  if(error){console.error('Could not load notifications:',error);list.innerHTML='<div class="notification-empty"><span class="notification-empty-icon">'+notificationIcon('friend_accepted')+'</span><strong>Activity could not load</strong><p>Check your connection and try again.</p><button class="button button-outline" type="button" data-retry-notifications>Try again</button></div>';return}
+  notificationItems=(data||[]).map(item=>({...item,actor:Array.isArray(item.actor)?item.actor[0]||{}:item.actor||{},pending_request:false}))
+  const pendingIds=notificationItems.filter(item=>item.type==='friend_request').map(item=>item.target_id).filter(Boolean)
+  if(pendingIds.length){const {data:requests}=await supabase.from('friend_requests').select('id').in('id',pendingIds).eq('status','pending');const pending=new Set((requests||[]).map(row=>row.id));notificationItems.forEach(item=>item.pending_request=pending.has(item.target_id))}
+  renderNotifications()
+}
+
+async function loadNotificationCount() {
+  const badge=document.querySelector('#header-notification-count')
+  if(!badge)return
+  if(!session){badge.hidden=true;return}
+  const {count,error}=await supabase.from('notifications').select('id',{count:'exact',head:true}).eq('recipient_id',session.user.id).eq('is_read',false)
+  if(error){console.warn('Could not load notification count:',error.message);badge.hidden=true;return}
+  badge.textContent=count>99?'99+':String(count||0)
+  badge.hidden=!count
+}
+
+function subscribeToNotificationUpdates() {
+  if(!session)return
+  if(notificationRealtimeChannel)supabase.removeChannel(notificationRealtimeChannel)
+  notificationRealtimeChannel=supabase.channel(`notification-count-${session.user.id}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:`recipient_id=eq.${session.user.id}`},()=>{loadNotificationCount();if(page==='notifications')loadNotifications()}).subscribe()
+}
+
+async function markNotificationRead(notificationId) {
+  const item=notificationItems.find(row=>row.id===notificationId)
+  if(!item||item.is_read||!session)return
+  const {error}=await supabase.from('notifications').update({is_read:true}).eq('id',notificationId).eq('recipient_id',session.user.id)
+  if(error){toast(error.message,'error');return}
+  item.is_read=true
+  renderNotifications()
+  await loadNotificationCount()
+}
+
+function bindChatPageEvents() {
+  document.querySelector('#chat-new-button')?.addEventListener('click',openNewChatDialog)
+  document.querySelector('#conversation-search')?.addEventListener('input',renderChatList)
+  document.querySelector('#conversation-list')?.addEventListener('click',e=>{if(e.target.closest('[data-chat-new]'))return openNewChatDialog();if(e.target.closest('[data-retry-chats]'))return loadChats();const row=e.target.closest('[data-conversation-id]');if(row)selectConversation(row.dataset.conversationId)})
+  document.querySelector('#chat-room')?.addEventListener('click',e=>{if(e.target.closest('[data-chat-back]')){document.querySelector('#chat-layout')?.classList.remove('has-active-conversation');history.replaceState(null,'','/chats/')}})
+  document.querySelector('#chat-room')?.addEventListener('submit',async e=>{const form=e.target.closest('#message-form');if(!form)return;e.preventDefault();if(!session)return openAuth();const input=form.querySelector('[name="message"]'),content=String(input.value||'').trim();if(!content||!activeConversationId)return;const submit=form.querySelector('[type="submit"]');submit.disabled=true;const {data,error}=await supabase.from('messages').insert({conversation_id:activeConversationId,sender_id:session.user.id,content}).select('id,conversation_id,sender_id,content,created_at').single();submit.disabled=false;if(error){toast(error.message,'error');return}handleChatMessage(data);await markConversationRead(activeConversationId);document.querySelector('#message-form [name="message"]')?.focus()})
+  document.querySelector('#modal-root')?.addEventListener('click',async e=>{
+    if(e.target.closest('[data-close-chat-modal]')||e.target.matches('[data-chat-modal-backdrop]')){document.querySelector('#modal-root').innerHTML='';return}
+    const choice=e.target.closest('[data-start-chat]');if(!choice)return
+    choice.disabled=true
+    const {data,error}=await supabase.rpc('start_direct_conversation',{target_user_id:choice.dataset.startChat})
+    if(error){choice.disabled=false;toast(error.message,'error');return}
+    document.querySelector('#modal-root').innerHTML=''
+    await loadChats(data)
+  })
+}
+
+function bindNotificationPageEvents() {
+  document.querySelectorAll('[data-notification-filter]').forEach(tab=>tab.addEventListener('click',()=>{notificationFilter=tab.dataset.notificationFilter;renderNotifications()}))
+  document.querySelector('#notifications-mark-read')?.addEventListener('click',async()=>{if(!session)return;const {error}=await supabase.from('notifications').update({is_read:true}).eq('recipient_id',session.user.id).eq('is_read',false);if(error)return toast(error.message,'error');notificationItems.forEach(item=>item.is_read=true);renderNotifications();await loadNotificationCount();toast('All caught up.','success')})
+  document.querySelector('#notifications-list')?.addEventListener('click',async e=>{
+    if(e.target.closest('[data-retry-notifications]'))return loadNotifications()
+    const accept=e.target.closest('[data-accept-notification]')
+    if(accept){accept.disabled=true;const {error}=await supabase.from('friend_requests').update({status:'accepted'}).eq('id',accept.dataset.acceptNotification).eq('to_user_id',session.user.id);if(error){accept.disabled=false;toast(error.message,'error');return}await supabase.from('notifications').update({is_read:true}).eq('id',accept.dataset.notification).eq('recipient_id',session.user.id);toast('Friend request accepted.','success');await loadNotifications();await loadNotificationCount();return}
+    const ignore=e.target.closest('[data-ignore-notification]')
+    if(ignore){ignore.disabled=true;const {error}=await supabase.from('friend_requests').delete().eq('id',ignore.dataset.ignoreNotification).eq('to_user_id',session.user.id);if(error){ignore.disabled=false;toast(error.message,'error');return}await supabase.from('notifications').update({is_read:true}).eq('id',ignore.dataset.notification).eq('recipient_id',session.user.id);toast('Friend request dismissed.');await loadNotifications();await loadNotificationCount();return}
+    const link=e.target.closest('[data-mark-notification]')
+    if(link){e.preventDefault();const target=link.href;await markNotificationRead(link.dataset.markNotification);location.href=target}
+  })
+}
+
 async function initialize() {
   mountShell()
   const {data}=await supabase.auth.getSession();session=data.session
@@ -369,9 +610,12 @@ async function initialize() {
   const signupLink=document.querySelector('#switch-to-signup');if(signupLink)signupLink.href=authPageHref('signup')
   const loginLink=document.querySelector('#switch-to-login');if(loginLink)loginLink.href=authPageHref('login')
   mountShell()
+  if(session){await loadNotificationCount();subscribeToNotificationUpdates()}
   const composerAvatar=document.querySelector('[data-user-avatar]');if(composerAvatar)composerAvatar.outerHTML=avatar(session?initials(myName()):'FX','blue',profile?.avatar_url)
   if(page==='home')await loadHome()
   if(page==='friends')await loadFriends()
+  if(page==='chats')await loadChats()
+  if(page==='notifications')await loadNotifications()
   if(page==='reels')await loadReels()
   if(page==='profile')await loadProfilePage()
   if(page==='reel-create')prepareReelComposer()
@@ -461,7 +705,8 @@ function bindEvents() {
   document.querySelectorAll('[data-profile-tab]').forEach(tab=>tab.addEventListener('click',()=>{const selected=tab.dataset.profileTab;document.querySelectorAll('[data-profile-tab]').forEach(item=>{const active=item===tab;item.classList.toggle('active',active);item.setAttribute('aria-selected',String(active))});document.querySelectorAll('.profile-panel').forEach(panel=>{panel.hidden=panel.id!==`profile-panel-${selected}`})}))
   document.querySelector('#profile-form')?.addEventListener('submit',async e=>{e.preventDefault();if(!session)return openAuth();const f=new FormData(e.currentTarget);const username=String(f.get('username')).trim().toLowerCase();if(!/^[a-z0-9]{3,30}$/.test(username))return toast('Use 3–30 letters or numbers for your username.','error');const {error}=await supabase.from('profiles').update({username,full_name:f.get('full_name'),bio:f.get('bio'),is_public:document.querySelector('#public-profile').checked}).eq('id',session.user.id);if(error)return toast(error.code==='23505'?'That username is taken. Try adding a number.':error.message,'error');await supabase.auth.updateUser({data:{username}});toast('Profile saved.','success');document.querySelector('#profile-link').textContent=`/${username}`})
   document.querySelector('#username-field')?.addEventListener('input',e=>{e.target.value=e.target.value.toLowerCase().replace(/[^a-z0-9]/g,'');document.querySelector('#profile-link').textContent=`/${e.target.value}`})
-  document.querySelector('#message-form')?.addEventListener('submit',e=>{e.preventDefault();toast('Chat messages are being connected next.')})
+  bindChatPageEvents()
+  bindNotificationPageEvents()
   document.querySelector('#global-search')?.addEventListener('keydown',e=>{if(e.key==='Enter'){const value=e.target.value.trim().replace(/^@/,'').toLowerCase();if(value)location.href=`/${encodeURIComponent(value)}`}})
   document.querySelectorAll('[data-toast]').forEach(b=>b.addEventListener('click',()=>toast(b.dataset.toast)))
   document.querySelectorAll('[data-friend-request]').forEach(b=>b.addEventListener('click',()=>session?toast('Find a person in search to send a friend request.'):openAuth()))
