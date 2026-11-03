@@ -1127,3 +1127,45 @@ html[data-theme="dark"] .profile-completion-card .auth-page-form>label>textarea{
 #left-sidebar .side-menu>a .side-glyph{display:grid;flex:0 0 34px;width:34px;height:34px;place-items:center}
 #left-sidebar .side-menu>a .side-link-label{display:block;flex:1 1 auto;min-width:0;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #left-sidebar .side-menu>a .side-count{flex:0 0 auto;margin-left:auto}
+
+
+/* Home feed social actions, comment dialog and mixed reel cards */
+.action-svg{width:17px;height:17px;flex:none;display:block}
+.post-actions button{display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.post-actions button.liked{color:#e35b78}
+.post-meta [data-like-count]{display:inline-flex;align-items:center;gap:4px}
+.post-comment-total{border:0;background:none;color:var(--muted);font-size:11px;padding:0;cursor:pointer}
+.comments-modal-backdrop{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:18px;background:rgba(17,24,39,.56);backdrop-filter:blur(4px)}
+.comments-modal{width:min(100%,560px);height:min( min(760px, calc(100dvh - 36px)), 760px);display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--line);border-radius:20px;background:var(--paper);box-shadow:0 28px 90px rgba(10,18,35,.28)}
+.comments-modal>header{display:flex;align-items:center;justify-content:space-between;padding:20px 22px;border-bottom:1px solid var(--line)}
+.comments-modal>header .overline{margin:0 0 5px}
+.comments-modal>header h2{margin:0;font:750 22px Manrope,sans-serif;color:var(--ink)}
+.comments-modal>header p{margin:4px 0 0;color:var(--muted);font-size:12px}
+.comments-modal>header>button{width:36px;height:36px;border:0;border-radius:50%;background:#f2f3f7;color:#5d6879;font-size:25px}
+.modal-comment-list{flex:1;overflow-y:auto;padding:16px 20px}
+.comment-thread{margin:0 0 14px 0;padding-left:calc(min(var(--reply-depth),3)*18px)}
+.comment-item{display:flex;align-items:flex-start;gap:10px}
+.comment-avatar .avatar{width:34px;height:34px;font-size:11px}
+.comment-body{min-width:0;flex:1;padding:10px 12px;border-radius:12px;background:#f6f7fa}
+.comment-body>strong{font-size:12px;color:var(--ink)}
+.comment-body>p{margin:5px 0;color:#3f4b5d;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.comment-meta{display:flex;align-items:center;gap:12px}
+.comment-meta small{color:var(--muted);font-size:10px}
+.comment-meta button{border:0;background:none;padding:0;color:var(--brand);font-size:11px;font-weight:700}
+.reply-form{display:flex;gap:7px;margin-top:9px}
+.reply-form input,.modal-comment-form input{flex:1;min-width:0;border:1px solid var(--line);border-radius:999px;padding:10px 13px;background:var(--paper);color:var(--ink);font-size:12px;outline-color:var(--brand)}
+.reply-form button{border:0;border-radius:999px;padding:0 13px;background:var(--brand);color:#fff;font-size:11px;font-weight:700}
+.modal-comment-form{display:flex;align-items:center;gap:10px;padding:14px 18px;border-top:1px solid var(--line)}
+.modal-comment-form button{display:grid;place-items:center;width:40px;height:40px;flex:none;border:0;border-radius:50%;background:var(--brand);color:#fff}
+.modal-comment-form svg{width:19px;height:19px}
+.home-reel-card{display:grid;grid-template-columns:116px minmax(0,1fr);gap:14px;overflow:hidden;padding:10px;margin-bottom:14px}
+.home-reel-video{position:relative;height:146px;overflow:hidden;border-radius:10px;background:#161b29}
+.home-reel-video video{width:100%;height:100%;object-fit:cover}
+.home-reel-video>button{position:absolute;inset:0;display:grid;place-items:center;border:0;background:rgba(0,0,0,.12);color:white}
+.home-reel-video>button svg{width:40px;height:40px;padding:10px;border-radius:50%;background:#ffffff35;fill:currentColor}
+.home-reel-copy{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:5px;min-width:0}
+.reel-feed-label{color:var(--brand);font-size:9px;font-weight:800;letter-spacing:1.2px}
+.home-reel-copy strong{font-size:13px;color:var(--ink)}
+.home-reel-copy small{font-size:11px;color:var(--muted)}
+.home-reel-copy p{margin:3px 0 0;font-size:12px;line-height:1.5;color:#465165;overflow-wrap:anywhere}
+@media(max-width:520px){.comments-modal-backdrop{padding:0}.comments-modal{width:100%;height:100dvh;max-height:100dvh;border-radius:0}.home-reel-card{grid-template-columns:98px minmax(0,1fr)}.home-reel-video{height:128px}.comment-thread{padding-left:calc(min(var(--reply-depth),2)*12px)}}
