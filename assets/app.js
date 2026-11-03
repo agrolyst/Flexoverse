@@ -1126,7 +1126,7 @@ function bindEvents() {
     if(!postId)return
     const payload={post_id:postId,user_id:session.user.id,content}
     if(form.dataset.replyForm)payload.parent_comment_id=form.dataset.replyForm
-    const submit=form.querySelector('[type="submit]');if(submit)submit.disabled=true
+    const submit=form.querySelector('[type="submit"]');if(submit)submit.disabled=true
     const {error}=await supabase.from('comments').insert(payload)
     if(submit)submit.disabled=false
     if(error){toast(error.message,'error');return}
