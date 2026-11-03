@@ -1087,3 +1087,12 @@ html[data-theme="dark"] .profile-completion-card .auth-page-form>label>textarea{
   .chat-layout .chat-room-head{min-height:54px}
 }
 
+
+/* Unified text and video composer */
+.create-format-label{display:block;margin:14px 0 7px;color:#667183;font-size:12px;font-weight:700}
+.create-format-select{width:100%;padding:11px 12px;border:1px solid #e5e7ed;border-radius:9px;background:#fff;color:var(--ink);font:500 13px 'DM Sans',sans-serif;outline-color:#aaa5f5}
+#text-post-fields textarea,#video-post-fields textarea{width:100%;min-height:125px;margin-top:12px;padding:13px;border:1px solid #e5e7ed;border-radius:10px;outline-color:#aaa5f5;resize:vertical;font:400 13px/1.6 'DM Sans',sans-serif}
+.create-video-upload{margin-top:12px;min-height:210px}
+.create-video-upload input{position:absolute;width:1px;height:1px;opacity:0}
+.create-signin-hint{padding:10px 12px;background:#f5f4ff;border-radius:9px;font-size:12px;color:#5c56c8}
+.create-signin-hint a{font-weight:700;text-decoration:underline}
