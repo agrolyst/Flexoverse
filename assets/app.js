@@ -23,6 +23,8 @@ let callLocalStream = null
 let callRemoteStream = null
 let currentCall = null
 let callLogView = false
+let chatSelectionMode = false
+let selectedChatIds = new Set()
 let pendingIceCandidates = []
 let callHistoryId = null
 let notificationItems = []
@@ -517,7 +519,7 @@ function renderChatList() {
     list.innerHTML=chatItems.length?'<div class="conversation-empty"><strong>No chats found</strong><p>Try searching with another name.</p></div>':'<div class="conversation-empty"><strong>Your inbox is quiet</strong><p>Start a private conversation with one of your friends.</p><button class="button button-soft" type="button" data-chat-new>Start a chat</button></div>'
     return
   }
-  list.innerHTML=visible.map(item=>{const active=item.conversation_id===activeConversationId;const unread=item.unread_count>0;const preview=item.last_message?(item.last_sender_id===session?.user?.id?`You: ${item.last_message}`:item.last_message):'Start the conversation';return `<button class="conversation ${active?'active':''} ${unread?'unread-conversation':''}" type="button" data-conversation-id="${esc(item.conversation_id)}" aria-current="${active?'true':'false'}">${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<span class="conversation-text"><strong>${esc(item.peer_name)}</strong><small>${esc(preview)}</small></span><time>${esc(chatTime(item.last_message_at||item.created_at))}</time>${unread?'<i class="unread" aria-label="Unread messages"></i>':''}</button>`}).join('')
+  list.innerHTML=visible.map(item=>{const active=item.conversation_id===activeConversationId;const unread=item.unread_count>0;const selected=selectedChatIds.has(item.conversation_id);const preview=item.last_message?(item.last_sender_id===session?.user?.id?`You: ${item.last_message}`:item.last_message):'Start the conversation';return `<div class="conversation-row-wrap ${selected?'is-selected':''}"><button class="conversation ${active?'active':''} ${unread?'unread-conversation':''}" type="button" data-conversation-id="${esc(item.conversation_id)}" aria-current="${active?'true':'false'}">${chatSelectionMode?`<span class="chat-select-check ${selected?'checked':''}" aria-hidden="true">${selected?'✓':''}</span>`:''}${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<span class="conversation-text"><strong>${esc(item.peer_name)}</strong><small>${esc(preview)}</small></span><time>${esc(chatTime(item.last_message_at||item.created_at))}</time>${unread?'<i class="unread" aria-label="Unread messages"></i>':''}</button></div>`}).join('')
 }
 
 function renderChatWelcome(message='Choose a chat to catch up or start a new conversation with a friend.') {
@@ -533,7 +535,7 @@ function renderChatRoom(item,messages=activeChatMessages) {
   document.querySelector('#chat-layout')?.classList.add('has-active-conversation')
   const groups=[]
   let priorDay=''
-  for(const message of messages){const day=chatDay(message.created_at);if(day!==priorDay){groups.push(`<p class="chat-day-divider">${esc(day)}</p>`);priorDay=day}const own=message.sender_id===session?.user?.id;groups.push(`<div class="message ${own?'sent':'received'}" data-message-id="${esc(message.id)}">${esc(message.content)}<small>${esc(new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'}).format(new Date(message.created_at)))}</small></div>`)}
+  for(const message of messages){const day=chatDay(message.created_at);if(day!==priorDay){groups.push(`<p class="chat-day-divider">${esc(day)}</p>`);priorDay=day}const own=message.sender_id===session?.user?.id;groups.push(`<div class="message-wrap ${own?'own-message':'other-message'}" data-message-wrap="${esc(message.id)}"><div class="message ${own?'sent':'received'}" data-message-id="${esc(message.id)}">${esc(message.content)}<small>${esc(new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'}).format(new Date(message.created_at)))}${message.edited_at?' · edited':''}</small></div>${own?`<button type="button" class="message-more" data-message-menu="${esc(message.id)}" aria-label="Message options"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>`:''}</div>`)}
   room.innerHTML=`<header class="chat-room-head"><button class="chat-room-back" type="button" data-chat-back aria-label="Back to conversations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12"/></svg></button>${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<div class="chat-room-person"><strong>${esc(item.peer_name)}</strong><small><span class="status-dot"></span> Your friend</small></div><div class="chat-header-menu-wrap"><button class="chat-header-menu-toggle" type="button" data-chat-menu-toggle aria-label="More chat options" aria-expanded="false" title="More options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button><div class="chat-header-menu" data-chat-menu hidden>
 <button type="button" data-chat-menu-action="contact"><svg class="chat-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.5h.01"/></svg>Contact info</button>
 <button type="button" data-chat-menu-action="search"><svg class="chat-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/></svg>Search messages</button>
@@ -835,12 +837,40 @@ async function endCall(notify=true) {
   callPeer?.close();callPeer=null;callLocalStream?.getTracks().forEach(t=>t.stop());callLocalStream=null;callRemoteStream=null;pendingIceCandidates=[];currentCall=null;window.__pendingCallOffer=null;callUi()
 }
 
+
+function renderChatSelectionControls(){
+ const host=document.querySelector('#chat-selection-controls');if(!host)return;
+ host.innerHTML=chatSelectionMode?`<span>${selectedChatIds.size} selected</span><button type="button" data-delete-selected-chats ${selectedChatIds.size?'':'disabled'}>Delete</button><button type="button" data-toggle-chat-selection>Cancel</button>`:`<button type="button" data-toggle-chat-selection>Select</button>`;
+}
+async function deleteSelectedChats(){
+ if(!selectedChatIds.size)return;
+ const ids=[...selectedChatIds];
+ const root=document.querySelector('#modal-root');
+ root.innerHTML=`<div class="modal-backdrop" data-chat-confirm-backdrop><section class="chat-edit-modal" role="dialog" aria-modal="true"><h2>Delete ${ids.length} chat${ids.length===1?'':'s'}?</h2><p>This removes ${ids.length===1?'this chat':'these chats'} from your inbox only. The other participant may still see the conversation.</p><div class="chat-edit-actions"><button type="button" data-cancel-chat-delete>Cancel</button><button type="button" class="danger" data-confirm-chat-delete>Delete</button></div></section></div>`;
+ root.onclick=async e=>{if(e.target.closest('[data-cancel-chat-delete]')||e.target.matches('[data-chat-confirm-backdrop]')){root.innerHTML='';root.onclick=null;return}if(!e.target.closest('[data-confirm-chat-delete]'))return;const btn=e.target.closest('[data-confirm-chat-delete]');btn.disabled=true;const {error}=await supabase.from('conversation_members').delete().eq('user_id',session.user.id).in('conversation_id',ids);if(error){btn.disabled=false;toast(error.message,'error');return}root.innerHTML='';root.onclick=null;chatItems=chatItems.filter(x=>!selectedChatIds.has(x.conversation_id));if(selectedChatIds.has(activeConversationId)){activeConversationId=null;renderChatWelcome('Choose a chat or start a new conversation.');document.querySelector('#chat-layout')?.classList.remove('has-active-conversation')}selectedChatIds.clear();chatSelectionMode=false;renderChatList();renderChatSelectionControls();toast('Chat removed from your inbox.','success')};
+}
+function openMessageEdit(messageId){
+ const message=activeChatMessages.find(m=>m.id===messageId);if(!message||message.sender_id!==session?.user?.id)return;
+ const root=document.querySelector('#modal-root');if(!root)return;
+ root.innerHTML=`<div class="modal-backdrop" data-edit-message-backdrop><form class="chat-edit-modal" data-edit-message-form role="dialog" aria-modal="true"><h2>Edit message</h2><textarea name="content" maxlength="4000" required>${esc(message.content)}</textarea><div class="chat-edit-actions"><button type="button" data-cancel-message-edit>Cancel</button><button type="submit">Save</button></div></form></div>`;
+ root.querySelector('textarea')?.focus();
+}
+async function saveEditedMessage(form){
+ const messageId=form.dataset.messageId||document.querySelector('[data-edit-message-form]')?.dataset.messageId;
+}
+async function updateChatMessage(messageId,content){
+ const {data,error}=await supabase.from('messages').update({content,edited_at:new Date().toISOString()}).eq('id',messageId).eq('sender_id',session.user.id).select('id,conversation_id,sender_id,content,created_at,edited_at').single();
+ if(error){toast(error.message,'error');return}
+ const idx=activeChatMessages.findIndex(m=>m.id===messageId);if(idx>=0)activeChatMessages[idx]=data;
+ const item=chatItems.find(x=>x.conversation_id===activeConversationId);renderChatRoom(item);document.querySelector('#modal-root').innerHTML='';toast('Message edited.','success');
+}
 function bindChatPageEvents() {
   document.querySelector('#chat-new-button')?.addEventListener('click',openNewChatDialog)
   document.querySelector('#conversation-search')?.addEventListener('input',()=>callLogView?loadCallHistory():renderChatList())
   document.querySelector('#call-log-toggle')?.addEventListener('click',()=>showCallHistory(true))
   document.querySelector('#chat-inbox-toggle')?.addEventListener('click',()=>showCallHistory(false))
-  document.querySelector('#conversation-list')?.addEventListener('click',e=>{if(e.target.closest('[data-chat-new]'))return openNewChatDialog();if(e.target.closest('[data-retry-chats]'))return loadChats();if(e.target.closest('[data-retry-call-history]'))return loadCallHistory();const callRow=e.target.closest('[data-call-conversation]');if(callRow){showCallHistory(false);return selectConversation(callRow.dataset.callConversation)}const row=e.target.closest('[data-conversation-id]');if(row)selectConversation(row.dataset.conversationId)})
+  document.querySelector('#chat-inbox-heading')?.addEventListener('click',e=>{if(e.target.closest('[data-toggle-chat-selection]')){chatSelectionMode=!chatSelectionMode;selectedChatIds.clear();renderChatList();return}if(e.target.closest('[data-delete-selected-chats]'))deleteSelectedChats()})
+  document.querySelector('#conversation-list')?.addEventListener('click',e=>{if(e.target.closest('[data-chat-new]'))return openNewChatDialog();if(e.target.closest('[data-retry-chats]'))return loadChats();if(e.target.closest('[data-retry-call-history]'))return loadCallHistory();const callRow=e.target.closest('[data-call-conversation]');if(callRow){showCallHistory(false);return selectConversation(callRow.dataset.callConversation)}const row=e.target.closest('[data-conversation-id]');if(row){if(chatSelectionMode){const id=row.dataset.conversationId;selectedChatIds.has(id)?selectedChatIds.delete(id):selectedChatIds.add(id);renderChatList();return}selectConversation(row.dataset.conversationId)}})
   document.querySelector('#chat-room')?.addEventListener('click',e=>{if(e.target.closest('[data-chat-back]')){document.querySelector('#chat-layout')?.classList.remove('has-active-conversation');history.replaceState(null,'','/chats/')}})
   document.querySelector('#chat-room')?.addEventListener('click',e=>{
     const toggle=e.target.closest('[data-chat-menu-toggle]');
@@ -854,13 +884,21 @@ function bindChatPageEvents() {
     if(action==='contact'){document.querySelector('.chat-room-profile')?.click();return}
     if(action==='close'){document.querySelector('[data-chat-back]')?.click();return}
     if(action==='search'){let box=document.querySelector('[data-chat-message-search]');if(!box){box=document.createElement('input');box.type='search';box.placeholder='Search messages…';box.setAttribute('data-chat-message-search','');box.className='chat-message-search';document.querySelector('#chat-history')?.before(box);box.addEventListener('input',()=>{const q=box.value.trim().toLowerCase();document.querySelectorAll('#chat-history .message').forEach(m=>m.hidden=!!q&&!m.textContent.toLowerCase().includes(q))})}box.focus();return}
-    if(action==='select'){toast('Message selection is not available yet.');return}
+    if(action==='select'){chatSelectionMode=true;renderChatList();toast('Select one or more chats, then choose Delete.');return}
     if(action==='mute'){const b=e.target.closest('[data-chat-menu-action]');b.textContent=b.textContent.includes('Mute')?'✓ Notifications muted':'♩ Mute notifications';toast('Notification preference is shown for this chat.');return}
     if(action==='theme'){document.querySelector('#chat-room')?.classList.toggle('chat-room-soft-theme');return}
     if(action==='favorite'){toast('Favorites are coming soon.');return}
     if(action==='export'){const item=chatItems.find(x=>x.conversation_id===activeConversationId);const lines=activeChatMessages.map(m=>{const who=m.sender_id===session?.user?.id?'You':(item?.peer_name||'Friend');return '['+new Date(m.created_at).toLocaleString()+'] '+who+': '+m.content});const blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='flexoverse-chat.txt';a.click();URL.revokeObjectURL(url);return}
   })
   document.querySelector('#call-root')?.addEventListener('click',e=>{if(e.target.closest('[data-end-call]'))endCall(true);if(e.target.closest('[data-reject-call]')){const p=window.__pendingCallOffer;if(p)callSignal('signal',{kind:'reject',callId:p.callId,to:p.from}).catch(()=>{});endCall(false)}if(e.target.closest('[data-accept-call]'))acceptCall();if(e.target.closest('[data-call-mute]')&&callLocalStream){const track=callLocalStream.getAudioTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-mute]').classList.toggle('is-muted',!track.enabled)}}if(e.target.closest('[data-call-camera]')&&callLocalStream){const track=callLocalStream.getVideoTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-camera]').classList.toggle('is-muted',!track.enabled)}}})
+  document.querySelector('#chat-room')?.addEventListener('click',e=>{
+    const msgMenu=e.target.closest('[data-message-menu]');
+    if(msgMenu){const id=msgMenu.dataset.messageMenu;const msg=activeChatMessages.find(m=>m.id===id);if(!msg)return;const root=document.querySelector('#modal-root');root.innerHTML=`<div class="message-action-backdrop" data-close-message-actions><div class="message-action-sheet" role="menu"><button type="button" data-edit-message="${esc(id)}">Edit message</button><button type="button" data-delete-message="${esc(id)}">Delete message</button></div></div>`;return}
+    const edit=e.target.closest('[data-edit-message]');if(edit){const id=edit.dataset.editMessage;openMessageEdit(id);const form=document.querySelector('[data-edit-message-form]');if(form)form.dataset.messageId=id;return}
+    const del=e.target.closest('[data-delete-message]');if(del){const id=del.dataset.deleteMessage;const root=document.querySelector('#modal-root');root.innerHTML=`<div class="modal-backdrop" data-confirm-message-delete><section class="chat-edit-modal" role="dialog" aria-modal="true"><h2>Delete message?</h2><p>This message will be removed from the conversation.</p><div class="chat-edit-actions"><button type="button" data-cancel-message-delete>Cancel</button><button type="button" class="danger" data-confirm-message-delete-id="${esc(id)}">Delete</button></div></section></div>`;return}
+  })
+  document.querySelector('#modal-root')?.addEventListener('click',e=>{if(e.target.closest('[data-cancel-message-edit]')||e.target.closest('[data-cancel-message-delete]')||e.target.matches('[data-close-message-actions]')){document.querySelector('#modal-root').innerHTML='';return}const del=e.target.closest('[data-confirm-message-delete-id]');if(del){const id=del.dataset.confirmMessageDeleteId;supabase.from('messages').delete().eq('id',id).eq('sender_id',session.user.id).then(({error})=>{if(error){toast(error.message,'error');return}activeChatMessages=activeChatMessages.filter(m=>m.id!==id);renderChatRoom(chatItems.find(x=>x.conversation_id===activeConversationId));document.querySelector('#modal-root').innerHTML='';toast('Message deleted.','success')})}})
+  document.querySelector('#modal-root')?.addEventListener('submit',async e=>{const form=e.target.closest('[data-edit-message-form]');if(!form)return;e.preventDefault();const content=form.querySelector('textarea').value.trim();if(!content)return;const btn=form.querySelector('[type=submit]');btn.disabled=true;await updateChatMessage(form.dataset.messageId,content);btn.disabled=false})
   document.querySelector('#chat-room')?.addEventListener('submit',async e=>{const form=e.target.closest('#message-form');if(!form)return;e.preventDefault();if(!session)return openAuth();const input=form.querySelector('[name="message"]'),content=String(input.value||'').trim();if(!content||!activeConversationId)return;const submit=form.querySelector('[type="submit"]');submit.disabled=true;const {data,error}=await supabase.from('messages').insert({conversation_id:activeConversationId,sender_id:session.user.id,content}).select('id,conversation_id,sender_id,content,created_at').single();submit.disabled=false;if(error){toast(error.message,'error');return}handleChatMessage(data);await markConversationRead(activeConversationId);document.querySelector('#message-form [name="message"]')?.focus()})
   document.querySelector('#modal-root')?.addEventListener('click',async e=>{
     if(e.target.closest('[data-close-chat-modal]')||e.target.matches('[data-chat-modal-backdrop]')){document.querySelector('#modal-root').innerHTML='';return}
