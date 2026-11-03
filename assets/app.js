@@ -76,20 +76,18 @@ function mountShell() {
   document.querySelector('#modal-root').innerHTML = ''
 }
 
+function heartSvg(filled=false){return `<svg class="action-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.7c0 4.2-8.8 10-8.8 10S3.2 12.9 3.2 8.7A4.2 4.2 0 0 1 11 6.4l1 1.1 1-1.1a4.2 4.2 0 0 1 7.8 2.3Z" fill="${filled?'currentColor':'none'}" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`}
+function commentSvg(){return '<svg class="action-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-8 8 8.4 8.4 0 0 1-3.8-.9L4 20l1.4-4.2A8 8 0 1 1 20 11.5Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'}
 function postCard(p) {
   const user = Array.isArray(p.profiles) ? p.profiles[0] || {} : p.profiles || {}
   const name = p.name || user.full_name || 'Flexoverse member'
   const handle = p.username || user.username || 'member'
   const image = p.image || p.image_path || ''
-  const id = String(p.id)
-  const safeId = esc(id)
-  const likeCount = relationCount(p.likes)
-  const commentCount = relationCount(p.comments)
-  const isLiked = liked.has(id)
-  const timestamp = timeAgo(p.created_at)
-  return `<article class="post card" id="post-${safeId}" data-post="${safeId}"><div class="post-top">${avatar(p.initials||initials(name),p.color||'blue',p.avatar_url||user.avatar_url)}<div class="post-user"><a href="/${encodeURIComponent(handle)}"><strong>${esc(name)}</strong></a><small>@${esc(handle)} · ${esc(timestamp)}</small></div><button class="more-button" data-toast="More post options" aria-label="Post options">···</button></div><p class="post-text">${esc(p.content)}</p>${image?`<img class="post-photo" src="${esc(image)}" alt="Post image">`:''}<div class="post-meta"><span data-like-count="${safeId}" data-count="${likeCount}">♡ ${likeCount} ${likeCount===1?'person':'people'}</span><span data-comment-count="${safeId}">${commentCount} ${commentCount===1?'comment':'comments'}</span></div><div class="post-actions"><button data-like="${safeId}" class="${isLiked?'liked':''}" aria-pressed="${isLiked}">${isLiked?'♥':'♡'} <span>${isLiked?'Liked':'Like'}</span></button><button data-comment="${safeId}" aria-expanded="false">▱ <span>Comment</span></button><button data-share>↗ <span>Share</span></button></div><section class="post-comments" data-comments-panel hidden><div class="comment-list" data-comment-list>Open comments to load them.</div>${session?`<form class="comment-form" data-comment-form="${safeId}"><input name="content" maxlength="1000" required placeholder="Write a comment…" aria-label="Write a comment"><button class="button button-primary" type="submit">Send</button></form>`:`<p class="comment-signin"><a href="/login/">Sign in</a> to join the conversation.</p>`}</section></article>`
+  const id = String(p.id), safeId = esc(id)
+  const likeCount = relationCount(p.likes), commentCount = relationCount(p.comments)
+  const isLiked = liked.has(id), timestamp = timeAgo(p.created_at)
+  return `<article class="post card" id="post-${safeId}" data-post="${safeId}"><div class="post-top">${avatar(p.initials||initials(name),p.color||'blue',p.avatar_url||user.avatar_url)}<div class="post-user"><a href="/${encodeURIComponent(handle)}"><strong>${esc(name)}</strong></a><small>@${esc(handle)} · ${esc(timestamp)}</small></div><button class="more-button" data-toast="More post options" aria-label="Post options">···</button></div><p class="post-text">${esc(p.content)}</p>${image?`<img class="post-photo" src="${esc(image)}" alt="Post image">`:''}<div class="post-meta"><span data-like-count="${safeId}" data-count="${likeCount}">${heartSvg(false)} <span>${likeCount} ${likeCount===1?'person':'people'}</span></span><button class="post-comment-total" type="button" data-comment="${safeId}" data-comment-count="${safeId}">${commentCount} ${commentCount===1?'comment':'comments'}</button></div><div class="post-actions"><button data-like="${safeId}" class="${isLiked?'liked':''}" aria-pressed="${isLiked}">${heartSvg(isLiked)} <span>${isLiked?'Liked':'Like'}</span></button><button data-comment="${safeId}" aria-expanded="false">${commentSvg()} <span>Comment</span></button><button data-share><svg class="action-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Share</span></button></div></article>`
 }
-
 function timeAgo(value) {
   if (!value) return 'just now'
   const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000))
@@ -99,6 +97,22 @@ function timeAgo(value) {
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
   if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`
   return new Date(value).toLocaleDateString()
+}
+
+async function loadHomeReels(){
+  const section=document.querySelector('#home-reels-section'),list=document.querySelector('#home-reels-list')
+  if(!section||!list)return
+  const {data,error}=await supabase.from('reels').select('id,user_id,caption,video_path,created_at,profiles(full_name,username,avatar_url)').eq('is_public',true).order('created_at',{ascending:false}).limit(12)
+  if(error){console.warn('Homepage reels unavailable:',error);section.hidden=true;return}
+  const rows=data||[]
+  if(!rows.length){section.hidden=true;return}
+  const {data:urls,error:urlError}=await supabase.storage.from('reels').createSignedUrls(rows.map(row=>row.video_path),3600)
+  if(urlError){console.warn('Could not sign homepage reel URLs:',urlError);section.hidden=true;return}
+  const urlByPath=Object.fromEntries((urls||[]).filter(item=>item.signedUrl).map(item=>[item.path,item.signedUrl]))
+  reelItems=rows.map(row=>{const user=Array.isArray(row.profiles)?row.profiles[0]||{}:row.profiles||{};return{id:row.id,user_id:row.user_id,caption:row.caption||'',video_path:row.video_path,video_url:urlByPath[row.video_path],created_at:row.created_at,user}}).filter(row=>row.video_url)
+  if(!reelItems.length){section.hidden=true;return}
+  list.innerHTML=reelItems.map((reel,index)=>{const name=reel.user.full_name||reel.user.username||'Flexoverse member';return `<article class="home-reel-card"><video src="${esc(reel.video_url)}" muted playsinline loop preload="metadata"></video><button type="button" data-home-reel="${index}" aria-label="Watch reel"><svg viewBox="0 0 24 24"><path d="m9 6 10 6-10 6z"/></svg></button><div><strong>${esc(name)}</strong><small>${esc(timeAgo(reel.created_at))}</small>${reel.caption?`<p>${esc(reel.caption)}</p>`:''}</div></article>`}).join('')
+  list.addEventListener('click',e=>{const button=e.target.closest('[data-home-reel]');if(button)openReelViewer(Number(button.dataset.homeReel))})
 }
 
 async function loadHome() {
@@ -121,23 +135,31 @@ async function loadHome() {
   if(location.hash.startsWith('#post-'))requestAnimationFrame(()=>document.getElementById(location.hash.slice(1))?.scrollIntoView({behavior:'smooth',block:'start'}))
 }
 
-async function loadComments(postId, article) {
-  const list = article.querySelector('[data-comment-list]')
-  if (!list) return
-  list.innerHTML = '<p class="comment-state">Loading comments…</p>'
-  const {data,error}=await supabase.from('comments').select('id,content,created_at,profiles(full_name,username)').eq('post_id',postId).order('created_at',{ascending:true}).limit(30)
-  if (error) {
-    console.error('Could not load comments:', error)
-    list.innerHTML = '<p class="comment-state">Comments could not load. Please try again.</p>'
-    return
+async function loadComments(postId) {
+  const list=document.querySelector('#comments-modal [data-modal-comment-list]')
+  if(!list)return
+  list.innerHTML='<p class="comment-state">Loading comments…</p>'
+  const {data,error}=await supabase.from('comments').select('id,post_id,user_id,parent_comment_id,content,created_at,profiles(full_name,username,avatar_url)').eq('post_id',postId).order('created_at',{ascending:true}).limit(150)
+  if(error){console.error('Could not load comments:',error);list.innerHTML='<p class="comment-state">Comments could not load. Please try again.</p>';return}
+  const rows=data||[],children=new Map()
+  rows.forEach(row=>{const key=row.parent_comment_id||'root';if(!children.has(key))children.set(key,[]);children.get(key).push(row)})
+  const render=row=>{
+    const author=Array.isArray(row.profiles)?row.profiles[0]||{}:row.profiles||{}
+    const replies=children.get(row.id)||[]
+    return `<article class="comment-thread"><div class="comment-item"><div class="comment-avatar">${avatar(initials(author.full_name||author.username||'Member'),'blue',author.avatar_url)}</div><div class="comment-body"><strong>${esc(author.full_name||author.username||'Flexoverse member')}</strong><p>${esc(row.content)}</p><div class="comment-meta"><small>${esc(timeAgo(row.created_at))}</small><button type="button" data-reply-to="${esc(row.id)}">Reply</button></div><form class="reply-form" data-reply-form="${esc(row.id)}" hidden><input name="content" maxlength="1000" required placeholder="Write a reply…" aria-label="Write a reply"><button type="submit">Reply</button></form></div></div>${replies.map(render).join('')}</article>`
   }
-  const comments = data || []
-  const profile = row => Array.isArray(row.profiles) ? row.profiles[0] || {} : row.profiles || {}
-  list.innerHTML = comments.length ? comments.map(row=>{const author=profile(row);return `<article class="comment-item"><strong>${esc(author.full_name||author.username||'Flexoverse member')}</strong><p>${esc(row.content)}</p><small>${esc(timeAgo(row.created_at))}</small></article>`}).join('') : '<p class="comment-state">No comments yet. Start the conversation.</p>'
-  const count = article.querySelector('[data-comment-count]')
-  if (count) count.textContent = `${comments.length} ${comments.length===1?'comment':'comments'}`
+  list.innerHTML=(children.get('root')||[]).map(render).join('')||'<p class="comment-state">No comments yet. Start the conversation.</p>'
+  const count=document.querySelector(`#post-${CSS.escape(postId)} [data-comment-count]`)
+  if(count)count.textContent=`${rows.length} ${rows.length===1?'comment':'comments'}`
 }
-
+function openComments(postId){
+  const post=document.querySelector(`#post-${CSS.escape(postId)}`)
+  const root=document.querySelector('#modal-root')
+  if(!root)return
+  const title=post?.querySelector('.post-user strong')?.textContent||'this post'
+  root.innerHTML=`<div class="comments-modal-backdrop" data-close-comments><section class="comments-modal" role="dialog" aria-modal="true" aria-label="Comments"><header><div><span class="overline">CONVERSATION</span><h2>Comments</h2><p>On ${esc(title)}’s post</p></div><button type="button" data-close-comments aria-label="Close comments">×</button></header><div class="modal-comment-list" data-modal-comment-list></div>${session?`<form class="modal-comment-form" data-new-comment="${esc(postId)}"><input name="content" maxlength="1000" required placeholder="Write a comment…" aria-label="Write a comment"><button type="submit" aria-label="Send comment"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 17 8-17 8 3-8-3-8Zm3 8h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button></form>`:`<p class="comment-signin"><a href="/login/">Sign in</a> to join the conversation.</p>`}</section></div>`
+  loadComments(postId)
+}
 function friendEmptyState(title,description,action='') {
   return `<div class="friends-empty-state"><span class="friends-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.8 19a5.2 5.2 0 0 1 10.4 0v1H2.8zM14 15.3a4.4 4.4 0 0 1 7.2 3.4v1h-6"/></svg></span><strong>${esc(title)}</strong><p>${esc(description)}</p>${action}</div>`
 }
@@ -983,7 +1005,7 @@ async function initialize() {
   mountShell()
   if(session){await loadNotificationPreferences();await loadNotificationCount();subscribeToNotificationUpdates()}
   const composerAvatar=document.querySelector('[data-user-avatar]');if(composerAvatar)composerAvatar.outerHTML=avatar(session?initials(myName()):'FX','blue',profile?.avatar_url)
-  if(page==='home')await loadHome()
+  if(page==='home'){await Promise.all([loadHome(),loadHomeReels()])}
   if(page==='friends')await loadFriends()
   if(page==='chats')await loadChats()
   if(page==='notifications')await loadNotifications()
@@ -1067,28 +1089,20 @@ function bindEvents() {
         :await supabase.from('likes').insert({post_id:postId,user_id:session.user.id})
       likeButton.disabled=false
       if(result.error){
-        if(result.error.code==='23505'&&!wasLiked){liked.add(postId);likeButton.classList.add('liked');likeButton.setAttribute('aria-pressed','true');likeButton.innerHTML='♥ <span>Liked</span>';return}
+        if(result.error.code==='23505'&&!wasLiked){liked.add(postId);likeButton.classList.add('liked');likeButton.setAttribute('aria-pressed','true');likeButton.innerHTML=heartSvg(true)+' <span>Liked</span>';return}
         toast(result.error.message,'error');return
       }
       if(wasLiked)liked.delete(postId);else liked.add(postId)
       likeButton.classList.toggle('liked',!wasLiked)
       likeButton.setAttribute('aria-pressed',String(!wasLiked))
-      likeButton.innerHTML=`${wasLiked?'♡':'♥'} <span>${wasLiked?'Like':'Liked'}</span>`
+      likeButton.innerHTML=heartSvg(!wasLiked)+' <span>'+(wasLiked?'Like':'Liked')+'</span>'
       const total=likeButton.closest('.post')?.querySelector('[data-like-count]')
-      if(total){const count=Math.max(0,Number(total.dataset.count||0)+(wasLiked?-1:1));total.dataset.count=String(count);total.textContent=`♡ ${count} ${count===1?'person':'people'}`}
+      if(total){const count=Math.max(0,Number(total.dataset.count||0)+(wasLiked?-1:1));total.dataset.count=String(count);total.innerHTML=heartSvg(false)+' <span>'+count+' '+(count===1?'person':'people')+'</span>'}
       toast(wasLiked?'Like removed.':'You liked this post.','success')
       return
     }
     const commentButton=e.target.closest('[data-comment]')
-    if(commentButton){
-      const article=commentButton.closest('.post')
-      const panel=article?.querySelector('[data-comments-panel]')
-      if(!panel)return
-      panel.hidden=!panel.hidden
-      commentButton.setAttribute('aria-expanded',String(!panel.hidden))
-      if(!panel.hidden)await loadComments(commentButton.dataset.comment,article)
-      return
-    }
+    if(commentButton){openComments(commentButton.dataset.comment);return}
     const shareButton=e.target.closest('[data-share]')
     if(shareButton){
       const post=shareButton.closest('.post')
@@ -1096,24 +1110,31 @@ function bindEvents() {
       try{await navigator.clipboard.writeText(postUrl);toast('Post link copied.','success')}catch{toast('Copy this post link from your browser address bar.')}
     }
   }))
-  document.querySelectorAll('.feed-list').forEach(feed=>feed.addEventListener('submit',async e=>{
-    const form=e.target.closest('[data-comment-form]')
+  document.querySelector('#modal-root')?.addEventListener('click',e=>{
+    if(e.target.closest('[data-close-comments]')){document.querySelector('#modal-root').innerHTML='';return}
+    const reply=e.target.closest('[data-reply-to]')
+    if(reply){const form=reply.closest('.comment-body')?.querySelector('[data-reply-form]');if(form){form.hidden=!form.hidden;form.querySelector('input')?.focus()}}
+  })
+  document.querySelector('#modal-root')?.addEventListener('submit',async e=>{
+    const form=e.target.closest('[data-new-comment],[data-reply-form]')
     if(!form)return
     e.preventDefault()
     if(!session)return openAuth()
     const content=String(new FormData(form).get('content')||'').trim()
     if(!content)return
-    const postId=form.dataset.commentForm
-    const article=form.closest('.post')
-    const submit=form.querySelector('[type="submit"]')
-    submit.disabled=true
-    const {error}=await supabase.from('comments').insert({post_id:postId,user_id:session.user.id,content})
-    submit.disabled=false
+    const postId=document.querySelector('[data-new-comment]')?.dataset.newComment
+    if(!postId)return
+    const payload={post_id:postId,user_id:session.user.id,content}
+    if(form.dataset.replyForm)payload.parent_comment_id=form.dataset.replyForm
+    const submit=form.querySelector('[type="submit]');if(submit)submit.disabled=true
+    const {error}=await supabase.from('comments').insert(payload)
+    if(submit)submit.disabled=false
     if(error){toast(error.message,'error');return}
-    form.reset()
-    await loadComments(postId,article)
-    toast('Comment added.','success')
-  }))
+    form.reset();if(form.dataset.replyForm)form.hidden=true
+    await loadComments(postId)
+    toast(form.dataset.replyForm?'Reply added.':'Comment added.','success')
+  })
+
   document.querySelector('#suggestions-list')?.addEventListener('click',async e=>{const b=e.target.closest('[data-request]');if(!b||b.disabled)return;const old=b.innerHTML;b.disabled=true;b.innerHTML='<span>Sending…</span>';const sent=await sendFriendRequest(b.dataset.request);if(sent)await loadFriends();else{b.disabled=false;b.innerHTML=old}})
   document.querySelector('#requests-list')?.addEventListener('click',async e=>{const accept=e.target.closest('[data-accept]');const ignore=e.target.closest('[data-ignore]');if(accept){accept.disabled=true;const {error}=await supabase.from('friend_requests').update({status:'accepted'}).eq('id',accept.dataset.accept);if(error){accept.disabled=false;toast(error.message,'error')}else{await loadFriends();toast('You’re friends now.','success')}}if(ignore){ignore.disabled=true;const {error}=await supabase.from('friend_requests').delete().eq('id',ignore.dataset.ignore);if(error){ignore.disabled=false;toast(error.message,'error')}else{await loadFriends();toast('Request dismissed.','success')}}})
   document.querySelectorAll('[data-friends-filter]').forEach(input=>input.addEventListener('input',()=>{const list=document.querySelector(input.dataset.friendsFilter);if(!list)return;const query=input.value.trim().toLowerCase();let visible=0;list.querySelectorAll(input.dataset.filterItems).forEach(item=>{const matches=String(item.dataset.searchText||'').includes(query);item.hidden=!matches;if(matches)visible++});const empty=list.querySelector('[data-empty-results]');if(empty)empty.hidden=visible>0||!query}))
