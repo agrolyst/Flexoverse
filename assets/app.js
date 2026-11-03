@@ -567,7 +567,7 @@ async function markConversationRead(conversationId) {
   renderChatList()
 }
 
-async async function subscribeToChatTyping(conversationId){
+async function subscribeToChatTyping(conversationId){
  if(chatTypingChannel){await supabase.removeChannel(chatTypingChannel);chatTypingChannel=null}
  if(!session||!conversationId)return;
  chatTypingChannel=supabase.channel('chat-typing:'+conversationId,{config:{presence:{key:session.user.id}}})
