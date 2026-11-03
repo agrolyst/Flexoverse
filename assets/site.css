@@ -1229,3 +1229,75 @@ html[data-theme="dark"] .profile-completion-card .auth-page-form>label>textarea{
 .report-modal textarea{min-height:92px;resize:vertical}
 .report-modal .button{margin-top:8px;justify-content:center}
 .report-close{position:absolute;right:14px;top:10px;width:34px;height:34px;border:0;border-radius:50%;background:#f3f5f9;color:#596174;font-size:22px;cursor:pointer}
+
+
+/* TikTok-style Reels experience */
+body[data-page="reels"]{background:#0d0e12}
+body[data-page="reels"] .site-header{background:#111217;border-color:#262832;color:#fff}
+body[data-page="reels"] .site-header .wordmark,body[data-page="reels"] .site-header .top-navigation a,body[data-page="reels"] .site-header .header-icon,body[data-page="reels"] .site-header .user-control{color:#f5f5f7}
+body[data-page="reels"] .page-layout{max-width:none;display:block;padding:0}
+body[data-page="reels"] #left-sidebar,body[data-page="reels"] #right-sidebar{display:none}
+body[data-page="reels"] .reels-page{max-width:none;width:100%;margin:0}
+body[data-page="reels"] .reels-page-heading{position:absolute;z-index:4;top:84px;left:50%;transform:translateX(-50%);width:min(100% - 32px,520px);display:flex;align-items:center;justify-content:space-between;pointer-events:none}
+body[data-page="reels"] .reels-page-heading>div{display:none}
+body[data-page="reels"] .reels-create-link{pointer-events:auto;background:#ffffff20;border:1px solid #ffffff55;color:#fff;box-shadow:none}
+body[data-page="reels"] #mobile-nav{display:none}
+body[data-page="reels"] .reels-feed{height:calc(100dvh - 72px);min-height:520px;max-height:none;width:100%;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;align-items:center;gap:0;padding:0;scroll-snap-type:y mandatory;scrollbar-width:none;background:#0d0e12}
+body[data-page="reels"] .reels-feed::-webkit-scrollbar{display:none}
+body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,850px);width:min(100%,480px);height:calc(100dvh - 72px);min-height:520px;min-width:0;max-height:850px;border-radius:0;overflow:hidden;background:#090a0d;box-shadow:none;scroll-snap-align:start;scroll-snap-stop:always}
+.tiktok-reel-card .reel-preview{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#090a0d}
+.tiktok-reel-card .reel-card-shade{position:absolute;inset:0;background:linear-gradient(180deg,#0005 0%,transparent 25%,transparent 55%,#000b 100%);pointer-events:none}
+.tiktok-reel-card .reel-open{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent;color:transparent;z-index:1}
+.tiktok-reel-card .reel-open span{display:none}
+.tiktok-reel-card .reel-card-details{position:absolute;z-index:2;left:18px;right:86px;bottom:28px;color:#fff;display:flex;flex-direction:column;gap:11px}
+.tiktok-reel-card .reel-card-details .reel-author{display:flex;align-items:center;gap:9px;color:#fff}
+.tiktok-reel-card .reel-author .avatar{width:40px;height:40px;border:1px solid #ffffff88}
+.tiktok-reel-card .reel-author span{display:flex;flex-direction:column;gap:4px}
+.tiktok-reel-card .reel-author strong{font-size:13px}
+.tiktok-reel-card .reel-author small{font-size:10px;color:#ffffffbd}
+.tiktok-reel-card .reel-card-details p{font-size:13px;line-height:1.5;margin:0;color:#fff;overflow-wrap:anywhere}
+.reel-feed-actions{position:absolute;z-index:3;right:15px;bottom:30px;display:flex;flex-direction:column;align-items:center;gap:22px}
+.reel-feed-actions button,.reel-viewer-actions button{display:flex;flex-direction:column;align-items:center;gap:5px;border:0;background:transparent;color:#fff;text-shadow:0 1px 5px #0009;padding:4px}
+.reel-feed-actions b,.reel-feed-actions button:first-child{font-size:30px}
+.reel-feed-actions small{font-size:11px;font-weight:700}
+.reel-feed-actions button.is-liked,.reel-viewer-actions button.is-liked{color:#ff4776}
+.reel-viewer.tiktok-viewer{z-index:50}
+.tiktok-viewer .reel-viewer-shell{width:min(100vw,560px);height:min(92dvh,900px);max-height:900px}
+.tiktok-viewer .reel-viewer-frame{height:100%;width:100%;position:relative;background:#050505}
+.tiktok-viewer .reel-viewer-frame>video{width:100%;height:100%;object-fit:contain;background:#050505}
+.tiktok-viewer .reel-viewer-info{position:absolute;left:18px;right:85px;bottom:24px;z-index:3;color:#fff}
+.tiktok-viewer .reel-viewer-info p{font-size:13px;line-height:1.5}
+.reel-viewer-actions{position:absolute;right:14px;bottom:28px;z-index:5;display:flex;flex-direction:column;gap:18px}
+.reel-viewer-actions button b{font-size:29px;line-height:1}
+.reel-viewer-actions button small{font-size:11px;font-weight:700}
+.tiktok-viewer .reel-viewer-close,.tiktok-viewer .reel-viewer-step{z-index:8}
+.reel-comments-panel{position:absolute;z-index:7;right:0;top:0;bottom:0;width:min(360px,88vw);background:#fff;color:#202433;display:flex;flex-direction:column;box-shadow:-10px 0 35px #0004}
+.reel-comments-panel[hidden]{display:none}
+.reel-comments-panel>header{height:58px;flex:none;border-bottom:1px solid #eceef2;display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+.reel-comments-panel>header strong{font-size:14px}
+.reel-comments-panel>header button{border:0;background:transparent;font-size:24px;color:#737b89}
+.reel-comments-list{flex:1;overflow:auto;padding:14px}
+.reel-comment{padding:10px 0;border-bottom:1px solid #f0f1f4;font-size:12px}
+.reel-comment strong{font-size:11px}
+.reel-comment p{margin:5px 0;color:#394253;line-height:1.5;overflow-wrap:anywhere}
+.reel-comment small{font-size:9px;color:#9299a5}
+.reel-comment>button{border:0;background:transparent;color:#665ce3;font-size:10px;margin-left:10px}
+.reel-comment form{display:flex;gap:6px;margin-top:8px}
+.reel-comment form input,.reel-comment-form input{min-width:0;flex:1;border:1px solid #e4e6ec;border-radius:18px;padding:9px 12px;font-size:11px}
+.reel-comment form button,.reel-comment-form button{border:0;background:#655ce8;color:#fff;border-radius:18px;padding:0 13px;font-size:10px;font-weight:700}
+.reel-comment article{margin:8px 0 0 14px;padding-left:10px;border-left:2px solid #ecebff}
+.reel-comment-form{display:flex;gap:8px;padding:12px;border-top:1px solid #eceef2}
+.reel-comment-form button{padding:0 17px}
+.reel-comment-signin{padding:14px;font-size:11px;color:#6e7787}
+.reel-comment-signin a{color:#655ce8;font-weight:700}
+@media(max-width:700px){
+ body[data-page="reels"] .site-header{height:58px;padding:0 14px;gap:10px}
+ body[data-page="reels"] .site-header .wordmark{min-width:0;font-size:17px}
+ body[data-page="reels"] .site-header .header-search,body[data-page="reels"] .site-header .top-navigation,body[data-page="reels"] .site-header .user-control{display:none}
+ body[data-page="reels"] .reels-feed{height:calc(100dvh - 58px);min-height:450px}
+ body[data-page="reels"] .reels-page-heading{top:66px}
+ body[data-page="reels"] .tiktok-reel-card{height:calc(100dvh - 58px);min-height:450px}
+ .tiktok-viewer .reel-viewer-shell{height:100dvh;width:100vw;max-height:none}
+ .tiktok-viewer .reel-viewer-frame>video{object-fit:cover}
+ .reel-comments-panel{width:min(100%,390px)}
+}
