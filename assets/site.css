@@ -1504,3 +1504,25 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
 .typing-dots i:nth-child(2){animation-delay:.15s}.typing-dots i:nth-child(3){animation-delay:.3s}
 @keyframes chatTypingPulse{0%,60%,100%{transform:translateY(0);opacity:.45}30%{transform:translateY(-4px);opacity:1}}
 .group-message-sender{display:block;margin:0 0 4px;color:#2584e8;font-size:10px;font-weight:700}
+
+/* Full-height independently scrollable desktop chat panes */
+@media(min-width:761px){
+ body[data-page="chats"] .chats-page{min-height:0}
+ body[data-page="chats"] .chat-layout{height:calc(100dvh - 230px)!important;min-height:420px;max-height:820px;overflow:hidden!important;grid-template-columns:minmax(250px,32%) minmax(0,1fr)!important}
+ body[data-page="chats"] .chat-inbox{display:flex!important;flex-direction:column!important;min-height:0!important;height:100%!important;overflow:hidden!important;padding:14px 10px!important}
+ body[data-page="chats"] .chat-inbox-heading,body[data-page="chats"] .chat-selection-controls,body[data-page="chats"] .chat-inbox-tabs,body[data-page="chats"] .inbox-search{flex:0 0 auto}
+ body[data-page="chats"] .conversation-list{min-height:0!important;flex:1 1 auto!important;overflow-y:auto!important;overscroll-behavior:contain!important;padding-bottom:14px!important}
+ body[data-page="chats"] .chat-room{display:flex!important;flex-direction:column!important;min-width:0!important;min-height:0!important;height:100%!important;overflow:hidden!important}
+ body[data-page="chats"] .chat-room-head{flex:0 0 64px!important;min-width:0}
+ body[data-page="chats"] .chat-history{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important}
+ body[data-page="chats"] .chat-typing-indicator{flex:0 0 auto!important}
+ body[data-page="chats"] .message-composer{position:sticky!important;bottom:0!important;z-index:4!important;flex:0 0 auto!important;background:#fff!important;padding:10px 14px!important;padding-bottom:calc(10px + env(safe-area-inset-bottom))!important}
+}
+.chat-voice-player{display:block;width:min(260px,100%);height:38px;max-width:100%;margin:3px 0}
+.voice-message-unavailable{font-size:12px;opacity:.75}
+.voice-record-button{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;border:1px solid #e2e6ee;border-radius:50%;background:#f7f8fb;color:#46536a;cursor:pointer}
+.voice-record-button svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.voice-record-button.recording{background:#fff0f0;border-color:#efb5b5;color:#cf3434;animation:voiceRecordPulse 1s infinite}
+.voice-record-button:disabled{opacity:.6;cursor:wait}
+@keyframes voiceRecordPulse{50%{box-shadow:0 0 0 5px #e84b4b20}}
+@media(max-width:760px){.voice-record-button{width:36px;height:36px;flex-basis:36px}.chat-voice-player{width:min(230px,70vw)}}
