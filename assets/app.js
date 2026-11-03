@@ -111,6 +111,7 @@ async function loadHomeReels(){
   const urlByPath=Object.fromEntries((urls||[]).filter(item=>item.signedUrl).map(item=>[item.path,item.signedUrl]))
   reelItems=rows.map(row=>{const user=Array.isArray(row.profiles)?row.profiles[0]||{}:row.profiles||{};return{id:row.id,user_id:row.user_id,caption:row.caption||'',video_path:row.video_path,video_url:urlByPath[row.video_path],created_at:row.created_at,user}}).filter(row=>row.video_url)
   if(!reelItems.length){section.hidden=true;return}
+  section.hidden=false
   list.innerHTML=reelItems.map((reel,index)=>{const name=reel.user.full_name||reel.user.username||'Flexoverse member';return `<article class="home-reel-card"><video src="${esc(reel.video_url)}" muted playsinline loop preload="metadata"></video><button type="button" data-home-reel="${index}" aria-label="Watch reel"><svg viewBox="0 0 24 24"><path d="m9 6 10 6-10 6z"/></svg></button><div><strong>${esc(name)}</strong><small>${esc(timeAgo(reel.created_at))}</small>${reel.caption?`<p>${esc(reel.caption)}</p>`:''}</div></article>`}).join('')
   list.addEventListener('click',e=>{const button=e.target.closest('[data-home-reel]');if(button)openReelViewer(Number(button.dataset.homeReel))})
 }
@@ -1111,7 +1112,7 @@ function bindEvents() {
     }
   }))
   document.querySelector('#modal-root')?.addEventListener('click',e=>{
-    if(e.target.closest('[data-close-comments]')){document.querySelector('#modal-root').innerHTML='';return}
+    if(e.target.matches('[data-close-comments]')){document.querySelector('#modal-root').innerHTML='';return}
     const reply=e.target.closest('[data-reply-to]')
     if(reply){const form=reply.closest('.comment-body')?.querySelector('[data-reply-form]');if(form){form.hidden=!form.hidden;form.querySelector('input')?.focus()}}
   })
