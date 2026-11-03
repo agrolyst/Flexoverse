@@ -1301,3 +1301,30 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
  .tiktok-viewer .reel-viewer-frame>video{object-fit:cover}
  .reel-comments-panel{width:min(100%,390px)}
 }
+
+
+/* Voice and video calls */
+.chat-call-actions{display:flex;align-items:center;gap:7px;margin-left:auto}
+.chat-call-actions button{width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--line);border-radius:50%;background:var(--surface,#fff);color:var(--ink);cursor:pointer}
+.chat-call-actions button:hover{background:var(--surface-soft,#f3f5fa);color:var(--brand)}
+.chat-call-actions svg,.call-controls svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.call-backdrop{position:fixed;inset:0;z-index:1000;background:#080b13d9;display:grid;place-items:center;padding:18px}
+.call-window{width:min(100%,520px);min-height:300px;background:#171923;color:#fff;border:1px solid #ffffff20;border-radius:22px;overflow:hidden;box-shadow:0 24px 80px #0008;display:flex;flex-direction:column}
+.call-window>header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:17px 20px;border-bottom:1px solid #ffffff1c}
+.call-window>header strong{font-size:15px}.call-window>header span{font-size:12px;color:#c9ccda}
+.call-video-stage{position:relative;flex:1;min-height:300px;background:#090b10;display:grid;place-items:center;overflow:hidden}
+.call-video-stage video[data-remote-video]{width:100%;height:100%;min-height:300px;max-height:65vh;object-fit:contain}
+.call-video-stage video[data-local-video]{position:absolute;right:14px;bottom:14px;width:112px;height:150px;object-fit:cover;border:2px solid #fff;border-radius:12px;background:#242631}
+.call-video-stage video[hidden]{display:none}
+.call-video-stage[data-audio-call] video{display:none}
+.call-audio-avatar{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+.call-audio-avatar .avatar{width:86px;height:86px;font-size:25px}
+.call-controls{display:flex;align-items:center;justify-content:center;gap:18px;padding:18px}
+.call-controls button{min-width:48px;height:48px;padding:0 16px;border:0;border-radius:28px;background:#353947;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-weight:700}
+.call-controls button[hidden]{display:none}
+.call-controls .call-end-button{background:#e34255}
+.call-controls .call-accept-button{background:#16a36a}
+.call-controls button.is-muted{background:#a83b48}
+.call-incoming{min-height:0;padding:30px;align-items:center;justify-content:center;text-align:center;gap:12px}
+.call-incoming h2{margin:0;font-size:22px}.call-incoming p{color:#c9ccda;margin:0}
+@media(max-width:560px){.chat-call-actions{gap:4px}.chat-call-actions button{width:32px;height:32px}.call-backdrop{padding:0}.call-window{width:100%;min-height:100dvh;border-radius:0}.call-video-stage{min-height:55vh}.call-video-stage video[data-remote-video]{max-height:75vh}}
