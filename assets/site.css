@@ -1372,3 +1372,6 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
 .chat-room.chat-room-soft-theme .message.received{background:#fff}
 .chat-room.chat-room-soft-theme .message.sent{background:#d9fdd3;border-color:#c8f0c1}
 @media(max-width:760px){.chat-header-menu-toggle{width:34px;height:34px}.chat-header-menu{right:0;width:min(224px,calc(100vw - 28px))}}
+
+.chat-header-menu .chat-menu-icon{width:18px;height:18px;flex:0 0 18px;display:block;color:#586579}
+.chat-header-menu button:hover .chat-menu-icon{color:#263244}
