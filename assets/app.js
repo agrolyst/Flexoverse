@@ -140,26 +140,26 @@ async function loadComments(postId) {
   const list=document.querySelector('#modal-root [data-modal-comment-list]')
   if(!list)return
   list.innerHTML='<p class="comment-state">Loading comments…</p>'
-  const {data,error}=await supabase.from('comments').select('id,post_id,user_id,parent_comment_id,content,created_at,profiles!comments_user_id_fkey(full_name,username,avatar_url)').eq('post_id',postId).order('created_at',{ascending:true}).limit(150)
+  const {data,error}=await supabase.from('comments').select('id,post_id,user_id,parent_comment_id,content,created_at,profiles!comments_user_id_fkey(full_name,username,avatar_url),comment_likes(count)').eq('post_id',postId).order('created_at',{ascending:true}).limit(150)
   if(error){console.error('Could not load comments:',error);list.innerHTML='<p class="comment-state">Comments could not load. Please try again.</p>';return}
-  const rows=data||[],children=new Map()
+  const rows=data||[],children=new Map(),ids=rows.map(row=>row.id)
+  let myCommentLikes=new Set()
+  if(session&&ids.length){
+    const {data:mine,error:mineError}=await supabase.from('comment_likes').select('comment_id').eq('user_id',session.user.id).in('comment_id',ids)
+    if(mineError)console.warn('Could not load your comment likes:',mineError)
+    myCommentLikes=new Set((mine||[]).map(item=>item.comment_id))
+  }
   rows.forEach(row=>{const key=row.parent_comment_id||'root';if(!children.has(key))children.set(key,[]);children.get(key).push(row)})
   const render=row=>{
     const author=Array.isArray(row.profiles)?row.profiles[0]||{}:row.profiles||{}
     const replies=children.get(row.id)||[]
-    return `<article class="comment-thread"><div class="comment-item"><div class="comment-avatar">${avatar(initials(author.full_name||author.username||'Member'),'blue',author.avatar_url)}</div><div class="comment-body"><strong>${esc(author.full_name||author.username||'Flexoverse member')}</strong><p>${esc(row.content)}</p><div class="comment-meta"><small>${esc(timeAgo(row.created_at))}</small><button type="button" data-reply-to="${esc(row.id)}">Reply</button></div><form class="reply-form" data-reply-form="${esc(row.id)}" hidden><input name="content" maxlength="1000" required placeholder="Write a reply…" aria-label="Write a reply"><button type="submit">Reply</button></form></div></div>${replies.map(render).join('')}</article>`
+    const count=relationCount(row.comment_likes)
+    const isLiked=myCommentLikes.has(row.id)
+    return `<article class="comment-thread"><div class="comment-item"><div class="comment-avatar">${avatar(initials(author.full_name||author.username||'Member'),'blue',author.avatar_url)}</div><div class="comment-content"><div class="comment-bubble"><strong>${esc(author.full_name||author.username||'Flexoverse member')}</strong><p>${esc(row.content)}</p></div><div class="comment-actions"><small>${esc(timeAgo(row.created_at))}</small><button type="button" data-reply-to="${esc(row.id)}">Reply</button></div><form class="reply-form" data-reply-form="${esc(row.id)}" hidden><input name="content" maxlength="1000" required placeholder="Write a reply…" aria-label="Write a reply"><button type="submit">Send</button></form></div><button type="button" class="comment-like ${isLiked?'is-liked':''}" data-like-comment="${esc(row.id)}" aria-label="${isLiked?'Unlike comment':'Like comment'}" aria-pressed="${isLiked}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.2S3.5 15.1 3.5 9.2a4.6 4.6 0 0 1 8.5-2.4 4.6 4.6 0 0 1 8.5 2.4c0 5.9-8.5 11-8.5 11Z"/></svg><span data-comment-like-count>${count}</span></button></div>${replies.length?`<div class="comment-replies">${replies.map(render).join('')}</div>`:''}</article>`
   }
   list.innerHTML=(children.get('root')||[]).map(render).join('')||'<p class="comment-state">No comments yet. Start the conversation.</p>'
   const count=document.querySelector(`#post-${CSS.escape(postId)} [data-comment-count]`)
   if(count)count.textContent=`${rows.length} ${rows.length===1?'comment':'comments'}`
-}
-function openComments(postId){
-  const post=document.querySelector(`#post-${CSS.escape(postId)}`)
-  const root=document.querySelector('#modal-root')
-  if(!root)return
-  const title=post?.querySelector('.post-user strong')?.textContent||'this post'
-  root.innerHTML=`<div class="comments-modal-backdrop" data-close-comments><section class="comments-modal" role="dialog" aria-modal="true" aria-label="Comments"><header><div><span class="overline">CONVERSATION</span><h2>Comments</h2><p>On ${esc(title)}’s post</p></div><button type="button" data-close-comments aria-label="Close comments">×</button></header><div class="modal-comment-list" data-modal-comment-list></div>${session?`<form class="modal-comment-form" data-new-comment="${esc(postId)}"><input name="content" maxlength="1000" required placeholder="Write a comment…" aria-label="Write a comment"><button type="submit" aria-label="Send comment"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 17 8-17 8 3-8-3-8Zm3 8h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button></form>`:`<p class="comment-signin"><a href="/login/">Sign in</a> to join the conversation.</p>`}</section></div>`
-  loadComments(postId)
 }
 function friendEmptyState(title,description,action='') {
   return `<div class="friends-empty-state"><span class="friends-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.8 19a5.2 5.2 0 0 1 10.4 0v1H2.8zM14 15.3a4.4 4.4 0 0 1 7.2 3.4v1h-6"/></svg></span><strong>${esc(title)}</strong><p>${esc(description)}</p>${action}</div>`
