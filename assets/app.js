@@ -1077,7 +1077,7 @@ function bindEvents() {
     else{submit.disabled=false;submit.textContent='Share post';await loadHome()}
   })
   document.querySelector('#post-content')?.addEventListener('input',e=>{const count=document.querySelector('#post-count');if(count)count.textContent=`${e.target.value.length} / 2000`})
-  document.querySelectorAll('.feed-list').forEach(feed=>feed.addEventListener('click',async e=>{
+  document.addEventListener('click',async e=>{
     if(e.target.closest('[data-retry-feed]'))return loadHome()
     const likeButton=e.target.closest('[data-like]')
     if(likeButton){
@@ -1110,7 +1110,7 @@ function bindEvents() {
       const postUrl=`${location.origin}/#${post?.id||''}`
       try{await navigator.clipboard.writeText(postUrl);toast('Post link copied.','success')}catch{toast('Copy this post link from your browser address bar.')}
     }
-  }))
+  })
   document.querySelector('#modal-root')?.addEventListener('click',async e=>{
     if(e.target.matches('[data-close-comments]')){document.querySelector('#modal-root').innerHTML='';return}
     const like=e.target.closest('[data-like-comment]')
