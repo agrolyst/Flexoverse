@@ -600,6 +600,7 @@ function renderChatRoom(item,messages=activeChatMessages) {
  room.innerHTML=`<header class="chat-room-head"><button class="chat-room-back" type="button" data-chat-back aria-label="Back to conversations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12"/></svg></button>${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<div class="chat-room-person"><strong>${esc(item.peer_name)}</strong><small><span class="status-dot"></span> Your friend</small></div><div class="chat-header-menu-wrap"><button class="chat-header-menu-toggle" type="button" data-chat-menu-toggle aria-label="More chat options" aria-expanded="false" title="More options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button><div class="chat-header-menu" data-chat-menu hidden>
 <button type="button" data-chat-menu-action="contact">Contact info</button><button type="button" data-chat-menu-action="search">Search messages</button><button type="button" data-chat-menu-action="select">Select messages</button><button type="button" data-chat-menu-action="mute">Mute notifications</button><button type="button" data-chat-menu-action="theme">Chat theme</button><div class="chat-menu-divider"></div>${item.is_group?'':'<button type="button" data-start-call="audio">Voice call</button><button type="button" data-start-call="video">Video call</button>'}<button type="button" data-chat-menu-action="favorite">Add to Favorites</button><button type="button" data-chat-menu-action="export">Export chat</button><div class="chat-menu-divider"></div><button type="button" data-chat-menu-action="close">Close chat</button></div></div>${item.is_group?'':'<a class="chat-room-profile" href="/'+encodeURIComponent(item.peer_username||'')+'" aria-label="View profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a>'}</header><div class="chat-history" id="chat-history" role="log" aria-live="polite" aria-label="Conversation with ${esc(item.peer_name)}">${groups.join('')||'<p class="chat-history-empty">Say hello and start the conversation.</p>'}</div><div class="chat-typing-indicator" id="chat-typing-indicator" hidden aria-live="polite"></div><form class="message-composer" id="message-form">${replyBar}<input name="message" maxlength="4000" required autocomplete="off" placeholder="Write a message…" aria-label="Write a message"><button class="voice-record-button" type="button" data-voice-record aria-label="Record voice message">${voiceMicSvg()}</button><button class="send-button" aria-label="Send message" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button></form>`;
  const history=document.querySelector('#chat-history');if(history)history.scrollTop=history.scrollHeight;
+ renderTypingPresence();
 }
 async function markConversationRead(conversationId) {
   if(!session||!conversationId)return
@@ -612,32 +613,38 @@ async function markConversationRead(conversationId) {
 }
 
 async function subscribeToChatTyping(conversationId){
+ if(chatTypingStopTimer){clearTimeout(chatTypingStopTimer);chatTypingStopTimer=null}
  if(chatTypingChannel){await supabase.removeChannel(chatTypingChannel);chatTypingChannel=null}
  if(!session||!conversationId)return;
- chatTypingChannel=supabase.channel('chat-typing:'+conversationId,{config:{presence:{key:session.user.id}}})
- .on('presence',{event:'sync'},()=>renderTypingPresence())
+ const channel=supabase.channel('chat-typing:'+conversationId,{config:{presence:{key:session.user.id}}});
+ channel.on('presence',{event:'sync'},()=>renderTypingPresence())
  .on('presence',{event:'join'},()=>renderTypingPresence())
- .on('presence',{event:'leave'},()=>renderTypingPresence())
- .subscribe(status=>{if(status==='SUBSCRIBED')chatTypingChannel.track({userId:session.user.id,fullName:profile?.full_name||session.user.user_metadata?.full_name||'Someone',typing:false}).catch(()=>{})});
+ .on('presence',{event:'leave'},()=>renderTypingPresence());
+ await new Promise((resolve,reject)=>{
+  channel.subscribe(status=>{
+   if(status==='SUBSCRIBED'){chatTypingChannel=channel;channel.track({userId:session.user.id,fullName:profile?.full_name||session.user.user_metadata?.full_name||'Someone',typing:false}).then(resolve).catch(reject)}
+   else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')reject(new Error('Typing status channel failed: '+status));
+  });
+ });
+ renderTypingPresence();
 }
 function renderTypingPresence(){
- const node=document.querySelector('#chat-typing-indicator');if(!node||!chatTypingChannel)return;
+ const node=document.querySelector('#chat-typing-indicator');if(!node)return;
+ if(!chatTypingChannel){node.hidden=true;node.innerHTML='';return}
  const state=chatTypingChannel.presenceState();
  const users=Object.values(state).flat().filter(p=>p.userId!==session?.user?.id&&p.typing);
- if(!users.length){node.hidden=true;node.innerHTML='';return}
  const names=[...new Set(users.map(p=>String(p.fullName||'Someone').trim()).filter(Boolean))];
- let label;
- if(names.length===1)label=names[0]+' is typing';
- else if(names.length===2)label=names[0]+' and '+names[1]+' are typing';
- else label=names[0]+' and others are typing';
- node.innerHTML='<span class="typing-dots"><i></i><i></i><i></i></span><span>'+esc(label)+'…</span>';
- node.hidden=false;
+ if(!names.length){node.hidden=true;node.innerHTML='';return}
+ const label=names.length===1?names[0]+' is typing':names.length===2?names[0]+' and '+names[1]+' are typing':names[0]+' and others are typing';
+ node.innerHTML='<span class="typing-dots"><i></i><i></i><i></i></span><span>'+esc(label)+'…</span>';node.hidden=false;
 }
 async function setChatTyping(isTyping){
- if(!chatTypingChannel)return;
+ if(!chatTypingChannel||!session)return;
  if(chatTypingStopTimer){clearTimeout(chatTypingStopTimer);chatTypingStopTimer=null}
- if(isTyping){chatTypingChannel.track({userId:session.user.id,fullName:profile?.full_name||session.user.user_metadata?.full_name||'Someone',typing:true}).catch(()=>{});chatTypingStopTimer=setTimeout(()=>setChatTyping(false),1700)}
- else chatTypingChannel.track({userId:session.user.id,fullName:profile?.full_name||'Someone',typing:false}).catch(()=>{});
+ try{
+  await chatTypingChannel.track({userId:session.user.id,fullName:profile?.full_name||session.user.user_metadata?.full_name||'Someone',typing:!!isTyping});
+ }catch(error){console.warn('Could not update typing presence:',error)}
+ if(isTyping)chatTypingStopTimer=setTimeout(()=>{setChatTyping(false)},2500);
 }
 
 async function selectConversation(conversationId,updateUrl=true) {
