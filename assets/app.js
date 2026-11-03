@@ -17,6 +17,12 @@ let chatItems = []
 let activeConversationId = null
 let activeChatMessages = []
 let chatRealtimeChannel = null
+let callSignalChannel = null
+let callPeer = null
+let callLocalStream = null
+let callRemoteStream = null
+let currentCall = null
+let pendingIceCandidates = []
 let notificationItems = []
 let notificationFilter = 'all'
 let notificationRealtimeChannel = null
@@ -526,7 +532,7 @@ function renderChatRoom(item,messages=activeChatMessages) {
   const groups=[]
   let priorDay=''
   for(const message of messages){const day=chatDay(message.created_at);if(day!==priorDay){groups.push(`<p class="chat-day-divider">${esc(day)}</p>`);priorDay=day}const own=message.sender_id===session?.user?.id;groups.push(`<div class="message ${own?'sent':'received'}" data-message-id="${esc(message.id)}">${esc(message.content)}<small>${esc(new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'}).format(new Date(message.created_at)))}</small></div>`)}
-  room.innerHTML=`<header class="chat-room-head"><button class="chat-room-back" type="button" data-chat-back aria-label="Back to conversations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12"/></svg></button>${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<div class="chat-room-person"><strong>${esc(item.peer_name)}</strong><small><span class="status-dot"></span> Your friend</small></div><a class="chat-room-profile" href="/${encodeURIComponent(item.peer_username||'') }" aria-label="View ${esc(item.peer_name)}’s profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a></header><div class="chat-history" id="chat-history" role="log" aria-live="polite" aria-label="Conversation with ${esc(item.peer_name)}">${groups.join('')||'<p class="chat-history-empty">Say hello and start the conversation.</p>'}</div><form class="message-composer" id="message-form"><input name="message" maxlength="4000" required autocomplete="off" placeholder="Write a message…" aria-label="Write a message"><button class="send-button" aria-label="Send message" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button></form>`
+  room.innerHTML=`<header class="chat-room-head"><button class="chat-room-back" type="button" data-chat-back aria-label="Back to conversations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12"/></svg></button>${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<div class="chat-room-person"><strong>${esc(item.peer_name)}</strong><small><span class="status-dot"></span> Your friend</small></div><div class="chat-call-actions"><button type="button" data-start-call="audio" aria-label="Start voice call" title="Voice call"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 11.2 18a19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 2.1 3.2 2 2 0 0 1 4.1 1h3a2 2 0 0 1 2 1.7l.5 2.8a2 2 0 0 1-.6 1.7L7.1 9.1a16 16 0 0 0 6 6l1.9-1.9a2 2 0 0 1 1.7-.6l2.8.5a2 2 0 0 1 1.5 1.8Z"/></svg></button><button type="button" data-start-call="video" aria-label="Start video call" title="Video call"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg></button></div><a class="chat-room-profile" href="/${encodeURIComponent(item.peer_username||'') }" aria-label="View ${esc(item.peer_name)}’s profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a></header><div class="chat-history" id="chat-history" role="log" aria-live="polite" aria-label="Conversation with ${esc(item.peer_name)}">${groups.join('')||'<p class="chat-history-empty">Say hello and start the conversation.</p>'}</div><form class="message-composer" id="message-form"><input name="message" maxlength="4000" required autocomplete="off" placeholder="Write a message…" aria-label="Write a message"><button class="send-button" aria-label="Send message" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button></form>`
   const history=document.querySelector('#chat-history');if(history)history.scrollTop=history.scrollHeight
 }
 
@@ -544,6 +550,8 @@ async function selectConversation(conversationId,updateUrl=true) {
   const item=chatItems.find(chat=>chat.conversation_id===conversationId)
   if(!item)return
   activeConversationId=conversationId
+  await endCall(false)
+  await ensureCallChannel(conversationId).catch(error=>{console.warn('Call channel unavailable:',error.message)})
   activeChatMessages=[]
   renderChatList()
   const room=document.querySelector('#chat-room')
@@ -702,11 +710,83 @@ async function markNotificationRead(notificationId) {
   await loadNotificationCount()
 }
 
+function callUi(html='') { const root=document.querySelector('#call-root'); if(root)root.innerHTML=html }
+function callSignal(event,payload) { if(!callSignalChannel)return Promise.reject(new Error('Call connection is not ready'));return callSignalChannel.send({type:'broadcast',event,payload:{...payload,from:session.user.id}}) }
+async function ensureCallChannel(conversationId) {
+  if(callSignalChannel&&callSignalChannel.topic===`call:${conversationId}`)return callSignalChannel
+  if(callSignalChannel){await supabase.removeChannel(callSignalChannel);callSignalChannel=null}
+  const channel=supabase.channel(`call:${conversationId}`,{config:{private:true,broadcast:{ack:true}}})
+  channel.on('broadcast',{event:'signal'},({payload})=>handleCallSignal(payload))
+  await new Promise((resolve,reject)=>{channel.subscribe(status=>{if(status==='SUBSCRIBED'){callSignalChannel=channel;resolve()}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){reject(new Error('Could not connect call service. Check Realtime permissions.'))}})})
+  return channel
+}
+function renderCallScreen(status='Calling…',video=false) {
+  const peer=chatItems.find(x=>x.conversation_id===activeConversationId)
+  callUi(`<div class="call-backdrop"><section class="call-window" role="dialog" aria-modal="true" aria-label="Call"><header><strong>${esc(peer?.peer_name||'Flexoverse call')}</strong><span data-call-status>${esc(status)}</span></header><div class="call-video-stage" ${video?'':'data-audio-call'}><video data-remote-video autoplay playsinline></video><video data-local-video autoplay muted playsinline></video><div class="call-audio-avatar">${avatar(initials(peer?.peer_name||'Friend'),'blue',peer?.peer_avatar_url||'')}</div></div><div class="call-controls"><button type="button" data-call-mute aria-label="Mute microphone" title="Mute microphone"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5m-4 0h8"/></svg></button><button type="button" data-call-camera aria-label="Turn camera off" title="Turn camera off" ${video?'':'hidden'}><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg></button><button type="button" class="call-end-button" data-end-call aria-label="End call" title="End call"><svg viewBox="0 0 24 24"><path d="m4 14 3-3a2 2 0 0 1 2-.4l2 .7a2 2 0 0 0 2 0l2-.7a2 2 0 0 1 2 .4l3 3-2 4-4-1-2-2-2 2-4 1z"/></svg></button></div></section></div>`)
+  const local=document.querySelector('[data-local-video]');if(local&&callLocalStream){local.srcObject=callLocalStream;local.hidden=!video}
+  const remote=document.querySelector('[data-remote-video]');if(remote&&callRemoteStream)remote.srcObject=callRemoteStream
+}
+async function createCallPeer(video) {
+  callPeer=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]})
+  callRemoteStream=new MediaStream()
+  const remote=document.querySelector('[data-remote-video]');if(remote)remote.srcObject=callRemoteStream
+  callPeer.ontrack=e=>{e.streams[0]?.getTracks().forEach(track=>callRemoteStream.addTrack(track));const v=document.querySelector('[data-remote-video]');if(v)v.srcObject=callRemoteStream}
+  callPeer.onicecandidate=e=>{if(e.candidate&&currentCall)callSignal('signal',{kind:'ice',callId:currentCall.id,candidate:e.candidate})}
+  callPeer.onconnectionstatechange=()=>{if(callPeer&&['failed','disconnected'].includes(callPeer.connectionState)){const st=document.querySelector('[data-call-status]');if(st)st.textContent='Connection interrupted…'}}
+  callLocalStream=await navigator.mediaDevices.getUserMedia({audio:true,video:!!video})
+  callLocalStream.getTracks().forEach(track=>callPeer.addTrack(track,callLocalStream))
+  return callPeer
+}
+async function startCall(mode) {
+  if(!session||!activeConversationId)return openAuth()
+  if(!navigator.mediaDevices?.getUserMedia||!window.RTCPeerConnection)return toast('Calls need a supported browser and a secure HTTPS connection.','error')
+  if(!navigator.onLine)return toast('You appear to be offline.','error')
+  try {
+    await ensureCallChannel(activeConversationId)
+    currentCall={id:crypto.randomUUID(),mode,initiator:true}
+    renderCallScreen('Calling…',mode==='video')
+    await createCallPeer(mode==='video')
+    const offer=await callPeer.createOffer();await callPeer.setLocalDescription(offer)
+    await callSignal('signal',{kind:'offer',callId:currentCall.id,conversationId:activeConversationId,to:chatItems.find(x=>x.conversation_id===activeConversationId)?.peer_user_id,mode,sdp:offer})
+    const status=document.querySelector('[data-call-status]');if(status)status.textContent='Ringing…'
+  } catch(error){console.error('Call start failed:',error);await endCall(false);toast(error.message||'Could not start the call. Check microphone and camera permissions.','error')}
+}
+async function handleCallSignal(payload) {
+  if(!payload||payload.from===session?.user?.id)return
+  if(payload.kind==='offer') {
+    if(payload.to!==session?.user?.id||payload.conversationId!==activeConversationId)return
+    if(currentCall){await callSignal('signal',{kind:'busy',callId:payload.callId,to:payload.from});return}
+    currentCall={id:payload.callId,mode:payload.mode,initiator:false,from:payload.from}
+    const peer=chatItems.find(x=>x.conversation_id===activeConversationId)
+    callUi(`<div class="call-backdrop"><section class="call-window call-incoming" role="dialog" aria-modal="true"><h2>Incoming ${payload.mode==='video'?'video':'voice'} call</h2><p>${esc(peer?.peer_name||'Your friend')} is calling you.</p><div class="call-controls"><button class="call-end-button" type="button" data-reject-call>Decline</button><button class="call-accept-button" type="button" data-accept-call>Answer</button></div></section></div>`)
+    window.__pendingCallOffer=payload
+    return
+  }
+  if(!currentCall||payload.callId!==currentCall.id)return
+  try {
+    if(payload.kind==='answer'&&callPeer){await callPeer.setRemoteDescription(new RTCSessionDescription(payload.sdp));for(const c of pendingIceCandidates.splice(0))await callPeer.addIceCandidate(new RTCIceCandidate(c));const st=document.querySelector('[data-call-status]');if(st)st.textContent='Connected'}
+    if(payload.kind==='ice'&&callPeer){if(callPeer.remoteDescription)await callPeer.addIceCandidate(new RTCIceCandidate(payload.candidate));else pendingIceCandidates.push(payload.candidate)}
+    if(payload.kind==='reject'){toast('The call was declined.');await endCall(false)}
+    if(payload.kind==='busy'){toast('They are already on another call.');await endCall(false)}
+    if(payload.kind==='end'){await endCall(false)}
+  }catch(error){console.error('Call signal error:',error);toast('The call connection could not be completed.','error');await endCall(false)}
+}
+async function acceptCall() {
+  const offer=window.__pendingCallOffer;if(!offer||!currentCall)return
+  try{callUi();await createCallPeer(offer.mode==='video');await callPeer.setRemoteDescription(new RTCSessionDescription(offer.sdp));for(const c of pendingIceCandidates.splice(0))await callPeer.addIceCandidate(new RTCIceCandidate(c));const answer=await callPeer.createAnswer();await callPeer.setLocalDescription(answer);await callSignal('signal',{kind:'answer',callId:currentCall.id,to:offer.from,sdp:answer});renderCallScreen('Connecting…',offer.mode==='video')}catch(error){console.error(error);toast(error.message||'Could not answer the call. Check microphone and camera permissions.','error');await endCall(true)}
+}
+async function endCall(notify=true) {
+  if(notify&&currentCall&&callSignalChannel)callSignal('signal',{kind:'end',callId:currentCall.id,to:currentCall.from}).catch(()=>{})
+  callPeer?.close();callPeer=null;callLocalStream?.getTracks().forEach(t=>t.stop());callLocalStream=null;callRemoteStream=null;pendingIceCandidates=[];currentCall=null;window.__pendingCallOffer=null;callUi()
+}
+
 function bindChatPageEvents() {
   document.querySelector('#chat-new-button')?.addEventListener('click',openNewChatDialog)
   document.querySelector('#conversation-search')?.addEventListener('input',renderChatList)
   document.querySelector('#conversation-list')?.addEventListener('click',e=>{if(e.target.closest('[data-chat-new]'))return openNewChatDialog();if(e.target.closest('[data-retry-chats]'))return loadChats();const row=e.target.closest('[data-conversation-id]');if(row)selectConversation(row.dataset.conversationId)})
   document.querySelector('#chat-room')?.addEventListener('click',e=>{if(e.target.closest('[data-chat-back]')){document.querySelector('#chat-layout')?.classList.remove('has-active-conversation');history.replaceState(null,'','/chats/')}})
+  document.querySelector('#chat-room')?.addEventListener('click',e=>{const start=e.target.closest('[data-start-call]');if(start)startCall(start.dataset.startCall)})
+  document.querySelector('#call-root')?.addEventListener('click',e=>{if(e.target.closest('[data-end-call]'))endCall(true);if(e.target.closest('[data-reject-call]')){const p=window.__pendingCallOffer;if(p)callSignal('signal',{kind:'reject',callId:p.callId,to:p.from}).catch(()=>{});endCall(false)}if(e.target.closest('[data-accept-call]'))acceptCall();if(e.target.closest('[data-call-mute]')&&callLocalStream){const track=callLocalStream.getAudioTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-mute]').classList.toggle('is-muted',!track.enabled)}}if(e.target.closest('[data-call-camera]')&&callLocalStream){const track=callLocalStream.getVideoTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-camera]').classList.toggle('is-muted',!track.enabled)}}})
   document.querySelector('#chat-room')?.addEventListener('submit',async e=>{const form=e.target.closest('#message-form');if(!form)return;e.preventDefault();if(!session)return openAuth();const input=form.querySelector('[name="message"]'),content=String(input.value||'').trim();if(!content||!activeConversationId)return;const submit=form.querySelector('[type="submit"]');submit.disabled=true;const {data,error}=await supabase.from('messages').insert({conversation_id:activeConversationId,sender_id:session.user.id,content}).select('id,conversation_id,sender_id,content,created_at').single();submit.disabled=false;if(error){toast(error.message,'error');return}handleChatMessage(data);await markConversationRead(activeConversationId);document.querySelector('#message-form [name="message"]')?.focus()})
   document.querySelector('#modal-root')?.addEventListener('click',async e=>{
     if(e.target.closest('[data-close-chat-modal]')||e.target.matches('[data-chat-modal-backdrop]')){document.querySelector('#modal-root').innerHTML='';return}
