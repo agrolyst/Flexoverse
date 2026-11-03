@@ -1125,7 +1125,7 @@ function bindEvents() {
     }
   })
   document.querySelector('#modal-root')?.addEventListener('click',async e=>{
-    if(e.target.matches('[data-close-comments]')){document.querySelector('#modal-root').innerHTML='';return}
+    if(e.target.matches('[data-close-comments]')){document.querySelector('#modal-root').innerHTML='';document.body.classList.remove('comments-open');return}
     const like=e.target.closest('[data-like-comment]')
     if(like){
       if(!session){openAuth();return}
