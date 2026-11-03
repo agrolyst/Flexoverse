@@ -735,6 +735,7 @@ async function createCallPeer(video) {
   callPeer.onconnectionstatechange=()=>{if(callPeer&&['failed','disconnected'].includes(callPeer.connectionState)){const st=document.querySelector('[data-call-status]');if(st)st.textContent='Connection interrupted…'}}
   callLocalStream=await navigator.mediaDevices.getUserMedia({audio:true,video:!!video})
   callLocalStream.getTracks().forEach(track=>callPeer.addTrack(track,callLocalStream))
+  const local=document.querySelector('[data-local-video]');if(local){local.srcObject=callLocalStream;local.hidden=!video}
   return callPeer
 }
 async function startCall(mode) {
@@ -747,7 +748,7 @@ async function startCall(mode) {
     renderCallScreen('Calling…',mode==='video')
     await createCallPeer(mode==='video')
     const offer=await callPeer.createOffer();await callPeer.setLocalDescription(offer)
-    await callSignal('signal',{kind:'offer',callId:currentCall.id,conversationId:activeConversationId,to:chatItems.find(x=>x.conversation_id===activeConversationId)?.peer_user_id,mode,sdp:offer})
+    await callSignal('signal',{kind:'offer',callId:currentCall.id,conversationId:activeConversationId,to:chatItems.find(x=>x.conversation_id===activeConversationId)?.peer_id,mode,sdp:offer})
     const status=document.querySelector('[data-call-status]');if(status)status.textContent='Ringing…'
   } catch(error){console.error('Call start failed:',error);await endCall(false);toast(error.message||'Could not start the call. Check microphone and camera permissions.','error')}
 }
