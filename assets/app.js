@@ -515,6 +515,7 @@ function renderChatList() {
   const search=document.querySelector('#conversation-search')?.value.trim().toLowerCase()||''
   const visible=chatItems.filter(item=>`${item.peer_name} ${item.peer_username}`.toLowerCase().includes(search))
   const total=document.querySelector('#chat-total');if(total)total.textContent=String(chatItems.length)
+  renderChatSelectionControls()
   if(!visible.length){
     list.innerHTML=chatItems.length?'<div class="conversation-empty"><strong>No chats found</strong><p>Try searching with another name.</p></div>':'<div class="conversation-empty"><strong>Your inbox is quiet</strong><p>Start a private conversation with one of your friends.</p><button class="button button-soft" type="button" data-chat-new>Start a chat</button></div>'
     return
