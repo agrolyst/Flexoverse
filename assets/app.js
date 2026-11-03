@@ -836,9 +836,11 @@ async function markNotificationRead(notificationId) {
   await loadNotificationCount()
 }
 
-let incomingRingContext=null,incomingRingTimer=null;
+let incomingRingContext=null,incomingRingTimer=null,incomingVibrationTimer=null;
 function stopIncomingRingtone(){
  if(incomingRingTimer){clearInterval(incomingRingTimer);incomingRingTimer=null}
+ if(incomingVibrationTimer){clearInterval(incomingVibrationTimer);incomingVibrationTimer=null}
+ try{navigator.vibrate?.(0)}catch{}
  if(incomingRingContext){incomingRingContext.close().catch(()=>{});incomingRingContext=null}
 }
 async function playIncomingRingtone(){
@@ -849,19 +851,20 @@ async function playIncomingRingtone(){
   const ctx=incomingRingContext;
   const ring=()=>{
    if(!ctx||ctx.state==='closed')return;
-   [0,0.42].forEach(offset=>{
+   [0,0.38,0.76].forEach(offset=>{
     const osc=ctx.createOscillator(),gain=ctx.createGain();
-    osc.type='sine';osc.frequency.setValueAtTime(440,ctx.currentTime+offset);
-    osc.frequency.setValueAtTime(480,ctx.currentTime+offset+0.18);
+    osc.type='triangle';osc.frequency.setValueAtTime(520,ctx.currentTime+offset);
+    osc.frequency.setValueAtTime(660,ctx.currentTime+offset+0.16);
     gain.gain.setValueAtTime(0.0001,ctx.currentTime+offset);
-    gain.gain.linearRampToValueAtTime(0.13,ctx.currentTime+offset+0.025);
-    gain.gain.setValueAtTime(0.13,ctx.currentTime+offset+0.18);
-    gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+offset+0.24);
-    osc.connect(gain);gain.connect(ctx.destination);osc.start(ctx.currentTime+offset);osc.stop(ctx.currentTime+offset+0.25);
+    gain.gain.linearRampToValueAtTime(0.32,ctx.currentTime+offset+0.025);
+    gain.gain.setValueAtTime(0.32,ctx.currentTime+offset+0.2);
+    gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+offset+0.27);
+    osc.connect(gain);gain.connect(ctx.destination);osc.start(ctx.currentTime+offset);osc.stop(ctx.currentTime+offset+0.28);
    });
   };
-  ring();incomingRingTimer=setInterval(ring,1800);
+  ring();incomingRingTimer=setInterval(ring,1900);
  }catch(error){console.warn('Incoming ringtone could not play:',error)}
+ try{if(navigator.vibrate){navigator.vibrate([500,180,500,650]);incomingVibrationTimer=setInterval(()=>navigator.vibrate([500,180,500,650]),1900)}}catch(error){console.warn('Call vibration unavailable:',error)}
 }
 
 function callUi(html='') { const root=document.querySelector('#call-root'); if(root)root.innerHTML=html }
@@ -875,10 +878,13 @@ async function ensureCallChannel(conversationId) {
   return channel
 }
 function renderCallScreen(status='Calling…',video=false) {
-  const peer=chatItems.find(x=>x.conversation_id===activeConversationId)
-  callUi(`<div class="call-backdrop"><section class="call-window" role="dialog" aria-modal="true" aria-label="Call"><header><strong>${esc(peer?.peer_name||'Flexoverse call')}</strong><span data-call-status>${esc(status)}</span></header><div class="call-video-stage" ${video?'':'data-audio-call'}><video data-remote-video autoplay playsinline></video><video data-local-video autoplay muted playsinline></video><div class="call-audio-avatar">${avatar(initials(peer?.peer_name||'Friend'),'blue',peer?.peer_avatar_url||'')}</div></div><div class="call-controls"><button type="button" data-call-mute aria-label="Mute microphone" title="Mute microphone"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5m-4 0h8"/></svg></button><button type="button" data-call-camera aria-label="Turn camera off" title="Turn camera off" ${video?'':'hidden'}><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg></button><button type="button" class="call-end-button" data-end-call aria-label="End call" title="End call"><svg viewBox="0 0 24 24"><path d="m4 14 3-3a2 2 0 0 1 2-.4l2 .7a2 2 0 0 0 2 0l2-.7a2 2 0 0 1 2 .4l3 3-2 4-4-1-2-2-2 2-4 1z"/></svg></button></div></section></div>`)
-  const local=document.querySelector('[data-local-video]');if(local&&callLocalStream){local.srcObject=callLocalStream;local.hidden=!video}
-  const remote=document.querySelector('[data-remote-video]');if(remote&&callRemoteStream)remote.srcObject=callRemoteStream
+ const peer=chatItems.find(x=>x.conversation_id===activeConversationId);
+ callUi(`<div class="call-backdrop call-screen-backdrop"><section class="call-window call-screen" role="dialog" aria-modal="true" aria-label="Call">
+ <header class="call-screen-top"><button type="button" data-call-participants aria-label="Participants" title="Participants"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.9M16 3.2a4 4 0 0 1 0 7.6"/></svg></button><div class="call-screen-title"><strong>${esc(peer?.peer_name||'Flexoverse call')}</strong><span data-call-status>${esc(status)}</span></div><button type="button" data-call-flip aria-label="Switch camera" title="Switch camera" ${video?'':'hidden'}><svg viewBox="0 0 24 24"><path d="M20 7h-3l-2-3H9L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Z"/><circle cx="12" cy="13" r="3"/></svg></button></header>
+ <div class="call-video-stage call-screen-stage" ${video?'':'data-audio-call'}><video data-remote-video autoplay playsinline></video><video data-local-video autoplay muted playsinline></video><div class="call-audio-avatar">${avatar(initials(peer?.peer_name||'Friend'),'blue',peer?.peer_avatar_url||'')}<strong>${esc(peer?.peer_name||'Flexoverse')}</strong></div></div>
+ <div class="call-screen-controls"><button type="button" data-call-more aria-label="More call options" title="More options"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button><button type="button" data-call-speaker aria-label="Speaker on" title="Speaker"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4Zm12-1a6 6 0 0 1 0 8m2-11a10 10 0 0 1 0 14"/></svg></button><button type="button" data-call-camera aria-label="Turn camera off" title="Camera" ${video?'':'hidden'}><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg></button><button type="button" data-call-mute aria-label="Mute microphone" title="Microphone"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5m-4 0h8"/></svg></button><button type="button" class="call-end-button" data-end-call aria-label="End call" title="End call"><svg viewBox="0 0 24 24"><path d="m4 14 3-3a2 2 0 0 1 2-.4l2 .7a2 2 0 0 0 2 0l2-.7a2 2 0 0 1 2 .4l3 3-2 4-4-1-2-2-2 2-4 1z"/></svg></button></div></section></div>`);
+ const local=document.querySelector('[data-local-video]');if(local&&callLocalStream){local.srcObject=callLocalStream;local.hidden=!video}
+ const remote=document.querySelector('[data-remote-video]');if(remote&&callRemoteStream)remote.srcObject=callRemoteStream;
 }
 async function createCallPeer(video) {
   callPeer=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]})
@@ -948,7 +954,11 @@ async function loadLiveKitSdk(){
 }
 function renderGroupCallScreen(status='Connecting…',video=false){
  const item=chatItems.find(x=>x.conversation_id===activeConversationId);
- callUi(`<div class="call-backdrop"><section class="call-window flexoverse-group-call" role="dialog" aria-modal="true" aria-label="Group call"><header><strong>${esc(item?.peer_name||'Group call')}</strong><span data-group-call-status>${esc(status)}</span></header><div class="group-call-participants" data-group-call-participants></div><div class="call-controls"><button type="button" data-group-mute title="Mute microphone">Mute</button><button type="button" data-group-camera ${video?'':'hidden'} title="Turn camera off">Camera</button><button type="button" class="call-end-button" data-end-group-call>Leave</button></div></section></div>`);
+ callUi(`<div class="call-backdrop call-screen-backdrop"><section class="call-window call-screen flexoverse-group-call" role="dialog" aria-modal="true" aria-label="Group call">
+ <header class="call-screen-top"><button type="button" data-call-participants aria-label="Participants"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.9M16 3.2a4 4 0 0 1 0 7.6"/></svg></button><div class="call-screen-title"><strong>${esc(item?.peer_name||'Group call')}</strong><span data-group-call-status>${esc(status)}</span></div><button type="button" data-call-flip aria-label="Switch camera" ${video?'':'hidden'}>↻</button></header>
+ <div class="group-call-participants call-screen-stage" data-group-call-participants></div>
+ <div class="call-screen-controls"><button type="button" data-call-more aria-label="More options">•••</button><button type="button" data-group-speaker aria-label="Speaker">◖))</button><button type="button" data-group-camera ${video?'':'hidden'} aria-label="Camera">▣</button><button type="button" data-group-mute aria-label="Mute microphone">♩</button><button type="button" class="call-end-button" data-end-group-call aria-label="Leave call">☎</button></div>
+ </section></div>`);
 }
 async function joinLiveKitGroupCall(invite){
  stopIncomingRingtone();
@@ -1123,7 +1133,7 @@ function bindChatPageEvents() {
     if(action==='favorite'){toast('Favorites are coming soon.');return}
     if(action==='export'){const item=chatItems.find(x=>x.conversation_id===activeConversationId);const lines=activeChatMessages.map(m=>{const who=m.sender_id===session?.user?.id?'You':(item?.peer_name||'Friend');return '['+new Date(m.created_at).toLocaleString()+'] '+who+': '+m.content});const blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='flexoverse-chat.txt';a.click();URL.revokeObjectURL(url);return}
   })
-  document.querySelector('#call-root')?.addEventListener('click',e=>{if(e.target.closest('[data-accept-group-call]')){const invite=pendingGroupInvite;if(invite)joinLiveKitGroupCall(invite).catch(error=>{console.error(error);toast(error.message||'Could not join group call.','error');endGroupCall(false)});return}if(e.target.closest('[data-reject-group-call]')){stopIncomingRingtone();pendingGroupInvite=null;currentCall=null;callUi();return}if(e.target.closest('[data-end-group-call]')){endGroupCall(true);return}if(e.target.closest('[data-group-mute]')&&liveKitRoom){const p=liveKitRoom.localParticipant;p.setMicrophoneEnabled(!p.isMicrophoneEnabled).catch(error=>toast(error.message,'error'));e.target.closest('[data-group-mute]').textContent=p.isMicrophoneEnabled?'Unmute':'Mute';return}if(e.target.closest('[data-group-camera]')&&liveKitRoom){const p=liveKitRoom.localParticipant;p.setCameraEnabled(!p.isCameraEnabled).catch(error=>toast(error.message,'error'));return}if(e.target.closest('[data-end-call]'))endCall(true);if(e.target.closest('[data-reject-call]')){const p=window.__pendingCallOffer;if(p)callSignal('signal',{kind:'reject',callId:p.callId,to:p.from}).catch(()=>{});endCall(false)}if(e.target.closest('[data-accept-call]'))acceptCall();if(e.target.closest('[data-call-mute]')&&callLocalStream){const track=callLocalStream.getAudioTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-mute]').classList.toggle('is-muted',!track.enabled)}}if(e.target.closest('[data-call-camera]')&&callLocalStream){const track=callLocalStream.getVideoTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-camera]').classList.toggle('is-muted',!track.enabled)}}})
+  document.querySelector('#call-root')?.addEventListener('click',e=>{if(e.target.closest('[data-accept-group-call]')){const invite=pendingGroupInvite;if(invite)joinLiveKitGroupCall(invite).catch(error=>{console.error(error);toast(error.message||'Could not join group call.','error');endGroupCall(false)});return}if(e.target.closest('[data-reject-group-call]')){stopIncomingRingtone();pendingGroupInvite=null;currentCall=null;callUi();return}if(e.target.closest('[data-end-group-call]')){endGroupCall(true);return}if(e.target.closest('[data-group-speaker]')&&liveKitRoom){liveKitRoom.startAudio().catch(()=>{});return}if(e.target.closest('[data-group-mute]')&&liveKitRoom){const p=liveKitRoom.localParticipant;p.setMicrophoneEnabled(!p.isMicrophoneEnabled).catch(error=>toast(error.message,'error'));e.target.closest('[data-group-mute]').textContent=p.isMicrophoneEnabled?'Unmute':'Mute';return}if(e.target.closest('[data-group-camera]')&&liveKitRoom){const p=liveKitRoom.localParticipant;p.setCameraEnabled(!p.isCameraEnabled).catch(error=>toast(error.message,'error'));return}if(e.target.closest('[data-end-call]'))endCall(true);if(e.target.closest('[data-call-speaker]')){const audio=document.querySelector('[data-remote-video]');if(audio){audio.muted=!audio.muted;e.target.closest('[data-call-speaker]').classList.toggle('is-muted',audio.muted)}return}if(e.target.closest('[data-call-flip]')&&callLocalStream){const track=callLocalStream.getVideoTracks()[0];if(track&&track.applyConstraints)track.applyConstraints({facingMode:track.getSettings().facingMode==='user'?'environment':'user'}).catch(()=>{});return}if(e.target.closest('[data-reject-call]')){const p=window.__pendingCallOffer;if(p)callSignal('signal',{kind:'reject',callId:p.callId,to:p.from}).catch(()=>{});endCall(false)}if(e.target.closest('[data-accept-call]'))acceptCall();if(e.target.closest('[data-call-mute]')&&callLocalStream){const track=callLocalStream.getAudioTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-mute]').classList.toggle('is-muted',!track.enabled)}}if(e.target.closest('[data-call-camera]')&&callLocalStream){const track=callLocalStream.getVideoTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-camera]').classList.toggle('is-muted',!track.enabled)}}})
   document.querySelector('#chat-room')?.addEventListener('touchstart',e=>{const bubble=e.target.closest('.message');if(!bubble)return;const wrap=bubble.closest('[data-message-wrap]');const id=bubble.dataset.messageId;if(!id)return;messageLongPressTimer=setTimeout(()=>{messageLongPressTimer=null;openWhatsAppMessageMenu(id,wrap)},520)},{passive:true})
   document.querySelector('#chat-room')?.addEventListener('touchend',()=>{if(messageLongPressTimer){clearTimeout(messageLongPressTimer);messageLongPressTimer=null}},{passive:true})
   document.querySelector('#chat-room')?.addEventListener('touchmove',()=>{if(messageLongPressTimer){clearTimeout(messageLongPressTimer);messageLongPressTimer=null}},{passive:true})
