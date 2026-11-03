@@ -611,7 +611,7 @@ async function markConversationRead(conversationId) {
   renderChatList()
 }
 
-async async function subscribeToChatTyping(conversationId){
+async function subscribeToChatTyping(conversationId){
  if(chatTypingChannel){await supabase.removeChannel(chatTypingChannel);chatTypingChannel=null}
  if(!session||!conversationId)return;
  chatTypingChannel=supabase.channel('chat-typing:'+conversationId,{config:{presence:{key:session.user.id}}})
@@ -640,7 +640,7 @@ async function setChatTyping(isTyping){
  else chatTypingChannel.track({userId:session.user.id,fullName:profile?.full_name||'Someone',typing:false}).catch(()=>{});
 }
 
-async async function selectConversation(conversationId,updateUrl=true) {
+async function selectConversation(conversationId,updateUrl=true) {
   const item=chatItems.find(chat=>chat.conversation_id===conversationId)
   if(!item)return
   activeConversationId=conversationId
@@ -828,7 +828,7 @@ async function markNotificationRead(notificationId) {
 
 function callUi(html='') { const root=document.querySelector('#call-root'); if(root)root.innerHTML=html }
 function callSignal(event,payload) { if(!callSignalChannel)return Promise.reject(new Error('Call connection is not ready'));return callSignalChannel.send({type:'broadcast',event,payload:{...payload,from:session.user.id}}) }
-async async function ensureCallChannel(conversationId) {
+async function ensureCallChannel(conversationId) {
   if(callSignalChannel&&callSignalChannel.topic===`call:${conversationId}`)return callSignalChannel
   if(callSignalChannel){await supabase.removeChannel(callSignalChannel);callSignalChannel=null}
   const channel=supabase.channel(`call:${conversationId}`,{config:{private:true,broadcast:{ack:true}}})
