@@ -1563,3 +1563,12 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
 .flexoverse-group-call .call-screen-controls button{font-size:20px!important}
 @media(min-width:760px){.call-screen{max-width:100%!important}.call-screen-controls{left:calc(50% - 330px)!important;right:calc(50% - 330px)!important;bottom:30px!important}.call-screen-stage{padding-bottom:160px!important}}
 @media(max-width:420px){.call-screen-controls{left:14px!important;right:14px!important;min-height:90px!important;padding:9px!important;gap:5px!important}.call-screen-controls button{width:56px!important;height:56px!important}.call-screen-top{left:14px!important;right:14px!important}}
+
+/* Consistent icon system for group-call controls */
+.flexoverse-group-call .call-screen-controls button{font-size:0!important;line-height:0!important}
+.flexoverse-group-call .call-screen-controls button svg{display:block!important;width:28px!important;height:28px!important;fill:none!important;stroke:currentColor!important;stroke-width:2.1!important;stroke-linecap:round!important;stroke-linejoin:round!important}
+.flexoverse-group-call .call-screen-controls button[data-group-speaker]{background:#fff!important;color:#12191d!important}
+.flexoverse-group-call .call-screen-controls button.is-muted{background:#3b454d!important;color:#fff!important}
+.flexoverse-group-call .call-screen-controls button.call-end-button{background:#ed0645!important;color:#fff!important}
+.flexoverse-group-call .call-screen-controls button:focus-visible,.call-screen-controls button:focus-visible{outline:3px solid #7bb8ff!important;outline-offset:3px!important}
+@media(max-width:420px){.flexoverse-group-call .call-screen-controls button svg{width:25px!important;height:25px!important}}
