@@ -1096,3 +1096,24 @@ html[data-theme="dark"] .profile-completion-card .auth-page-form>label>textarea{
 .create-video-upload input{position:absolute;width:1px;height:1px;opacity:0}
 .create-signin-hint{padding:10px 12px;background:#f5f4ff;border-radius:9px;font-size:12px;color:#5c56c8}
 .create-signin-hint a{font-weight:700;text-decoration:underline}
+
+/* Personal content library */
+.my-content-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:16px;margin:0 0 18px}
+.my-content-stats>div{display:flex;flex-direction:column;align-items:center;gap:5px;border-right:1px solid var(--line)}
+.my-content-stats>div:last-child{border-right:0}
+.my-content-stats strong{font:800 20px Manrope;color:var(--ink)}
+.my-content-stats span{font-size:9px;color:var(--muted)}
+.my-content-filters{display:flex;gap:7px;border-bottom:1px solid var(--line);margin:0 0 20px}
+.my-content-filters button{padding:11px 13px;border:0;border-bottom:2px solid transparent;background:transparent;color:#7d8794;font-size:10px}
+.my-content-filters button.active{border-bottom-color:var(--brand);color:var(--brand);font-weight:700}
+.my-content-section{margin:0 0 27px}
+.my-content-section[hidden]{display:none}
+.my-content-section>.section-heading{margin:0 1px 12px}
+.my-content-video-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.my-content-video{position:relative;overflow:hidden;min-width:0;aspect-ratio:3/4;background:#202533}
+.my-content-video video{width:100%;height:100%;object-fit:cover;display:block}
+.my-content-watch{position:absolute;left:50%;top:43%;transform:translate(-50%,-50%);width:42px;height:42px;border:1px solid #ffffff80;border-radius:50%;background:#171e2a88;color:white;font-size:17px}
+.my-content-video-copy{position:absolute;left:0;right:0;bottom:0;padding:28px 10px 10px;background:linear-gradient(transparent,#111a);color:#fff;display:flex;flex-direction:column;gap:5px}
+.my-content-video-copy strong{font-size:9px;line-height:1.4;overflow-wrap:anywhere}
+.my-content-video-copy small{font-size:8px;color:#ffffffb8}
+@media(max-width:760px){.my-content-video-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.my-content-stats{padding:13px 7px}.my-content-stats strong{font-size:17px}.my-content-stats span{font-size:8px}.my-content-filters{gap:2px}.my-content-filters button{padding:10px 9px;font-size:9px}}
