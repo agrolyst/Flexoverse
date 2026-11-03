@@ -1355,3 +1355,20 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
  .chat-call-menu-toggle{width:34px;height:34px;flex-basis:34px}
  .chat-room-profile{width:34px;height:34px;flex-basis:34px}
 }
+
+
+/* WhatsApp-inspired conversation overflow menu */
+.chat-header-menu-wrap{position:relative;display:flex;align-items:center;flex:0 0 auto;margin-left:auto}
+.chat-header-menu-toggle{width:38px;height:38px;display:grid;place-items:center;border:1px solid #e8eaf0;border-radius:50%;background:#fff;color:#344054;padding:0;cursor:pointer}
+.chat-header-menu-toggle svg{width:19px;height:19px;fill:currentColor}
+.chat-header-menu[hidden]{display:none!important}
+.chat-header-menu{position:absolute;z-index:50;top:calc(100% + 8px);right:0;width:224px;max-height:min(76vh,560px);overflow:auto;padding:6px;background:#fff;border:1px solid #e8eaf0;border-radius:12px;box-shadow:0 14px 38px #17202f24;display:flex;flex-direction:column;gap:2px}
+.chat-header-menu button{width:100%;min-height:38px;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:12px;padding:0 10px;border:0;border-radius:7px;background:transparent;color:#263244;text-align:left;font-size:12px;font-weight:500;cursor:pointer}
+.chat-header-menu button:hover{background:#f2f4f7}
+.chat-header-menu .menu-symbol{width:18px;flex:0 0 18px;text-align:center;font-size:17px;color:#586579}
+.chat-menu-divider{height:1px;background:#e9ecf1;margin:5px 2px}
+.chat-message-search{width:calc(100% - 24px);margin:10px 12px 0;padding:10px 12px;border:1px solid #e4e8ef;border-radius:9px;outline-color:var(--brand);font-size:13px}
+.chat-room.chat-room-soft-theme .chat-history{background:#f1f4ed}
+.chat-room.chat-room-soft-theme .message.received{background:#fff}
+.chat-room.chat-room-soft-theme .message.sent{background:#d9fdd3;border-color:#c8f0c1}
+@media(max-width:760px){.chat-header-menu-toggle{width:34px;height:34px}.chat-header-menu{right:0;width:min(224px,calc(100vw - 28px))}}
