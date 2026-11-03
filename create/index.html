@@ -25,11 +25,31 @@
             <small id="post-author-handle">@yourname</small>
           </span>
         </div>
-        <label class="sr-only" for="post-content">Write your post</label>
-        <textarea id="post-content" name="content" required maxlength="2000" placeholder="What would you like to share?" rows="8"></textarea>
-        <div class="create-post-footer">
-          <span>Your post will appear in the public feed.</span>
-          <span id="post-count">0 / 2000</span>
+        <label class="create-format-label" for="post-format">What would you like to share?</label>
+        <select id="post-format" name="format" class="create-format-select">
+          <option value="text">Text post</option>
+          <option value="video">Video / Reel</option>
+        </select>
+        <div id="text-post-fields">
+          <label class="sr-only" for="post-content">Write your post</label>
+          <textarea id="post-content" name="content" maxlength="2000" placeholder="What would you like to share?" rows="8"></textarea>
+          <div class="create-post-footer"><span>Your post will appear in the public feed.</span><span id="post-count">0 / 2000</span></div>
+        </div>
+        <div id="video-post-fields" hidden>
+          <label class="create-format-label" for="video-category">Choose your video type</label>
+          <select id="video-category" name="category" class="create-format-select">
+            <option value="Entertainment">Entertainment</option><option value="Comedy">Comedy</option><option value="Education">Education</option><option value="Music">Music</option><option value="Lifestyle">Lifestyle</option><option value="Gaming">Gaming</option><option value="Sports">Sports</option><option value="News & Updates">News &amp; Updates</option><option value="Tutorials">Tutorials</option><option value="Other">Other</option>
+          </select>
+          <label class="reel-upload-zone create-video-upload" for="create-video-file" id="create-video-zone">
+            <video id="create-video-preview" class="reel-upload-preview" playsinline controls hidden></video>
+            <span class="reel-upload-prompt" id="create-video-prompt"><span class="reel-upload-icon" aria-hidden="true">▶</span><strong>Select a video from your device</strong><small>MP4, WebM or MOV · maximum 50 MB</small></span>
+            <input id="create-video-file" name="video" type="file" accept="video/mp4,video/webm,video/quicktime">
+          </label>
+          <p class="reel-field-help">Vertical videos work best. Your video will be shared in Reels.</p>
+          <label class="create-format-label" for="video-caption">Video caption <span class="muted">Optional</span></label>
+          <textarea id="video-caption" name="caption" maxlength="500" placeholder="Tell people what your video is about…"></textarea>
+          <div class="reel-caption-meta"><span>Be kind and respectful.</span><span id="video-caption-count">0 / 500</span></div>
+          <div class="reel-upload-progress" id="create-upload-progress" hidden><div class="reel-progress-track"><span id="create-progress-bar"></span></div><small id="create-progress-label">Preparing upload…</small></div>
         </div>
         <div class="create-post-actions">
           <a class="button button-outline" href="/">Cancel</a>
