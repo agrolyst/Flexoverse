@@ -22,7 +22,9 @@ let callPeer = null
 let callLocalStream = null
 let callRemoteStream = null
 let currentCall = null
+let callLogView = false
 let pendingIceCandidates = []
+let callHistoryId = null
 let notificationItems = []
 let notificationFilter = 'all'
 let notificationRealtimeChannel = null
@@ -751,17 +753,53 @@ async function createCallPeer(video) {
   const local=document.querySelector('[data-local-video]');if(local){local.srcObject=callLocalStream;local.hidden=!video}
   return callPeer
 }
+
+async function loadCallHistory() {
+ const list=document.querySelector('#conversation-list');if(!list||!session)return;
+ list.innerHTML='<div class="chat-loading">Loading call history…</div>';
+ const result=await supabase.from('call_history').select('id,conversation_id,caller_id,receiver_id,call_type,status,started_at,duration_seconds,caller:profiles!call_history_caller_id_fkey(full_name,username,avatar_url),receiver:profiles!call_history_receiver_id_fkey(full_name,username,avatar_url)').order('started_at',{ascending:false}).limit(100);
+ if(result.error){console.error(result.error);list.innerHTML='<div class="conversation-empty">Could not load call history. <button type="button" data-retry-call-history>Retry</button></div>';return}
+ if(!result.data?.length){list.innerHTML='<div class="conversation-empty"><strong>No calls yet</strong><p>Your voice and video calls will appear here.</p></div>';return}
+ list.innerHTML=result.data.map(row=>{
+  const outgoing=row.caller_id===session.user.id,person=outgoing?row.receiver:row.caller,name=person?.full_name||person?.username||'Flexoverse friend';
+  const missed=row.status==='missed'||(row.status==='calling'&&!outgoing),state=missed?'Missed':row.status==='declined'?'Declined':row.status==='cancelled'?'Cancelled':row.status==='calling'?'Calling':'Completed';
+  const icon=row.call_type==='video'?'<svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg>':'<svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 11.2 18a19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 2.1 3.2 2 2 0 0 1 4.1 1h3a2 2 0 0 1 2 1.7l.5 2.8a2 2 0 0 1-.6 1.7L7.1 9.1a16 16 0 0 0 6 6l1.9-1.9a2 2 0 0 1 1.7-.6l2.8.5a2 2 0 0 1 1.5 1.8Z"/></svg>';
+  return '<button class="call-history-row" type="button" data-call-conversation="'+esc(row.conversation_id)+'"><span>'+avatar(initials(name),'blue',person?.avatar_url||'')+'</span><span class="call-history-details"><strong>'+esc(name)+'</strong><small class="'+(missed?'is-missed':'')+'">'+(outgoing?'Outgoing':'Incoming')+' '+row.call_type+' · '+state+'</small><time>'+esc(chatTime(row.started_at))+'</time></span><span class="call-history-type '+(missed?'is-missed':'')+'">'+icon+'</span></button>';
+ }).join('');
+}
+function showCallHistory(show) {
+ callLogView=show;
+ document.querySelector('#call-log-toggle')?.classList.toggle('active',show);
+ document.querySelector('#chat-inbox-toggle')?.classList.toggle('active',!show);
+ const search=document.querySelector('#conversation-search');if(search)search.placeholder=show?'Search call history':'Search chats';
+ if(show)loadCallHistory();else renderChatList();
+}
+async function createCallHistory(mode,receiverId,conversationId) {
+ const {data,error}=await supabase.from('call_history').insert({conversation_id:conversationId,caller_id:session.user.id,receiver_id:receiverId,call_type:mode,status:'calling'}).select('id').single();
+ if(error)throw error;callHistoryId=data.id;return data.id;
+}
+async function updateCallHistory(status) {
+ if(!callHistoryId)return;
+ const patch={status};
+ if(status==='answered')patch.answered_at=new Date().toISOString();
+ if(['ended','declined','missed','cancelled'].includes(status)){patch.ended_at=new Date().toISOString();patch.ended_by=session?.user?.id||null;if(currentCall?.answeredAt)patch.duration_seconds=Math.max(0,Math.floor((Date.now()-currentCall.answeredAt)/1000))}
+ const {error}=await supabase.from('call_history').update(patch).eq('id',callHistoryId);
+ if(error)console.warn('Call history update failed:',error.message);
+ if(callLogView)loadCallHistory();
+}
 async function startCall(mode) {
   if(!session||!activeConversationId)return openAuth()
   if(!navigator.mediaDevices?.getUserMedia||!window.RTCPeerConnection)return toast('Calls need a supported browser and a secure HTTPS connection.','error')
   if(!navigator.onLine)return toast('You appear to be offline.','error')
   try {
     await ensureCallChannel(activeConversationId)
-    currentCall={id:crypto.randomUUID(),mode,initiator:true}
+    const receiverId=chatItems.find(x=>x.conversation_id===activeConversationId)?.peer_id
+    callHistoryId=await createCallHistory(mode,receiverId,activeConversationId)
+    currentCall={id:crypto.randomUUID(),mode,initiator:true,answeredAt:null}
     renderCallScreen('Calling…',mode==='video')
     await createCallPeer(mode==='video')
     const offer=await callPeer.createOffer();await callPeer.setLocalDescription(offer)
-    await callSignal('signal',{kind:'offer',callId:currentCall.id,conversationId:activeConversationId,to:chatItems.find(x=>x.conversation_id===activeConversationId)?.peer_id,mode,sdp:offer})
+    await callSignal('signal',{kind:'offer',callId:currentCall.id,conversationId:activeConversationId,to:receiverId,mode,sdp:offer,callLogId:callHistoryId})
     const status=document.querySelector('[data-call-status]');if(status)status.textContent='Ringing…'
   } catch(error){console.error('Call start failed:',error);await endCall(false);toast(error.message||'Could not start the call. Check microphone and camera permissions.','error')}
 }
@@ -770,7 +808,8 @@ async function handleCallSignal(payload) {
   if(payload.kind==='offer') {
     if(payload.to!==session?.user?.id||payload.conversationId!==activeConversationId)return
     if(currentCall){await callSignal('signal',{kind:'busy',callId:payload.callId,to:payload.from});return}
-    currentCall={id:payload.callId,mode:payload.mode,initiator:false,from:payload.from}
+    currentCall={id:payload.callId,mode:payload.mode,initiator:false,from:payload.from,answeredAt:null}
+    callHistoryId=payload.callLogId||null
     const peer=chatItems.find(x=>x.conversation_id===activeConversationId)
     callUi(`<div class="call-backdrop"><section class="call-window call-incoming" role="dialog" aria-modal="true"><h2>Incoming ${payload.mode==='video'?'video':'voice'} call</h2><p>${esc(peer?.peer_name||'Your friend')} is calling you.</p><div class="call-controls"><button class="call-end-button" type="button" data-reject-call>Decline</button><button class="call-accept-button" type="button" data-accept-call>Answer</button></div></section></div>`)
     window.__pendingCallOffer=payload
@@ -778,26 +817,30 @@ async function handleCallSignal(payload) {
   }
   if(!currentCall||payload.callId!==currentCall.id)return
   try {
-    if(payload.kind==='answer'&&callPeer){await callPeer.setRemoteDescription(new RTCSessionDescription(payload.sdp));for(const c of pendingIceCandidates.splice(0))await callPeer.addIceCandidate(new RTCIceCandidate(c));const st=document.querySelector('[data-call-status]');if(st)st.textContent='Connected'}
+    if(payload.kind==='answer'&&callPeer){currentCall.answeredAt=Date.now();await updateCallHistory('answered');await callPeer.setRemoteDescription(new RTCSessionDescription(payload.sdp));for(const c of pendingIceCandidates.splice(0))await callPeer.addIceCandidate(new RTCIceCandidate(c));const st=document.querySelector('[data-call-status]');if(st)st.textContent='Connected'}
     if(payload.kind==='ice'&&callPeer){if(callPeer.remoteDescription)await callPeer.addIceCandidate(new RTCIceCandidate(payload.candidate));else pendingIceCandidates.push(payload.candidate)}
-    if(payload.kind==='reject'){toast('The call was declined.');await endCall(false)}
+    if(payload.kind==='reject'){await updateCallHistory('declined');toast('The call was declined.');await endCall(false)}
     if(payload.kind==='busy'){toast('They are already on another call.');await endCall(false)}
     if(payload.kind==='end'){await endCall(false)}
   }catch(error){console.error('Call signal error:',error);toast('The call connection could not be completed.','error');await endCall(false)}
 }
 async function acceptCall() {
   const offer=window.__pendingCallOffer;if(!offer||!currentCall)return
-  try{callUi();await createCallPeer(offer.mode==='video');await callPeer.setRemoteDescription(new RTCSessionDescription(offer.sdp));for(const c of pendingIceCandidates.splice(0))await callPeer.addIceCandidate(new RTCIceCandidate(c));const answer=await callPeer.createAnswer();await callPeer.setLocalDescription(answer);await callSignal('signal',{kind:'answer',callId:currentCall.id,to:offer.from,sdp:answer});renderCallScreen('Connecting…',offer.mode==='video')}catch(error){console.error(error);toast(error.message||'Could not answer the call. Check microphone and camera permissions.','error');await endCall(true)}
+  try{currentCall.answeredAt=Date.now();await updateCallHistory('answered');callUi();await createCallPeer(offer.mode==='video');await callPeer.setRemoteDescription(new RTCSessionDescription(offer.sdp));for(const c of pendingIceCandidates.splice(0))await callPeer.addIceCandidate(new RTCIceCandidate(c));const answer=await callPeer.createAnswer();await callPeer.setLocalDescription(answer);await callSignal('signal',{kind:'answer',callId:currentCall.id,to:offer.from,sdp:answer});renderCallScreen('Connecting…',offer.mode==='video')}catch(error){console.error(error);toast(error.message||'Could not answer the call. Check microphone and camera permissions.','error');await endCall(true)}
 }
 async function endCall(notify=true) {
+  if(currentCall&&callHistoryId)await updateCallHistory(currentCall.answeredAt?'ended':(currentCall.initiator?'missed':'declined'))
+  callHistoryId=null
   if(notify&&currentCall&&callSignalChannel)callSignal('signal',{kind:'end',callId:currentCall.id,to:currentCall.from}).catch(()=>{})
   callPeer?.close();callPeer=null;callLocalStream?.getTracks().forEach(t=>t.stop());callLocalStream=null;callRemoteStream=null;pendingIceCandidates=[];currentCall=null;window.__pendingCallOffer=null;callUi()
 }
 
 function bindChatPageEvents() {
   document.querySelector('#chat-new-button')?.addEventListener('click',openNewChatDialog)
-  document.querySelector('#conversation-search')?.addEventListener('input',renderChatList)
-  document.querySelector('#conversation-list')?.addEventListener('click',e=>{if(e.target.closest('[data-chat-new]'))return openNewChatDialog();if(e.target.closest('[data-retry-chats]'))return loadChats();const row=e.target.closest('[data-conversation-id]');if(row)selectConversation(row.dataset.conversationId)})
+  document.querySelector('#conversation-search')?.addEventListener('input',()=>callLogView?loadCallHistory():renderChatList())
+  document.querySelector('#call-log-toggle')?.addEventListener('click',()=>showCallHistory(true))
+  document.querySelector('#chat-inbox-toggle')?.addEventListener('click',()=>showCallHistory(false))
+  document.querySelector('#conversation-list')?.addEventListener('click',e=>{if(e.target.closest('[data-chat-new]'))return openNewChatDialog();if(e.target.closest('[data-retry-chats]'))return loadChats();if(e.target.closest('[data-retry-call-history]'))return loadCallHistory();const callRow=e.target.closest('[data-call-conversation]');if(callRow){showCallHistory(false);return selectConversation(callRow.dataset.callConversation)}const row=e.target.closest('[data-conversation-id]');if(row)selectConversation(row.dataset.conversationId)})
   document.querySelector('#chat-room')?.addEventListener('click',e=>{if(e.target.closest('[data-chat-back]')){document.querySelector('#chat-layout')?.classList.remove('has-active-conversation');history.replaceState(null,'','/chats/')}})
   document.querySelector('#chat-room')?.addEventListener('click',e=>{
     const toggle=e.target.closest('[data-chat-menu-toggle]');
