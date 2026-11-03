@@ -1111,10 +1111,25 @@ function bindEvents() {
       try{await navigator.clipboard.writeText(postUrl);toast('Post link copied.','success')}catch{toast('Copy this post link from your browser address bar.')}
     }
   }))
-  document.querySelector('#modal-root')?.addEventListener('click',e=>{
+  document.querySelector('#modal-root')?.addEventListener('click',async e=>{
     if(e.target.matches('[data-close-comments]')){document.querySelector('#modal-root').innerHTML='';return}
+    const like=e.target.closest('[data-like-comment]')
+    if(like){
+      if(!session){openAuth();return}
+      const commentId=like.dataset.likeComment
+      like.disabled=true
+      const {data:existing,error:lookupError}=await supabase.from('comment_likes').select('id').eq('comment_id',commentId).eq('user_id',session.user.id).maybeSingle()
+      if(lookupError){like.disabled=false;toast('Could not update comment like. Please try again.','error');return}
+      const result=existing
+        ?await supabase.from('comment_likes').delete().eq('id',existing.id)
+        :await supabase.from('comment_likes').insert({comment_id:commentId,user_id:session.user.id})
+      if(result.error){like.disabled=false;toast(result.error.message,'error');return}
+      const postId=document.querySelector('[data-new-comment]')?.dataset.newComment
+      if(postId)await loadComments(postId)
+      return
+    }
     const reply=e.target.closest('[data-reply-to]')
-    if(reply){const form=reply.closest('.comment-body')?.querySelector('[data-reply-form]');if(form){form.hidden=!form.hidden;form.querySelector('input')?.focus()}}
+    if(reply){const form=reply.closest('.comment-content')?.querySelector('[data-reply-form]');if(form){form.hidden=!form.hidden;if(!form.hidden)form.querySelector('input')?.focus()}}
   })
   document.querySelector('#modal-root')?.addEventListener('submit',async e=>{
     const form=e.target.closest('[data-new-comment],[data-reply-form]')
