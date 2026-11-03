@@ -17,6 +17,8 @@ let chatItems = []
 let activeConversationId = null
 let activeChatMessages = []
 let chatRealtimeChannel = null
+let chatTypingChannel=null;
+let chatTypingStopTimer=null;
 let callSignalChannel = null
 let callPeer = null
 let callLocalStream = null
@@ -540,6 +542,7 @@ function renderChatRoom(item,messages=activeChatMessages) {
   const message=messages[messageIndex],previous=messages[messageIndex-1],next=messages[messageIndex+1];
   const day=chatDay(message.created_at);if(day!==priorDay){groups.push(`<p class="chat-day-divider">${esc(day)}</p>`);priorDay=day}
   const own=message.sender_id===session?.user?.id;
+  const senderLabel=item.is_group&&!own?`<span class="group-message-sender">${esc(message.sender_name||'Member')}</span>`:'';
   const samePrev=previous&&previous.sender_id===message.sender_id&&(new Date(message.created_at)-new Date(previous.created_at))<300000&&chatDay(previous.created_at)===day;
   const sameNext=next&&next.sender_id===message.sender_id&&(new Date(next.created_at)-new Date(message.created_at))<120000&&chatDay(next.created_at)===day;
   const groupClass=(samePrev?'group-middle':'group-start')+(sameNext?'':' group-end');
@@ -547,11 +550,11 @@ function renderChatRoom(item,messages=activeChatMessages) {
   const quote=message.reply_to_message_id?`<div class="message-reply-quote ${parent?'':'missing-reply'}"><span class="reply-quote-accent"></span><div class="reply-quote-content"><strong>${parent?(parent.sender_id===session?.user?.id?'You':esc(item.peer_name||'Contact')):'Original message'}</strong><span>${parent?esc(parent.content.slice(0,180)):'This message is no longer available'}</span></div></div>`:'';
   const reactions=activeMessageReactions.filter(r=>r.message_id===message.id);
   const reactionBar=reactions.length?`<div class="message-reactions">${[...new Set(reactions.map(r=>r.reaction))].map(reaction=>{const mine=reactions.some(r=>r.reaction===reaction&&r.user_id===session?.user?.id);return `<button type="button" class="message-reaction ${mine?'mine':''}" data-toggle-reaction="${esc(reaction)}" data-message-id="${esc(message.id)}">${reaction} <small>${reactions.filter(r=>r.reaction===reaction).length}</small></button>`}).join('')}</div>`:'';
-  groups.push(`<div class="message-wrap ${own?'own-message':'other-message'} ${groupClass}" data-message-wrap="${esc(message.id)}"><div class="message ${own?'sent':'received'}" data-message-id="${esc(message.id)}">${quote}${esc(message.content)}<small>${esc(new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'}).format(new Date(message.created_at)))}${message.edited_at?' · edited':''}</small>${reactionBar}</div>${own?`<button type="button" class="message-more" data-message-menu="${esc(message.id)}" aria-label="Message options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>`:''}</div>`)
+  groups.push(`<div class="message-wrap ${own?'own-message':'other-message'} ${groupClass}" data-message-wrap="${esc(message.id)}"><div class="message ${own?'sent':'received'}" data-message-id="${esc(message.id)}">${senderLabel}${quote}${esc(message.content)}<small>${esc(new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'}).format(new Date(message.created_at)))}${message.edited_at?' · edited':''}</small>${reactionBar}</div>${own?`<button type="button" class="message-more" data-message-menu="${esc(message.id)}" aria-label="Message options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>`:''}</div>`)
  }
  const replyBar=pendingReplyTo?`<div class="reply-composer-bar"><span><strong>Replying to ${pendingReplyTo.sender_id===session?.user?.id?'yourself':esc(item.peer_name)}</strong><small>${esc(pendingReplyTo.content.slice(0,120))}</small></span><button type="button" data-cancel-reply aria-label="Cancel reply">×</button></div>`:'';
  room.innerHTML=`<header class="chat-room-head"><button class="chat-room-back" type="button" data-chat-back aria-label="Back to conversations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12"/></svg></button>${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<div class="chat-room-person"><strong>${esc(item.peer_name)}</strong><small><span class="status-dot"></span> Your friend</small></div><div class="chat-header-menu-wrap"><button class="chat-header-menu-toggle" type="button" data-chat-menu-toggle aria-label="More chat options" aria-expanded="false" title="More options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button><div class="chat-header-menu" data-chat-menu hidden>
-<button type="button" data-chat-menu-action="contact">Contact info</button><button type="button" data-chat-menu-action="search">Search messages</button><button type="button" data-chat-menu-action="select">Select messages</button><button type="button" data-chat-menu-action="mute">Mute notifications</button><button type="button" data-chat-menu-action="theme">Chat theme</button><div class="chat-menu-divider"></div><button type="button" data-start-call="audio">Voice call</button><button type="button" data-start-call="video">Video call</button><button type="button" data-chat-menu-action="favorite">Add to Favorites</button><button type="button" data-chat-menu-action="export">Export chat</button><div class="chat-menu-divider"></div><button type="button" data-chat-menu-action="close">Close chat</button></div></div><a class="chat-room-profile" href="/${encodeURIComponent(item.peer_username||'')}" aria-label="View profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a></header><div class="chat-history" id="chat-history" role="log" aria-live="polite" aria-label="Conversation with ${esc(item.peer_name)}">${groups.join('')||'<p class="chat-history-empty">Say hello and start the conversation.</p>'}</div><form class="message-composer" id="message-form">${replyBar}<input name="message" maxlength="4000" required autocomplete="off" placeholder="Write a message…" aria-label="Write a message"><button class="send-button" aria-label="Send message" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button></form>`;
+<button type="button" data-chat-menu-action="contact">Contact info</button><button type="button" data-chat-menu-action="search">Search messages</button><button type="button" data-chat-menu-action="select">Select messages</button><button type="button" data-chat-menu-action="mute">Mute notifications</button><button type="button" data-chat-menu-action="theme">Chat theme</button><div class="chat-menu-divider"></div>${item.is_group?'':'<button type="button" data-start-call="audio">Voice call</button><button type="button" data-start-call="video">Video call</button>'}<button type="button" data-chat-menu-action="favorite">Add to Favorites</button><button type="button" data-chat-menu-action="export">Export chat</button><div class="chat-menu-divider"></div><button type="button" data-chat-menu-action="close">Close chat</button></div></div><a class="chat-room-profile" href="/${encodeURIComponent(item.peer_username||'')}" aria-label="View profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a></header><div class="chat-history" id="chat-history" role="log" aria-live="polite" aria-label="Conversation with ${esc(item.peer_name)}">${groups.join('')||'<p class="chat-history-empty">Say hello and start the conversation.</p>'}</div><div class="chat-typing-indicator" id="chat-typing-indicator" hidden aria-live="polite"></div><form class="message-composer" id="message-form">${replyBar}<input name="message" maxlength="4000" required autocomplete="off" placeholder="Write a message…" aria-label="Write a message"><button class="send-button" aria-label="Send message" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button></form>`;
  const history=document.querySelector('#chat-history');if(history)history.scrollTop=history.scrollHeight;
 }
 async function markConversationRead(conversationId) {
@@ -564,10 +567,35 @@ async function markConversationRead(conversationId) {
   renderChatList()
 }
 
+async async function subscribeToChatTyping(conversationId){
+ if(chatTypingChannel){await supabase.removeChannel(chatTypingChannel);chatTypingChannel=null}
+ if(!session||!conversationId)return;
+ chatTypingChannel=supabase.channel('chat-typing:'+conversationId,{config:{presence:{key:session.user.id}}})
+ .on('presence',{event:'sync'},()=>renderTypingPresence())
+ .on('presence',{event:'join'},()=>renderTypingPresence())
+ .on('presence',{event:'leave'},()=>renderTypingPresence())
+ .subscribe(status=>{if(status==='SUBSCRIBED')chatTypingChannel.track({userId:session.user.id,fullName:profile?.full_name||session.user.user_metadata?.full_name||'Someone',typing:false}).catch(()=>{})});
+}
+function renderTypingPresence(){
+ const node=document.querySelector('#chat-typing-indicator');if(!node||!chatTypingChannel)return;
+ const state=chatTypingChannel.presenceState(),users=Object.values(state).flat().filter(p=>p.userId!==session?.user?.id&&p.typing);
+ if(!users.length){node.hidden=true;node.innerHTML='';return}
+ const names=[...new Set(users.map(p=>p.fullName||'Someone'))];
+ const label=names.length===1?names[0]+' is typing':names.length===2?names.join(' and ')+' are typing':'Several people are typing';
+ node.innerHTML='<span class="typing-dots"><i></i><i></i><i></i></span><span>'+esc(label)+'…</span>';node.hidden=false;
+}
+async function setChatTyping(isTyping){
+ if(!chatTypingChannel)return;
+ if(chatTypingStopTimer){clearTimeout(chatTypingStopTimer);chatTypingStopTimer=null}
+ if(isTyping){chatTypingChannel.track({userId:session.user.id,fullName:profile?.full_name||session.user.user_metadata?.full_name||'Someone',typing:true}).catch(()=>{});chatTypingStopTimer=setTimeout(()=>setChatTyping(false),1700)}
+ else chatTypingChannel.track({userId:session.user.id,fullName:profile?.full_name||'Someone',typing:false}).catch(()=>{});
+}
+
 async function selectConversation(conversationId,updateUrl=true) {
   const item=chatItems.find(chat=>chat.conversation_id===conversationId)
   if(!item)return
   activeConversationId=conversationId
+  await subscribeToChatTyping(conversationId)
   await endCall(false)
   await ensureCallChannel(conversationId).catch(error=>{console.warn('Call channel unavailable:',error.message)})
   activeChatMessages=[]
@@ -580,6 +608,7 @@ async function selectConversation(conversationId,updateUrl=true) {
   if(activeConversationId!==conversationId)return
   if(error){toast('Messages could not load. Try selecting this chat again.','error');renderChatRoom(item,[]);return}
   activeChatMessages=(data||[]).reverse()
+  const senderIds=[...new Set(activeChatMessages.map(m=>m.sender_id))];if(senderIds.length){const {data:senders}=await supabase.from('profiles').select('id,full_name,username').in('id',senderIds);const names=new Map((senders||[]).map(p=>[p.id,p.full_name||p.username]));activeChatMessages=activeChatMessages.map(m=>({...m,sender_name:names.get(m.sender_id)||'Member'}))}
   const reactionResult=await supabase.from('message_reactions').select('id,message_id,user_id,reaction').in('message_id',activeChatMessages.map(m=>m.id))
   activeMessageReactions=reactionResult.data||[]
   renderChatRoom(item)
@@ -618,7 +647,7 @@ async function loadChats(preferredConversation='') {
   list.innerHTML='<div class="chat-loading"><span class="friends-loading-dot"></span>Loading conversations</div>'
   const {data,error}=await supabase.rpc('list_my_conversations')
   if(error){console.error('Could not load conversations:',error);list.innerHTML='<div class="conversation-empty"><strong>Your chats could not load</strong><p>Check your connection and try again.</p><button class="button button-outline" type="button" data-retry-chats>Try again</button></div>';return}
-  chatItems=(data||[]).map(row=>({...row,peer_name:row.peer_name||row.peer_username||'Flexoverse friend',peer_username:row.peer_username||'member',unread_count:Number(row.unread_count||0)}))
+  chatItems=(data||[]).map(row=>({...row,peer_name:row.peer_name||row.peer_username||'Flexoverse friend',peer_username:row.peer_username||'member',is_group:!row.peer_id,unread_count:Number(row.unread_count||0)}))
   renderChatList()
   subscribeToChatInbox()
   const requested=preferredConversation||new URLSearchParams(location.search).get('id')
@@ -627,11 +656,26 @@ async function loadChats(preferredConversation='') {
   else renderChatWelcome()
 }
 
+async function openNewGroupDialog() {
+ if(!session)return openAuth();
+ const root=document.querySelector('#modal-root');if(!root)return;
+ root.innerHTML='<div class="modal-backdrop" data-group-modal-backdrop><section class="chat-new-modal group-create-modal" role="dialog" aria-modal="true"><header class="chat-new-modal-head"><div><h2>Create a group</h2><p>Name your group and choose at least two friends.</p></div><button class="chat-modal-close" type="button" data-close-chat-modal aria-label="Close">×</button></header><form data-create-group-form><label class="group-name-label">Group name<input name="group_name" maxlength="60" required placeholder="e.g. Weekend crew"></label><div class="group-friend-list"><div class="chat-loading">Loading friends…</div></div><footer><span data-group-selected-count>0 selected</span><button class="button button-primary" type="submit">Create group</button></footer></form></section></div>';
+ const box=root.querySelector('.group-friend-list');
+ const {data:requests,error}=await supabase.from('friend_requests').select('from_user_id,to_user_id').eq('status','accepted').or(`from_user_id.eq.${session.user.id},to_user_id.eq.${session.user.id}`);
+ if(error){box.textContent='Friends could not load. Please try again.';return}
+ const ids=[...new Set((requests||[]).map(r=>r.from_user_id===session.user.id?r.to_user_id:r.from_user_id))];
+ if(!ids.length){box.innerHTML='<p class="chat-modal-empty">Add friends before creating a group.</p>';return}
+ const {data:friends,error:friendError}=await supabase.from('profiles').select('id,username,full_name,avatar_url').in('id',ids).order('full_name');
+ if(friendError){box.textContent='Friends could not load. Please try again.';return}
+ box.innerHTML=(friends||[]).map(f=>`<label class="group-friend-choice"> <input type="checkbox" name="group_member" value="${esc(f.id)}">${avatar(initials(f.full_name||f.username),'blue',f.avatar_url)}<span><strong>${esc(f.full_name||f.username)}</strong><small>@${esc(f.username)}</small></span></label>`).join('');
+ root.querySelectorAll('[name="group_member"]').forEach(input=>input.addEventListener('change',()=>{const n=root.querySelectorAll('[name="group_member"]:checked').length;root.querySelector('[data-group-selected-count]').textContent=n+' selected'}));
+}
+
 async function openNewChatDialog() {
   if(!session)return openAuth()
   const root=document.querySelector('#modal-root')
   if(!root)return
-  root.innerHTML='<div class="modal-backdrop" data-chat-modal-backdrop><section class="chat-new-modal" role="dialog" aria-modal="true" aria-labelledby="chat-modal-title"><header class="chat-new-modal-head"><div><h2 id="chat-modal-title">New message</h2><p>Choose a friend to start a private chat.</p></div><button class="chat-modal-close" type="button" data-close-chat-modal aria-label="Close"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header><div class="chat-friend-list"><div class="chat-loading"><span class="friends-loading-dot"></span>Finding your friends</div></div></section></div>'
+  root.innerHTML='<div class="modal-backdrop" data-chat-modal-backdrop><section class="chat-new-modal" role="dialog" aria-modal="true" aria-labelledby="chat-modal-title"><header class="chat-new-modal-head"><div><h2 id="chat-modal-title">New message</h2><p>Choose a friend to start a private chat.</p><button type="button" class="button button-soft group-create-shortcut" data-open-new-group>Create group</button></div><button class="chat-modal-close" type="button" data-close-chat-modal aria-label="Close"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header><div class="chat-friend-list"><div class="chat-loading"><span class="friends-loading-dot"></span>Finding your friends</div></div></section></div>'
   const friendList=root.querySelector('.chat-friend-list')
   const {data:requests,error}=await supabase.from('friend_requests').select('from_user_id,to_user_id').eq('status','accepted').or(`from_user_id.eq.${session.user.id},to_user_id.eq.${session.user.id}`)
   if(error){friendList.innerHTML='<div class="chat-modal-empty"><strong>Friends could not load</strong><p>Try again in a moment.</p></div>';return}
@@ -933,15 +977,31 @@ function bindChatPageEvents() {
   document.querySelector('#modal-root')?.addEventListener('submit',async e=>{
  const editForm=e.target.closest('[data-edit-message-form]');if(editForm){e.preventDefault();const id=editForm.dataset.messageId,content=editForm.querySelector('textarea').value.trim();if(!content)return;if(!messageCanEdit(activeChatMessages.find(m=>m.id===id))){toast('Messages can only be edited within 5 minutes.','info');document.querySelector('#modal-root').innerHTML='';return}const save=editForm.querySelector('[type="submit"]');save.disabled=true;await updateChatMessage(id,content);return}
  const form=e.target.closest('[data-edit-message-form]');if(!form)return;e.preventDefault();const content=form.querySelector('textarea').value.trim();if(!content)return;const btn=form.querySelector('[type=submit]');btn.disabled=true;await updateChatMessage(form.dataset.messageId,content);btn.disabled=false})
-  document.querySelector('#chat-room')?.addEventListener('submit',async e=>{const form=e.target.closest('#message-form');if(!form)return;e.preventDefault();if(!session)return openAuth();const input=form.querySelector('[name="message"]'),content=String(input.value||'').trim();if(!content||!activeConversationId)return;const submit=form.querySelector('[type="submit"]');submit.disabled=true;const replyId=pendingReplyTo?.id||null;const {data,error}=await supabase.from('messages').insert({conversation_id:activeConversationId,sender_id:session.user.id,content,reply_to_message_id:replyId}).select('id,conversation_id,sender_id,content,created_at,edited_at,reply_to_message_id').single();submit.disabled=false;if(error){toast(error.message,'error');return}pendingReplyTo=null;handleChatMessage(data);await markConversationRead(activeConversationId);document.querySelector('#message-form [name="message"]')?.focus()})
+  document.querySelector('#chat-room')?.addEventListener('input',e=>{if(e.target.matches('#message-form [name="message"]'))setChatTyping(!!e.target.value.trim())});
+  document.querySelector('#chat-room')?.addEventListener('submit',async e=>{const form=e.target.closest('#message-form');if(!form)return;e.preventDefault();if(!session)return openAuth();const input=form.querySelector('[name="message"]'),content=String(input.value||'').trim();if(!content||!activeConversationId)return;setChatTyping(false);const submit=form.querySelector('[type="submit"]');submit.disabled=true;const replyId=pendingReplyTo?.id||null;const {data,error}=await supabase.from('messages').insert({conversation_id:activeConversationId,sender_id:session.user.id,content,reply_to_message_id:replyId}).select('id,conversation_id,sender_id,content,created_at,edited_at,reply_to_message_id').single();submit.disabled=false;if(error){toast(error.message,'error');return}pendingReplyTo=null;handleChatMessage(data);await markConversationRead(activeConversationId);document.querySelector('#message-form [name="message"]')?.focus()})
   document.querySelector('#modal-root')?.addEventListener('click',async e=>{
     if(e.target.closest('[data-close-chat-modal]')||e.target.matches('[data-chat-modal-backdrop]')){document.querySelector('#modal-root').innerHTML='';return}
+    if(e.target.closest('[data-open-new-group]')){openNewGroupDialog();return}
     const choice=e.target.closest('[data-start-chat]');if(!choice)return
     choice.disabled=true
     const {data,error}=await supabase.rpc('start_direct_conversation',{target_user_id:choice.dataset.startChat})
     if(error){choice.disabled=false;toast(error.message,'error');return}
     document.querySelector('#modal-root').innerHTML=''
     await loadChats(data)
+  });
+  document.querySelector('#modal-root')?.addEventListener('submit',async e=>{
+    const form=e.target.closest('[data-create-group-form]');if(!form)return;e.preventDefault();
+    const groupName=String(form.elements.group_name.value||'').trim();
+    const memberIds=[...form.querySelectorAll('[name="group_member"]:checked')].map(x=>x.value);
+    if(!groupName)return toast('Enter a group name.','error');
+    if(memberIds.length<2)return toast('Choose at least two friends for your group.','error');
+    const button=form.querySelector('[type="submit"]');button.disabled=true;button.textContent='Creating…';
+    const {data:conversation,error:createError}=await supabase.from('conversations').insert({created_by:session.user.id,is_group:true,group_name:groupName}).select('id').single();
+    if(createError){button.disabled=false;button.textContent='Create group';toast(createError.message,'error');return}
+    const members=[session.user.id,...memberIds].map(user_id=>({conversation_id:conversation.id,user_id}));
+    const {error:membersError}=await supabase.from('conversation_members').insert(members);
+    if(membersError){await supabase.from('conversations').delete().eq('id',conversation.id);button.disabled=false;toast(membersError.message,'error');return}
+    document.querySelector('#modal-root').innerHTML='';toast('Group created.','success');await loadChats(conversation.id);
   })
 }
 
