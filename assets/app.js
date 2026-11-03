@@ -552,7 +552,7 @@ async function startVoiceRecording(button){
   voiceRecorderChunks=[];
   const mime=['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/mp4'].find(t=>MediaRecorder.isTypeSupported(t));
   voiceRecorder=new MediaRecorder(voiceRecorderStream,mime?{mimeType:mime}:{});
-  voiceRecorderStartedAt=Date.now();voiceRecordingStartedAt=voiceRecorderStartedAt;
+  voiceRecordingStartedAt=Date.now();
   voiceRecorder.ondataavailable=e=>{if(e.data?.size)voiceRecorderChunks.push(e.data)};
   voiceRecorder.onstop=async()=>{
    const blob=new Blob(voiceRecorderChunks,{type:voiceRecorder.mimeType||'audio/webm'});
