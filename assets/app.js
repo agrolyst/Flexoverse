@@ -261,6 +261,22 @@ async function shareReel(id) {
   try{await navigator.clipboard.writeText(url);toast('Reel link copied.','success')}catch{toast('Open the reel and copy its link from the address bar.')}
 }
 
+let tusClientPromise=null
+async function loadTusClient(){
+  if(window.tus?.Upload)return window.tus
+  if(!tusClientPromise){
+    tusClientPromise=new Promise((resolve,reject)=>{
+      const script=document.createElement('script')
+      script.src='https://cdn.jsdelivr.net/npm/tus-js-client@4.3.1/dist/tus.min.js'
+      script.async=true
+      script.onload=()=>window.tus?.Upload?resolve(window.tus):reject(new Error('The video uploader could not be loaded. Please refresh and try again.'))
+      script.onerror=()=>{tusClientPromise=null;reject(new Error('The video uploader could not be loaded. Check your connection and try again.'))}
+      document.head.append(script)
+    })
+  }
+  return tusClientPromise
+}
+
 function prepareReelComposer() {
   const form=document.querySelector('#reel-form')
   if(!form)return
@@ -294,7 +310,7 @@ function prepareReelComposer() {
     const path=`${session.user.id}/${crypto.randomUUID()}.${extension}`
     let uploaded=false
     try{
-      const {Upload}=await import('https://esm.sh/tus-js-client@4.3.1')
+      const {Upload}=await loadTusClient()
       const {data:{session:authSession}}=await supabase.auth.getSession()
       if(!authSession?.access_token)throw new Error('Your sign-in session expired. Sign in again to upload.')
       await new Promise((resolve,reject)=>{
@@ -969,7 +985,7 @@ function bindEvents() {
       const path=`${session.user.id}/${crypto.randomUUID()}.${extension}`
       let uploaded=false
       try{
-        const {Upload}=await import('https://esm.sh/tus-js-client@4.3.1')
+        const {Upload}=await loadTusClient()
         const {data:{session:authSession}}=await supabase.auth.getSession()
         if(!authSession?.access_token)throw new Error('Your sign-in session expired. Sign in again to upload.')
         await new Promise((resolve,reject)=>{
