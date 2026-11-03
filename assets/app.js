@@ -10,6 +10,7 @@ let friendRequests = []
 let profileRecord = null
 let toastTimer = null
 let reelItems = []
+let reelLiked = new Set()
 let reelViewerIndex = -1
 let reelPreviewObserver = null
 let chatItems = []
@@ -225,30 +226,20 @@ async function loadFriends() {
 }
 
 async function loadReels() {
-  const list=document.querySelector('#reels-list')
-  if(!list)return
-  const {data,error}=await supabase.from('reels').select('id,user_id,caption,video_path,created_at,profiles(full_name,username,avatar_url)').order('created_at',{ascending:false}).limit(30)
-  if(error){toast(error.message,'error');list.innerHTML=`<div class="reels-empty-state card"><span class="reels-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4m0 4h.01"/><circle cx="12" cy="12" r="9"/></svg></span><strong>Reels are unavailable</strong><p>Check your connection and try again.</p><button class="button button-outline" data-retry-reels>Try again</button></div>`;return}
-  const rows=data||[]
-  let urlByPath={}
-  if(rows.length){
-    const {data:urls,error:urlError}=await supabase.storage.from('reels').createSignedUrls(rows.map(r=>r.video_path),3600)
-    if(urlError){toast(urlError.message,'error');list.innerHTML=`<div class="reels-empty-state card"><strong>Videos could not be loaded</strong><p>Refresh the page and try again.</p></div>`;return}
-    urlByPath=Object.fromEntries((urls||[]).filter(u=>u.signedUrl).map(u=>[u.path,u.signedUrl]))
-  }
-  reelItems=rows.map(row=>{const user=Array.isArray(row.profiles)?row.profiles[0]||{}:row.profiles||{};return{id:row.id,user_id:row.user_id,caption:row.caption||'',video_path:row.video_path,video_url:urlByPath[row.video_path],created_at:row.created_at,user}}).filter(reel=>reel.video_url)
-  if(!reelItems.length){
-    list.innerHTML=`<div class="reels-empty-state card"><span class="reels-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m10 8 6 4-6 4z"/></svg></span><strong>The reel feed is ready for its first video</strong><p>When community members share reels, they’ll appear here. You can start the feed with a short video of your own.</p><a class="button button-primary" href="/reels/create/">Create a reel</a></div>`
-    return
-  }
-  const playIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 10 6-10 6z"/></svg>'
-  const shareIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.4m-6.6 7 6.6 4.4"/></svg>'
-  list.innerHTML=reelItems.map((reel,index)=>{const name=reel.user.full_name||reel.user.username||'Flexoverse member';const username=reel.user.username||'member';return `<article class="reel-card" data-reel-card="${index}"><video class="reel-preview" src="${esc(reel.video_url)}" muted playsinline loop preload="metadata" aria-label="Video reel by ${esc(name)}"></video><div class="reel-card-shade"></div><button class="reel-open" type="button" data-open-reel="${index}" aria-label="Watch reel by ${esc(name)}">${playIcon}<span>Watch</span></button><div class="reel-card-details"><a class="reel-author" href="/${encodeURIComponent(username)}">${avatar(initials(name),'white',reel.user.avatar_url)}<span><strong>${esc(name)}</strong><small>@${esc(username)} · ${esc(timeAgo(reel.created_at))}</small></span></a>${reel.caption?`<p>${esc(reel.caption)}</p>`:''}<button class="reel-share" type="button" data-share-reel="${esc(reel.id)}" aria-label="Share reel">${shareIcon}<span>Share</span></button></div></article>`}).join('')
+  const list=document.querySelector('#reels-list');if(!list)return
+  list.innerHTML='<div class="reels-loading" role="status">Loading your video feed…</div>'
+  const {data,error}=await supabase.from('reels').select('id,user_id,caption,video_path,created_at,profiles!reels_user_id_fkey(full_name,username,avatar_url),reel_likes(count),reel_comments(count)').eq('is_public',true).order('created_at',{ascending:false}).limit(50)
+  if(error){console.error(error);list.innerHTML='<div class="reels-empty-state card"><strong>Reels could not load</strong><p>Please check your connection and try again.</p><button class="button button-outline" data-retry-reels>Try again</button></div>';return}
+  const rows=data||[];let urlByPath={}
+  if(rows.length){const {data:urls,error:urlError}=await supabase.storage.from('reels').createSignedUrls(rows.map(r=>r.video_path),3600);if(urlError){console.error(urlError);list.innerHTML='<div class="reels-empty-state card"><strong>Videos could not be loaded</strong><p>Refresh and try again.</p></div>';return}urlByPath=Object.fromEntries((urls||[]).filter(u=>u.signedUrl&&!u.error).map(u=>[u.path,u.signedUrl]))}
+  reelItems=rows.map(row=>{const user=Array.isArray(row.profiles)?row.profiles[0]||{}:row.profiles||{};return{id:row.id,user_id:row.user_id,caption:row.caption||'',video_path:row.video_path,video_url:urlByPath[row.video_path],created_at:row.created_at,user,like_count:relationCount(row.reel_likes),comment_count:relationCount(row.reel_comments)}}).filter(r=>r.video_url)
+  reelLiked=new Set()
+  if(session&&reelItems.length){const {data:mine,error:mineError}=await supabase.from('reel_likes').select('reel_id').eq('user_id',session.user.id).in('reel_id',reelItems.map(r=>r.id));if(!mineError)reelLiked=new Set((mine||[]).map(x=>x.reel_id))}
+  if(!reelItems.length){list.innerHTML='<div class="reels-empty-state card"><strong>Your video feed is ready</strong><p>When people share reels, they’ll appear here. Be the first to post a moment.</p><a class="button button-primary" href="/reels/create/">Create a reel</a></div>';return}
+  list.innerHTML=reelItems.map((r,i)=>{const name=r.user.full_name||r.user.username||'Flexoverse member',username=r.user.username||'member',likedNow=reelLiked.has(r.id);return `<article class="reel-card tiktok-reel-card" data-reel-card="${i}"><video class="reel-preview" src="${esc(r.video_url)}" muted playsinline loop preload="metadata" aria-label="Video by ${esc(name)}"></video><div class="reel-card-shade"></div><button class="reel-open" type="button" data-open-reel="${i}" aria-label="Open reel">▶</button><div class="reel-card-details"><a class="reel-author" href="/${encodeURIComponent(username)}">${avatar(initials(name),'white',r.user.avatar_url)}<span><strong>${esc(name)}</strong><small>@${esc(username)}</small></span></a><p>${esc(r.caption)}</p></div><div class="reel-feed-actions"><button type="button" data-feed-like="${esc(r.id)}" class="${likedNow?'is-liked':''}" aria-pressed="${likedNow}"><b>♥</b><small data-feed-like-count="${esc(r.id)}">${r.like_count}</small></button><button type="button" data-feed-comments="${esc(r.id)}"><b>●</b><small>${r.comment_count}</small></button><button type="button" data-share-reel="${esc(r.id)}"><b>↗</b><small>Share</small></button></div></article>`}).join('')
   observeReelPreviews()
-  const sharedId=new URLSearchParams(location.search).get('id')
-  if(sharedId){const index=reelItems.findIndex(reel=>reel.id===sharedId);if(index>=0)openReelViewer(index)}
+  const sharedId=new URLSearchParams(location.search).get('id');if(sharedId){const i=reelItems.findIndex(r=>r.id===sharedId);if(i>=0)openReelViewer(i)}
 }
-
 function observeReelPreviews() {
   const list=document.querySelector('#reels-list')
   if(!list||!('IntersectionObserver'in window))return
@@ -259,22 +250,28 @@ function observeReelPreviews() {
 
 function openReelViewer(index) {
   if(index<0||index>=reelItems.length)return
-  reelViewerIndex=index
-  reelPreviewObserver?.disconnect()
-  document.querySelectorAll('.reel-preview').forEach(video=>video.pause())
-  const root=document.querySelector('#reel-viewer-root')
-  if(!root)return
-  const reel=reelItems[index]
-  const name=reel.user.full_name||reel.user.username||'Flexoverse member'
-  const username=reel.user.username||'member'
-  root.innerHTML=`<div class="reel-viewer" role="dialog" aria-modal="true" aria-label="Reel by ${esc(name)}"><button class="reel-viewer-backdrop" type="button" data-close-reel aria-label="Close reel"></button><section class="reel-viewer-shell"><button class="reel-viewer-close" type="button" data-close-reel aria-label="Close reel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button><button class="reel-viewer-step reel-viewer-previous" type="button" data-reel-step="-1" aria-label="Previous reel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><div class="reel-viewer-frame"><video id="active-reel-video" src="${esc(reel.video_url)}" controls playsinline autoplay preload="auto" aria-label="Reel by ${esc(name)}"></video><div class="reel-viewer-info"><a class="reel-author" href="/${encodeURIComponent(username)}">${avatar(initials(name),'white',reel.user.avatar_url)}<span><strong>${esc(name)}</strong><small>@${esc(username)} · ${esc(timeAgo(reel.created_at))}</small></span></a>${reel.caption?`<p>${esc(reel.caption)}</p>`:''}<button class="reel-share" type="button" data-share-reel="${esc(reel.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.4m-6.6 7 6.6 4.4"/></svg><span>Share reel</span></button></div></div><button class="reel-viewer-step reel-viewer-next" type="button" data-reel-step="1" aria-label="Next reel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></section><span class="reel-viewer-position">${index+1} / ${reelItems.length}</span></div>`
-  document.body.classList.add('reel-viewer-open')
-  const video=root.querySelector('video')
-  video.muted=false
-  video.play().catch(()=>{video.muted=true;video.play().catch(()=>{})})
-  root.querySelector('.reel-viewer-close')?.focus()
+  reelViewerIndex=index;reelPreviewObserver?.disconnect();document.querySelectorAll('.reel-preview').forEach(v=>v.pause())
+  const root=document.querySelector('#reel-viewer-root');if(!root)return
+  const r=reelItems[index],name=r.user.full_name||r.user.username||'Flexoverse member',username=r.user.username||'member',isLiked=reelLiked.has(r.id)
+  root.innerHTML=`<div class="reel-viewer tiktok-viewer" role="dialog" aria-modal="true" aria-label="Reel by ${esc(name)}"><button class="reel-viewer-backdrop" type="button" data-close-reel aria-label="Close reel"></button><section class="reel-viewer-shell"><button class="reel-viewer-close" type="button" data-close-reel aria-label="Close reel">×</button><button class="reel-viewer-step reel-viewer-previous" type="button" data-reel-step="-1" aria-label="Previous reel">‹</button><div class="reel-viewer-frame"><video id="active-reel-video" src="${esc(r.video_url)}" playsinline autoplay loop preload="auto"></video><div class="reel-viewer-info"><a class="reel-author" href="/${encodeURIComponent(username)}">${avatar(initials(name),'white',r.user.avatar_url)}<span><strong>${esc(name)}</strong><small>@${esc(username)} · ${esc(timeAgo(r.created_at))}</small></span></a>${r.caption?`<p>${esc(r.caption)}</p>`:''}</div><div class="reel-viewer-actions"><button type="button" data-viewer-like="${esc(r.id)}" class="${isLiked?'is-liked':''}" aria-pressed="${isLiked}"><b>♥</b><small data-viewer-like-count>${r.like_count}</small></button><button type="button" data-viewer-comments="${esc(r.id)}"><b>●</b><small>${r.comment_count}</small></button><button type="button" data-share-reel="${esc(r.id)}"><b>↗</b><small>Share</small></button></div></div><aside class="reel-comments-panel" data-reel-comments-panel hidden><header><strong>Comments</strong><button type="button" data-hide-reel-comments>×</button></header><div class="reel-comments-list" data-reel-comments-list><p class="comment-state">Loading comments…</p></div>${session?`<form class="reel-comment-form" data-reel-comment-form="${esc(r.id)}"><input name="content" maxlength="1000" required placeholder="Add a comment…"><button type="submit">Post</button></form>`:'<p class="reel-comment-signin"><a href="/login/">Sign in</a> to join the conversation.</p>'}</aside><button class="reel-viewer-step reel-viewer-next" type="button" data-reel-step="1" aria-label="Next reel">›</button></section><span class="reel-viewer-position">${index+1} / ${reelItems.length}</span></div>`
+  document.body.classList.add('reel-viewer-open');const video=root.querySelector('video');video.muted=false;video.play().catch(()=>{video.muted=true;video.play().catch(()=>{})});root.querySelector('.reel-viewer-close')?.focus()
 }
-
+async function toggleReelLike(id){
+  if(!session){openAuth();return}const r=reelItems.find(x=>x.id===id);if(!r)return
+  const was=reelLiked.has(id),next=!was;if(next){reelLiked.add(id);r.like_count++}else{reelLiked.delete(id);r.like_count=Math.max(0,r.like_count-1)}
+  const paint=()=>{document.querySelectorAll('[data-viewer-like],[data-feed-like]').forEach(b=>{if((b.dataset.viewerLike||b.dataset.feedLike)===id){b.classList.toggle('is-liked',next);b.setAttribute('aria-pressed',String(next));const c=b.querySelector('[data-viewer-like-count],[data-feed-like-count]');if(c)c.textContent=r.like_count}})};paint()
+  const res=next?await supabase.from('reel_likes').insert({reel_id:id,user_id:session.user.id}):await supabase.from('reel_likes').delete().eq('reel_id',id).eq('user_id',session.user.id)
+  if(res.error&&!(res.error.code==='23505'&&next)){if(was){reelLiked.add(id);r.like_count++}else{reelLiked.delete(id);r.like_count=Math.max(0,r.like_count-1)};paint();toast(res.error.message,'error')}
+}
+async function loadReelComments(id){
+  const list=document.querySelector('#reel-viewer-root [data-reel-comments-list]');if(!list)return
+  list.innerHTML='<p class="comment-state">Loading comments…</p>'
+  const {data,error}=await supabase.from('reel_comments').select('id,parent_comment_id,content,created_at,profiles!reel_comments_user_id_fkey(full_name,username)').eq('reel_id',id).order('created_at',{ascending:true}).limit(150)
+  if(error){console.error(error);list.innerHTML='<p class="comment-state">Comments could not load. Try again.</p>';return}
+  const rows=data||[],groups=new Map();rows.forEach(x=>{const k=x.parent_comment_id||'root';if(!groups.has(k))groups.set(k,[]);groups.get(k).push(x)})
+  const draw=x=>{const u=Array.isArray(x.profiles)?x.profiles[0]||{}:x.profiles||{};return `<article class="reel-comment"><strong>${esc(u.full_name||u.username||'Flexoverse member')}</strong><p>${esc(x.content)}</p><small>${esc(timeAgo(x.created_at))}</small><button type="button" data-reel-reply="${esc(x.id)}">Reply</button><form data-reel-reply-form="${esc(x.id)}" hidden><input name="content" maxlength="1000" required placeholder="Write a reply"><button type="submit">Send</button></form>${(groups.get(x.id)||[]).map(draw).join('')}</article>`}
+  list.innerHTML=(groups.get('root')||[]).map(draw).join('')||'<p class="comment-state">No comments yet. Start the conversation.</p>'
+}
 function closeReelViewer() {
   const root=document.querySelector('#reel-viewer-root')
   root?.querySelector('video')?.pause()
@@ -1194,9 +1191,10 @@ function bindEvents() {
   document.querySelectorAll('[data-retry-friends]').forEach(button=>button.addEventListener('click',()=>loadFriends()))
   document.querySelector('#my-content-videos')?.addEventListener('click',e=>{const open=e.target.closest('[data-open-my-video]');if(open)openReelViewer(Number(open.dataset.openMyVideo))})
   document.querySelectorAll('[data-my-content-filter]').forEach(button=>button.addEventListener('click',()=>{const selected=button.dataset.myContentFilter;document.querySelectorAll('[data-my-content-filter]').forEach(item=>{const active=item===button;item.classList.toggle('active',active);item.setAttribute('aria-pressed',String(active))});document.querySelectorAll('[data-my-content-type]').forEach(section=>{section.hidden=selected!=='all'&&section.dataset.myContentType!==selected})}))
-  document.querySelector('#reels-list')?.addEventListener('click',e=>{const retry=e.target.closest('[data-retry-reels]');if(retry)return loadReels();const share=e.target.closest('[data-share-reel]');if(share){shareReel(share.dataset.shareReel);return}const open=e.target.closest('[data-open-reel]');if(open)openReelViewer(Number(open.dataset.openReel))})
+  document.querySelector('#reels-list')?.addEventListener('click',async e=>{const retry=e.target.closest('[data-retry-reels]');if(retry)return loadReels();const like=e.target.closest('[data-feed-like]');if(like){await toggleReelLike(like.dataset.feedLike);return}const comments=e.target.closest('[data-feed-comments]');if(comments){const i=reelItems.findIndex(r=>r.id===comments.dataset.feedComments);if(i>=0){openReelViewer(i);const panel=document.querySelector('[data-reel-comments-panel]');if(panel)panel.hidden=false;loadReelComments(comments.dataset.feedComments)}return}const share=e.target.closest('[data-share-reel]');if(share){shareReel(share.dataset.shareReel);return}const open=e.target.closest('[data-open-reel]');if(open)openReelViewer(Number(open.dataset.openReel))})
   const viewerRoot=document.querySelector('#reel-viewer-root')
-  viewerRoot?.addEventListener('click',e=>{const close=e.target.closest('[data-close-reel]');if(close){closeReelViewer();return}const step=e.target.closest('[data-reel-step]');if(step){stepReelViewer(Number(step.dataset.reelStep));return}const share=e.target.closest('[data-share-reel]');if(share)shareReel(share.dataset.shareReel)})
+  viewerRoot?.addEventListener('click',async e=>{const close=e.target.closest('[data-close-reel]');if(close){closeReelViewer();return}const step=e.target.closest('[data-reel-step]');if(step){stepReelViewer(Number(step.dataset.reelStep));return}const share=e.target.closest('[data-share-reel]');if(share){shareReel(share.dataset.shareReel);return}const like=e.target.closest('[data-viewer-like]');if(like){await toggleReelLike(like.dataset.viewerLike);return}const comments=e.target.closest('[data-viewer-comments]');if(comments){const panel=viewerRoot.querySelector('[data-reel-comments-panel]');if(panel)panel.hidden=false;loadReelComments(comments.dataset.viewerComments);return}if(e.target.closest('[data-hide-reel-comments]')){const panel=viewerRoot.querySelector('[data-reel-comments-panel]');if(panel)panel.hidden=true;return}const reply=e.target.closest('[data-reel-reply]');if(reply){const f=reply.parentElement.querySelector('[data-reel-reply-form]');if(f){f.hidden=!f.hidden;f.querySelector('input')?.focus()}}})
+  viewerRoot?.addEventListener('submit',async e=>{const reply=e.target.closest('[data-reel-reply-form]');if(reply){e.preventDefault();if(!session)return openAuth();const id=document.querySelector('[data-reel-comment-form]')?.dataset.reelCommentForm;const content=String(new FormData(reply).get('content')||'').trim();if(!id||!content)return;const {error}=await supabase.from('reel_comments').insert({reel_id:id,user_id:session.user.id,parent_comment_id:reply.dataset.reelReplyForm,content});if(error){toast(error.message,'error');return}await loadReelComments(id);return}const form=e.target.closest('[data-reel-comment-form]');if(!form)return;e.preventDefault();if(!session)return openAuth();const content=String(new FormData(form).get('content')||'').trim();if(!content)return;const button=form.querySelector('button');button.disabled=true;const {error}=await supabase.from('reel_comments').insert({reel_id:form.dataset.reelCommentForm,user_id:session.user.id,content});button.disabled=false;if(error){toast(error.message,'error');return}form.reset();await loadReelComments(form.dataset.reelCommentForm);const r=reelItems.find(x=>x.id===form.dataset.reelCommentForm);if(r)r.comment_count++;const c=viewerRoot.querySelector('[data-viewer-comments] small');if(c&&r)c.textContent=r.comment_count;toast('Comment added.','success')})
   let viewerTouchY=null
   viewerRoot?.addEventListener('touchstart',e=>{viewerTouchY=e.changedTouches[0]?.clientY??null},{passive:true})
   viewerRoot?.addEventListener('touchend',e=>{if(viewerTouchY===null)return;const delta=viewerTouchY-(e.changedTouches[0]?.clientY??viewerTouchY);viewerTouchY=null;if(Math.abs(delta)>70)stepReelViewer(delta>0?1:-1)},{passive:true})
