@@ -312,6 +312,30 @@ function prepareReelComposer() {
   })
 }
 
+
+function prepareUnifiedComposer(){
+  const format=document.querySelector('#post-format')
+  const textFields=document.querySelector('#text-post-fields')
+  const videoFields=document.querySelector('#video-post-fields')
+  const content=document.querySelector('#post-content')
+  const file=document.querySelector('#create-video-file')
+  const preview=document.querySelector('#create-video-preview')
+  const prompt=document.querySelector('#create-video-prompt')
+  const submit=document.querySelector('#post-form [type="submit"]')
+  let previewUrl=''
+  if(!session){const form=document.querySelector('#post-form');if(form)form.insertAdjacentHTML('afterbegin',`<p class="create-signin-hint">Sign in to publish posts and videos. <a href="${authPageHref('login')}">Sign in</a></p>`)}
+  const sync=()=>{const video=format.value==='video';textFields.hidden=video;videoFields.hidden=!video;content.required=!video;submit.textContent=video?'Share video':'Share post'}
+  format?.addEventListener('change',sync);sync()
+  file?.addEventListener('change',()=>{
+    const selected=file.files?.[0]
+    if(!selected){preview.hidden=true;prompt.hidden=false;return}
+    if(!['video/mp4','video/webm','video/quicktime'].includes(selected.type)||selected.size>50*1024*1024){toast('Choose an MP4, WebM or MOV video up to 50 MB.','error');file.value='';preview.hidden=true;prompt.hidden=false;return}
+    if(previewUrl)URL.revokeObjectURL(previewUrl)
+    previewUrl=URL.createObjectURL(selected);preview.src=previewUrl;preview.hidden=false;prompt.hidden=true
+  })
+  document.querySelector('#video-caption')?.addEventListener('input',e=>{const count=document.querySelector('#video-caption-count');if(count)count.textContent=`${e.target.value.length} / 500`})
+}
+
 async function loadProfilePage() {
   const fromPath=decodeURIComponent(location.pathname.split('/').filter(Boolean).pop()||'').toLowerCase()
   const handle=fromPath==='profile'?new URLSearchParams(location.search).get('username')||profile?.username:fromPath
@@ -913,7 +937,7 @@ async function initialize() {
   if(page==='reels')await loadReels()
   if(page==='profile')await loadProfilePage()
   if(page==='reel-create')prepareReelComposer()
-  if(page==='create'){const name=document.querySelector('#post-author-name');if(name)name.textContent=myName();const handle=document.querySelector('#post-author-handle');if(handle)handle.textContent='@'+myUsername();const photo=document.querySelector('#post-author-avatar');if(photo)photo.outerHTML=avatar(initials(myName()),'blue',profile?.avatar_url)}
+  if(page==='create'){const name=document.querySelector('#post-author-name');if(name)name.textContent=myName();const handle=document.querySelector('#post-author-handle');if(handle)handle.textContent='@'+myUsername();const photo=document.querySelector('#post-author-avatar');if(photo)photo.outerHTML=avatar(initials(myName()),'blue',profile?.avatar_url);prepareUnifiedComposer()}
   if(page==='complete-profile')await loadProfileCompletion()
   if(page.startsWith('settings-'))await renderSettingsSection()
   if(['privacy','terms','how-it-works','help','help-guide'].includes(page))renderInfoPage()
@@ -928,7 +952,53 @@ function bindEvents() {
   document.querySelector('#login-form')?.addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const {data,error}=await supabase.auth.signInWithPassword({email:f.get('email'),password:f.get('password')});if(error)return toast(error.message,'error');const destination=authReturnPath();location.replace(data.user?.user_metadata?.profile_completed===false?`/complete-profile/?next=${encodeURIComponent(destination)}`:destination)})
   document.querySelector('#signup-form')?.addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const username=String(f.get('username')||'').toLowerCase();if(!/^[a-z0-9]{3,30}$/.test(username))return toast('Use 3–30 letters or numbers for your username.','error');const submit=e.currentTarget.querySelector('[type="submit"]');submit.disabled=true;submit.textContent='Creating account…';const {data,error}=await supabase.auth.signUp({email:f.get('email'),password:f.get('password'),options:{emailRedirectTo:`${location.origin}/complete-profile/`,data:{full_name:f.get('name'),username,profile_completed:false}}});if(error){submit.disabled=false;submit.textContent='Create account and continue';return toast(error.message,'error')}if(data.session){location.replace(`/complete-profile/?next=${encodeURIComponent(authReturnPath())}`);return}const message=document.querySelector('#signup-message');if(message)message.textContent='Account created. Open the confirmation email to continue to profile setup. If asked to sign in, sign in with this email; you can skip the optional details.';submit.disabled=false;submit.textContent='Create account and continue'})
   document.querySelector('#signout')?.addEventListener('click',()=>supabase.auth.signOut())
-  document.querySelector('#post-form')?.addEventListener('submit',async e=>{e.preventDefault();if(!session){openAuth();return}const content=String(new FormData(e.currentTarget).get('content')||'').trim();if(!content)return;const submit=e.currentTarget.querySelector('[type="submit"]');submit.disabled=true;submit.textContent='Sharing…';const {error}=await supabase.from('posts').insert({user_id:session.user.id,content});if(error){submit.disabled=false;submit.textContent='Share post';return toast(error.message,'error')}toast('Your post was shared.','success');e.currentTarget.reset();if(page==='create'){setTimeout(()=>location.href='/',700)}else{submit.disabled=false;submit.textContent='Share post';await loadHome()}})
+  document.querySelector('#post-form')?.addEventListener('submit',async e=>{
+    e.preventDefault()
+    if(!session){openAuth();return}
+    const form=e.currentTarget
+    const values=new FormData(form)
+    const submit=form.querySelector('[type="submit"]')
+    if(values.get('format')==='video'){
+      const file=document.querySelector('#create-video-file')?.files?.[0]
+      if(!file)return toast('Choose a video before sharing.','error')
+      if(!['video/mp4','video/webm','video/quicktime'].includes(file.type)||file.size>50*1024*1024)return toast('Choose an MP4, WebM or MOV video up to 50 MB.','error')
+      submit.disabled=true;submit.textContent='Uploading…'
+      const progress=document.querySelector('#create-upload-progress'),bar=document.querySelector('#create-progress-bar'),label=document.querySelector('#create-progress-label')
+      progress.hidden=false
+      const extension=({'video/mp4':'mp4','video/webm':'webm','video/quicktime':'mov'})[file.type]
+      const path=`${session.user.id}/${crypto.randomUUID()}.${extension}`
+      let uploaded=false
+      try{
+        const {Upload}=await import('https://esm.sh/tus-js-client@4.3.1')
+        const {data:{session:authSession}}=await supabase.auth.getSession()
+        if(!authSession?.access_token)throw new Error('Your sign-in session expired. Sign in again to upload.')
+        await new Promise((resolve,reject)=>{
+          const upload=new Upload(file,{endpoint:'https://gkgjfbusdyiohiztwuec.storage.supabase.co/storage/v1/upload/resumable',retryDelays:[0,3000,5000,10000,20000],headers:{authorization:`Bearer ${authSession.access_token}`,'x-upsert':'false'},uploadDataDuringCreation:true,removeFingerprintOnSuccess:true,chunkSize:6*1024*1024,metadata:{bucketName:'reels',objectName:path,contentType:file.type,cacheControl:'3600'},onError:reject,onProgress(bytesUploaded,bytesTotal){const percent=Math.round(bytesUploaded/bytesTotal*100);bar.style.width=`${percent}%`;label.textContent=`Uploading video · ${percent}%`},onSuccess:resolve})
+          upload.start()
+        })
+        uploaded=true;label.textContent='Publishing your video…'
+        const category=String(values.get('category')||'Entertainment')
+        const caption=String(values.get('caption')||'').trim()
+        const taggedCaption=caption?`[${category}] ${caption}`:`[${category}]`
+        const {error}=await supabase.from('reels').insert({user_id:session.user.id,caption:taggedCaption,video_path:path,is_public:true})
+        if(error)throw error
+        toast('Your video was shared.','success');location.replace('/reels/')
+      }catch(error){
+        console.error(error);if(uploaded)await supabase.storage.from('reels').remove([path])
+        toast(error.message||'The video could not be uploaded. Try again.','error')
+        submit.disabled=false;submit.textContent='Share post'
+      }
+      return
+    }
+    const content=String(values.get('content')||'').trim()
+    if(!content)return toast('Write something before sharing.','error')
+    submit.disabled=true;submit.textContent='Sharing…'
+    const {error}=await supabase.from('posts').insert({user_id:session.user.id,content})
+    if(error){submit.disabled=false;submit.textContent='Share post';return toast(error.message,'error')}
+    toast('Your post was shared.','success');form.reset()
+    if(page==='create')setTimeout(()=>location.href='/',700)
+    else{submit.disabled=false;submit.textContent='Share post';await loadHome()}
+  })
   document.querySelector('#post-content')?.addEventListener('input',e=>{const count=document.querySelector('#post-count');if(count)count.textContent=`${e.target.value.length} / 2000`})
   document.querySelectorAll('.feed-list').forEach(feed=>feed.addEventListener('click',async e=>{
     if(e.target.closest('[data-retry-feed]'))return loadHome()
