@@ -1483,3 +1483,24 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
 .chat-history .message-reply-quote.missing-reply{opacity:.7!important}
 .chat-history .message.sent .message-reply-quote{background:rgba(0,0,0,.09)!important}
 .chat-history .message.received .message-reply-quote{background:#f0f2f5!important}
+
+/* Group conversations and realtime typing indicator */
+.group-create-shortcut{margin-top:8px!important}
+.group-create-modal form{display:flex;flex-direction:column;gap:14px}
+.group-name-label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:650}
+.group-name-label input{width:100%;box-sizing:border-box;border:1px solid #dce2e9;border-radius:10px;padding:11px 12px;font:inherit}
+.group-friend-list{max-height:48vh;overflow:auto;display:flex;flex-direction:column;gap:5px}
+.group-friend-choice{display:flex;align-items:center;gap:10px;padding:9px;border-radius:10px;cursor:pointer}
+.group-friend-choice:hover{background:#f3f5f8}
+.group-friend-choice input{width:17px;height:17px;accent-color:#3278d4}
+.group-friend-choice>span{display:flex;flex-direction:column;gap:2px}
+.group-friend-choice small{color:#788394;font-size:11px}
+.group-create-modal footer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-top:10px;border-top:1px solid #e8ebf0}
+.group-create-modal footer span{font-size:12px;color:#6b7280}
+.chat-typing-indicator{display:flex;align-items:center;gap:8px;min-height:28px;padding:2px 16px 6px;color:#667085;font-size:12px;background:#fff}
+.chat-typing-indicator[hidden]{display:none!important}
+.typing-dots{display:inline-flex;align-items:center;gap:3px}
+.typing-dots i{width:5px;height:5px;border-radius:50%;background:#2584e8;animation:chatTypingPulse 1s infinite ease-in-out}
+.typing-dots i:nth-child(2){animation-delay:.15s}.typing-dots i:nth-child(3){animation-delay:.3s}
+@keyframes chatTypingPulse{0%,60%,100%{transform:translateY(0);opacity:.45}30%{transform:translateY(-4px);opacity:1}}
+.group-message-sender{display:block;margin:0 0 4px;color:#2584e8;font-size:10px;font-weight:700}
