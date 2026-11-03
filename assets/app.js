@@ -540,7 +540,7 @@ function renderChatRoom(item,messages=activeChatMessages) {
   const message=messages[messageIndex],previous=messages[messageIndex-1],next=messages[messageIndex+1];
   const day=chatDay(message.created_at);if(day!==priorDay){groups.push(`<p class="chat-day-divider">${esc(day)}</p>`);priorDay=day}
   const own=message.sender_id===session?.user?.id;
-  const samePrev=previous&&previous.sender_id===message.sender_id&&(new Date(message.created_at)-new Date(previous.created_at))<120000&&chatDay(previous.created_at)===day;
+  const samePrev=previous&&previous.sender_id===message.sender_id&&(new Date(message.created_at)-new Date(previous.created_at))<300000&&chatDay(previous.created_at)===day;
   const sameNext=next&&next.sender_id===message.sender_id&&(new Date(next.created_at)-new Date(message.created_at))<120000&&chatDay(next.created_at)===day;
   const groupClass=(samePrev?'group-middle':'group-start')+(sameNext?'':' group-end');
   const parent=messages.find(m=>m.id===message.reply_to_message_id);
