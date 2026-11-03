@@ -622,11 +622,16 @@ async function subscribeToChatTyping(conversationId){
 }
 function renderTypingPresence(){
  const node=document.querySelector('#chat-typing-indicator');if(!node||!chatTypingChannel)return;
- const state=chatTypingChannel.presenceState(),users=Object.values(state).flat().filter(p=>p.userId!==session?.user?.id&&p.typing);
+ const state=chatTypingChannel.presenceState();
+ const users=Object.values(state).flat().filter(p=>p.userId!==session?.user?.id&&p.typing);
  if(!users.length){node.hidden=true;node.innerHTML='';return}
- const names=[...new Set(users.map(p=>p.fullName||'Someone'))];
- const label=names.length===1?names[0]+' is typing':names.length===2?names.join(' and ')+' are typing':'Several people are typing';
- node.innerHTML='<span class="typing-dots"><i></i><i></i><i></i></span><span>'+esc(label)+'…</span>';node.hidden=false;
+ const names=[...new Set(users.map(p=>String(p.fullName||'Someone').trim()).filter(Boolean))];
+ let label;
+ if(names.length===1)label=names[0]+' is typing';
+ else if(names.length===2)label=names[0]+' and '+names[1]+' are typing';
+ else label=names[0]+' and others are typing';
+ node.innerHTML='<span class="typing-dots"><i></i><i></i><i></i></span><span>'+esc(label)+'…</span>';
+ node.hidden=false;
 }
 async function setChatTyping(isTyping){
  if(!chatTypingChannel)return;
