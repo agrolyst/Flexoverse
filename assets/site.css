@@ -1328,3 +1328,30 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
 .call-incoming{min-height:0;padding:30px;align-items:center;justify-content:center;text-align:center;gap:12px}
 .call-incoming h2{margin:0;font-size:22px}.call-incoming p{color:#c9ccda;margin:0}
 @media(max-width:560px){.chat-call-actions{gap:4px}.chat-call-actions button{width:32px;height:32px}.call-backdrop{padding:0}.call-window{width:100%;min-height:100dvh;border-radius:0}.call-video-stage{min-height:55vh}.call-video-stage video[data-remote-video]{max-height:75vh}}
+
+
+/* Responsive chat call controls: paired on wider screens, chooser on phones */
+.chat-call-actions{flex:0 0 auto;position:relative;margin-left:auto;display:flex;align-items:center;justify-content:center;min-width:0}
+.chat-call-desktop{display:flex;flex-direction:row!important;align-items:center;gap:8px}
+.chat-call-desktop button,.chat-call-menu-toggle{width:36px;height:36px;flex:0 0 36px;border:1px solid #e8eaf0;border-radius:50%;background:#fff;color:#354052;display:grid;place-items:center;padding:0}
+.chat-call-mobile{display:none;position:relative}
+.chat-call-mobile svg,.chat-call-desktop svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.chat-call-menu[hidden]{display:none!important}
+.chat-call-menu{position:absolute;z-index:30;top:calc(100% + 9px);right:0;width:158px;padding:6px;background:#fff;border:1px solid #e8eaf0;border-radius:12px;box-shadow:0 12px 30px #17202f20;display:flex;flex-direction:column!important;gap:3px!important}
+.chat-call-menu button{display:flex;flex-direction:row!important;align-items:center;justify-content:flex-start;gap:9px;width:100%;height:40px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:#273246;font-size:12px;font-weight:600;text-align:left}
+.chat-call-menu button:hover{background:#f3f4fa}
+.chat-call-menu svg{width:17px;height:17px;flex:0 0 17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.chat-room-head{min-width:0;gap:clamp(6px,1.2vw,12px)}
+.chat-room-person{flex:1 1 auto;min-width:0}
+.chat-room-profile{flex:0 0 35px;margin-left:0}
+@media(max-width:760px){
+ .chat-call-desktop{display:none!important}
+ .chat-call-mobile{display:block}
+ .chat-call-menu{right:-4px}
+ .chat-room-head{padding:0 9px;gap:7px}
+ .chat-room-head .avatar{width:34px;height:34px;flex:0 0 34px}
+ .chat-room-person strong{font-size:11px}
+ .chat-room-person small{font-size:8px}
+ .chat-call-menu-toggle{width:34px;height:34px;flex-basis:34px}
+ .chat-room-profile{width:34px;height:34px;flex-basis:34px}
+}
