@@ -1397,3 +1397,31 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
 .wa-reaction-picker{display:flex;gap:8px;padding:12px;background:#202020;border-radius:28px}
 .wa-reaction-picker button{border:0;background:transparent;font-size:25px;cursor:pointer}
 @media(hover:none),(max-width:760px){.message-more{display:none!important}.message-wrap{touch-action:pan-y}.wa-message-menu{width:190px}}
+
+/* Refined conversation bubbles and compact WhatsApp-like message actions */
+.chat-history{padding:22px clamp(12px,3vw,30px) 28px;background-color:#f5f6f7;background-image:radial-gradient(#dfe3e8 0.65px,transparent .65px);background-size:17px 17px}
+.message-wrap{width:fit-content;max-width:min(78%,620px);margin:7px 0;gap:5px;align-items:center}
+.message-wrap.own-message{margin-left:auto}.message-wrap.other-message{margin-right:auto}
+.message{padding:10px 13px 7px;border-radius:12px;box-shadow:0 1px 1px #17203312;line-height:1.45;font-size:13px;overflow-wrap:anywhere}
+.message.sent{background:#d9fdd3;color:#1f3324;border-top-right-radius:4px}
+.message.received{background:#fff;color:#273244;border-top-left-radius:4px}
+.message>small{display:block;text-align:right;margin-top:4px;font-size:9px;color:#748078}
+.message-more{width:27px;height:27px;border:0;border-radius:50%;background:#fff;color:#697586;box-shadow:0 1px 5px #17203320;display:grid;place-items:center}
+.message-more svg{width:16px;height:16px;fill:currentColor}
+.message-wrap:hover .message-more,.message-more:focus-visible{opacity:1;visibility:visible;pointer-events:auto}
+.message-reply-quote{display:flex;flex-direction:column;gap:3px;padding:7px 9px;margin:-3px -5px 7px;border-left:3px solid #6478ca;background:#00000008;border-radius:5px;font-size:11px;max-width:320px}
+.message-reply-quote strong{color:#5367b4;font-size:10px}.message-reply-quote span{color:#4d5968;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.reply-composer-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;grid-column:1/-1;padding:8px 12px;margin:0 0 7px;border-left:3px solid #6478ca;border-radius:7px;background:#eef1ff}
+.reply-composer-bar span{display:flex;flex-direction:column;gap:3px;min-width:0}.reply-composer-bar strong{font-size:11px;color:#5264b2}.reply-composer-bar small{font-size:11px;color:#667085;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.reply-composer-bar button{border:0;background:transparent;color:#667085;font-size:22px;cursor:pointer}
+.message-composer{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 14px;background:#fff;border-top:1px solid #e9edf2}
+.message-composer>input{flex:1;min-width:0}
+.message-reactions{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.message-reaction{border:1px solid #dce2e8;border-radius:14px;padding:2px 7px;background:#fff;font-size:12px;cursor:pointer}
+.message-reaction.mine{border-color:#8094e9;background:#eef1ff}.message-reaction small{font-size:10px;color:#647084}
+.wa-message-menu{width:190px;padding:5px 0;background:#fff;color:#253044;border:1px solid #e7eaf0;border-radius:12px;box-shadow:0 12px 32px #17203325}
+.wa-message-menu button{height:39px;padding:0 13px;color:#303b4d;font-size:13px;gap:12px}
+.wa-message-menu button:hover{background:#f2f4f8}
+.wa-menu-icon{width:17px;height:17px;flex:0 0 17px;color:#667085}
+.wa-reaction-picker{background:#fff;box-shadow:0 12px 32px #17203325}
+@media(max-width:760px){.message-wrap{max-width:92%}.message-more{display:none!important}.wa-message-menu{width:185px}}
