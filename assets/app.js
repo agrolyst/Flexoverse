@@ -35,6 +35,9 @@ let activeMessageReactions = []
 let selectedChatIds = new Set()
 let pendingIceCandidates = []
 let callHistoryId = null
+let liveKitRoom=null;
+let liveKitSdkPromise=null;
+let pendingGroupInvite=null;
 let notificationItems = []
 let notificationFilter = 'all'
 let notificationRealtimeChannel = null
@@ -598,7 +601,7 @@ function renderChatRoom(item,messages=activeChatMessages) {
  }
  const replyBar=pendingReplyTo?`<div class="reply-composer-bar"><span><strong>Replying to ${pendingReplyTo.sender_id===session?.user?.id?'yourself':esc(item.peer_name)}</strong><small>${esc(pendingReplyTo.content.slice(0,120))}</small></span><button type="button" data-cancel-reply aria-label="Cancel reply">×</button></div>`:'';
  room.innerHTML=`<header class="chat-room-head"><button class="chat-room-back" type="button" data-chat-back aria-label="Back to conversations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12"/></svg></button>${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<div class="chat-room-person"><strong>${esc(item.peer_name)}</strong><small><span class="status-dot"></span> Your friend</small></div><div class="chat-header-menu-wrap"><button class="chat-header-menu-toggle" type="button" data-chat-menu-toggle aria-label="More chat options" aria-expanded="false" title="More options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button><div class="chat-header-menu" data-chat-menu hidden>
-<button type="button" data-chat-menu-action="contact">Contact info</button><button type="button" data-chat-menu-action="search">Search messages</button><button type="button" data-chat-menu-action="select">Select messages</button><button type="button" data-chat-menu-action="mute">Mute notifications</button><button type="button" data-chat-menu-action="theme">Chat theme</button><div class="chat-menu-divider"></div>${item.is_group?'':'<button type="button" data-start-call="audio">Voice call</button><button type="button" data-start-call="video">Video call</button>'}<button type="button" data-chat-menu-action="favorite">Add to Favorites</button><button type="button" data-chat-menu-action="export">Export chat</button><div class="chat-menu-divider"></div><button type="button" data-chat-menu-action="close">Close chat</button></div></div>${item.is_group?'':'<a class="chat-room-profile" href="/'+encodeURIComponent(item.peer_username||'')+'" aria-label="View profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a>'}</header><div class="chat-history" id="chat-history" role="log" aria-live="polite" aria-label="Conversation with ${esc(item.peer_name)}">${groups.join('')||'<p class="chat-history-empty">Say hello and start the conversation.</p>'}</div><div class="chat-typing-indicator" id="chat-typing-indicator" hidden aria-live="polite"></div><form class="message-composer" id="message-form">${replyBar}<input name="message" maxlength="4000" required autocomplete="off" placeholder="Write a message…" aria-label="Write a message"><button class="voice-record-button" type="button" data-voice-record aria-label="Record voice message">${voiceMicSvg()}</button><button class="send-button" aria-label="Send message" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button></form>`;
+<button type="button" data-chat-menu-action="contact">Contact info</button><button type="button" data-chat-menu-action="search">Search messages</button><button type="button" data-chat-menu-action="select">Select messages</button><button type="button" data-chat-menu-action="mute">Mute notifications</button><button type="button" data-chat-menu-action="theme">Chat theme</button><div class="chat-menu-divider"></div>${item.is_group?'<button type="button" data-start-group-call="audio">Group voice call</button><button type="button" data-start-group-call="video">Group video call</button>':'<button type="button" data-start-call="audio">Voice call</button><button type="button" data-start-call="video">Video call</button>'}<button type="button" data-chat-menu-action="favorite">Add to Favorites</button><button type="button" data-chat-menu-action="export">Export chat</button><div class="chat-menu-divider"></div><button type="button" data-chat-menu-action="close">Close chat</button></div></div>${item.is_group?'':'<a class="chat-room-profile" href="/'+encodeURIComponent(item.peer_username||'')+'" aria-label="View profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a>'}</header><div class="chat-history" id="chat-history" role="log" aria-live="polite" aria-label="Conversation with ${esc(item.peer_name)}">${groups.join('')||'<p class="chat-history-empty">Say hello and start the conversation.</p>'}</div><div class="chat-typing-indicator" id="chat-typing-indicator" hidden aria-live="polite"></div><form class="message-composer" id="message-form">${replyBar}<input name="message" maxlength="4000" required autocomplete="off" placeholder="Write a message…" aria-label="Write a message"><button class="voice-record-button" type="button" data-voice-record aria-label="Record voice message">${voiceMicSvg()}</button><button class="send-button" aria-label="Send message" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button></form>`;
  const history=document.querySelector('#chat-history');if(history)history.scrollTop=history.scrollHeight;
  renderTypingPresence();
 }
@@ -939,8 +942,77 @@ async function startCall(mode) {
     const status=document.querySelector('[data-call-status]');if(status)status.textContent='Ringing…'
   } catch(error){console.error('Call start failed:',error);await endCall(false);toast(error.message||'Could not start the call. Check microphone and camera permissions.','error')}
 }
+async function loadLiveKitSdk(){
+ if(!liveKitSdkPromise)liveKitSdkPromise=import('https://cdn.jsdelivr.net/npm/livekit-client@2.23.0/+esm');
+ return liveKitSdkPromise;
+}
+function renderGroupCallScreen(status='Connecting…',video=false){
+ const item=chatItems.find(x=>x.conversation_id===activeConversationId);
+ callUi(`<div class="call-backdrop"><section class="call-window flexoverse-group-call" role="dialog" aria-modal="true" aria-label="Group call"><header><strong>${esc(item?.peer_name||'Group call')}</strong><span data-group-call-status>${esc(status)}</span></header><div class="group-call-participants" data-group-call-participants></div><div class="call-controls"><button type="button" data-group-mute title="Mute microphone">Mute</button><button type="button" data-group-camera ${video?'':'hidden'} title="Turn camera off">Camera</button><button type="button" class="call-end-button" data-end-group-call>Leave</button></div></section></div>`);
+}
+async function joinLiveKitGroupCall(invite){
+ stopIncomingRingtone();
+ const item=chatItems.find(x=>x.conversation_id===invite.conversationId);
+ const {data,error}=await supabase.functions.invoke('livekit-token',{body:{conversationId:invite.conversationId,displayName:myName()}});
+ if(error||!data?.serverUrl||!data?.participantToken)throw new Error(data?.error||error?.message||'Could not get a secure group-call token.');
+ const sdk=await loadLiveKitSdk();
+ liveKitRoom=new sdk.Room({adaptiveStream:true,dynacast:true});
+ const video=invite.mode==='video';
+ renderGroupCallScreen('Joining…',video);
+ const host=document.querySelector('[data-group-call-participants]');
+ const addTrack=(track,participant)=>{
+  const element=track.attach();
+  element.dataset.participant=participant.identity;
+  if(track.kind==='video'){element.autoplay=true;element.playsInline=true;element.className='group-call-video';}
+  else {element.autoplay=true;element.hidden=true;}
+  host?.appendChild(element);
+ };
+ liveKitRoom.on(sdk.RoomEvent.TrackSubscribed,(track,publication,participant)=>addTrack(track,participant));
+ liveKitRoom.on(sdk.RoomEvent.TrackUnsubscribed,(track)=>track.detach().forEach(el=>el.remove()));
+ liveKitRoom.on(sdk.RoomEvent.ParticipantConnected,()=>{const st=document.querySelector('[data-group-call-status]');if(st)st.textContent=liveKitRoom.numParticipants+' people in call'});
+ liveKitRoom.on(sdk.RoomEvent.ParticipantDisconnected,()=>{const st=document.querySelector('[data-group-call-status]');if(st)st.textContent=liveKitRoom.numParticipants+' people in call'});
+ await liveKitRoom.connect(data.serverUrl,data.participantToken);
+ await liveKitRoom.localParticipant.setMicrophoneEnabled(true);
+ if(video)await liveKitRoom.localParticipant.setCameraEnabled(true);
+ for(const participant of liveKitRoom.remoteParticipants.values()){
+  for(const publication of participant.trackPublications.values())if(publication.track)addTrack(publication.track,participant);
+ }
+ const st=document.querySelector('[data-group-call-status]');if(st)st.textContent='Connected · '+liveKitRoom.numParticipants+' people';
+}
+async function startGroupCall(mode){
+ const item=chatItems.find(x=>x.conversation_id===activeConversationId);
+ if(!session||!item?.is_group)return openAuth();
+ if(currentCall)return toast('You are already in a call.','info');
+ if(!navigator.mediaDevices?.getUserMedia)return toast('Calls need microphone permission and a supported HTTPS browser.','error');
+ try{
+  await ensureCallChannel(activeConversationId);
+  const invite={kind:'group-invite',callId:crypto.randomUUID(),conversationId:activeConversationId,mode};
+  currentCall={id:invite.callId,mode,group:true,initiator:true,answeredAt:Date.now()};
+  await callSignal('signal',invite);
+  await joinLiveKitGroupCall(invite);
+ }catch(error){console.error('Group call failed:',error);await endGroupCall(false);toast(error.message||'Could not start the group call.','error')}
+}
+async function endGroupCall(notify=true){
+ stopIncomingRingtone();
+ if(notify&&currentCall?.group&&callSignalChannel)callSignal('signal',{kind:'group-end',callId:currentCall.id,conversationId:activeConversationId}).catch(()=>{});
+ if(liveKitRoom){try{await liveKitRoom.disconnect()}catch{}liveKitRoom=null}
+ currentCall=null;pendingGroupInvite=null;callUi();
+}
+
 async function handleCallSignal(payload) {
   if(!payload||payload.from===session?.user?.id)return
+  if(payload.kind==='group-invite'&&payload.conversationId===activeConversationId){
+    if(currentCall){callSignal('signal',{kind:'group-busy',callId:payload.callId,to:payload.from}).catch(()=>{});return}
+    pendingGroupInvite=payload;
+    currentCall={id:payload.callId,mode:payload.mode,group:true,initiator:false,from:payload.from,answeredAt:null};
+    playIncomingRingtone();
+    const caller=chatItems.find(x=>x.conversation_id===payload.conversationId)?.peer_name||'A group member';
+    callUi(`<div class="call-backdrop"><section class="call-window call-incoming" role="dialog" aria-modal="true"><h2>Incoming group ${payload.mode==='video'?'video':'voice'} call</h2><p>${esc(caller)} started a group call.</p><div class="call-controls"><button class="call-end-button" type="button" data-reject-group-call>Decline</button><button class="call-accept-button" type="button" data-accept-group-call>Join call</button></div></section></div>`);
+    return;
+  }
+  if(payload.kind==='group-end'&&currentCall?.group&&payload.callId===currentCall.id){await endGroupCall(false);return}
+  if(payload.kind==='group-busy')return;
+  if(payload.kind==='offer')
   if(payload.kind==='offer') {
     if(payload.to!==session?.user?.id||payload.conversationId!==activeConversationId)return
     if(currentCall){await callSignal('signal',{kind:'busy',callId:payload.callId,to:payload.from});return}
@@ -1034,6 +1106,8 @@ function bindChatPageEvents() {
   document.querySelector('#chat-room')?.addEventListener('click',e=>{
     const toggle=e.target.closest('[data-chat-menu-toggle]');
     if(toggle){const menu=document.querySelector('[data-chat-menu]');if(menu){menu.hidden=!menu.hidden;toggle.setAttribute('aria-expanded',String(!menu.hidden))}return}
+    const groupCall=e.target.closest('[data-start-group-call]');
+    if(groupCall){const menu=document.querySelector('[data-chat-menu]');if(menu)menu.hidden=true;document.querySelector('[data-chat-menu-toggle]')?.setAttribute('aria-expanded','false');startGroupCall(groupCall.dataset.startGroupCall);return}
     const call=e.target.closest('[data-start-call]');
     if(call){const menu=document.querySelector('[data-chat-menu]');if(menu)menu.hidden=true;document.querySelector('[data-chat-menu-toggle]')?.setAttribute('aria-expanded','false');startCall(call.dataset.startCall);return}
     const action=e.target.closest('[data-chat-menu-action]')?.dataset.chatMenuAction;
@@ -1049,7 +1123,7 @@ function bindChatPageEvents() {
     if(action==='favorite'){toast('Favorites are coming soon.');return}
     if(action==='export'){const item=chatItems.find(x=>x.conversation_id===activeConversationId);const lines=activeChatMessages.map(m=>{const who=m.sender_id===session?.user?.id?'You':(item?.peer_name||'Friend');return '['+new Date(m.created_at).toLocaleString()+'] '+who+': '+m.content});const blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='flexoverse-chat.txt';a.click();URL.revokeObjectURL(url);return}
   })
-  document.querySelector('#call-root')?.addEventListener('click',e=>{if(e.target.closest('[data-end-call]'))endCall(true);if(e.target.closest('[data-reject-call]')){const p=window.__pendingCallOffer;if(p)callSignal('signal',{kind:'reject',callId:p.callId,to:p.from}).catch(()=>{});endCall(false)}if(e.target.closest('[data-accept-call]'))acceptCall();if(e.target.closest('[data-call-mute]')&&callLocalStream){const track=callLocalStream.getAudioTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-mute]').classList.toggle('is-muted',!track.enabled)}}if(e.target.closest('[data-call-camera]')&&callLocalStream){const track=callLocalStream.getVideoTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-camera]').classList.toggle('is-muted',!track.enabled)}}})
+  document.querySelector('#call-root')?.addEventListener('click',e=>{if(e.target.closest('[data-accept-group-call]')){const invite=pendingGroupInvite;if(invite)joinLiveKitGroupCall(invite).catch(error=>{console.error(error);toast(error.message||'Could not join group call.','error');endGroupCall(false)});return}if(e.target.closest('[data-reject-group-call]')){stopIncomingRingtone();pendingGroupInvite=null;currentCall=null;callUi();return}if(e.target.closest('[data-end-group-call]')){endGroupCall(true);return}if(e.target.closest('[data-group-mute]')&&liveKitRoom){const p=liveKitRoom.localParticipant;p.setMicrophoneEnabled(!p.isMicrophoneEnabled).catch(error=>toast(error.message,'error'));e.target.closest('[data-group-mute]').textContent=p.isMicrophoneEnabled?'Unmute':'Mute';return}if(e.target.closest('[data-group-camera]')&&liveKitRoom){const p=liveKitRoom.localParticipant;p.setCameraEnabled(!p.isCameraEnabled).catch(error=>toast(error.message,'error'));return}if(e.target.closest('[data-end-call]'))endCall(true);if(e.target.closest('[data-reject-call]')){const p=window.__pendingCallOffer;if(p)callSignal('signal',{kind:'reject',callId:p.callId,to:p.from}).catch(()=>{});endCall(false)}if(e.target.closest('[data-accept-call]'))acceptCall();if(e.target.closest('[data-call-mute]')&&callLocalStream){const track=callLocalStream.getAudioTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-mute]').classList.toggle('is-muted',!track.enabled)}}if(e.target.closest('[data-call-camera]')&&callLocalStream){const track=callLocalStream.getVideoTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-camera]').classList.toggle('is-muted',!track.enabled)}}})
   document.querySelector('#chat-room')?.addEventListener('touchstart',e=>{const bubble=e.target.closest('.message');if(!bubble)return;const wrap=bubble.closest('[data-message-wrap]');const id=bubble.dataset.messageId;if(!id)return;messageLongPressTimer=setTimeout(()=>{messageLongPressTimer=null;openWhatsAppMessageMenu(id,wrap)},520)},{passive:true})
   document.querySelector('#chat-room')?.addEventListener('touchend',()=>{if(messageLongPressTimer){clearTimeout(messageLongPressTimer);messageLongPressTimer=null}},{passive:true})
   document.querySelector('#chat-room')?.addEventListener('touchmove',()=>{if(messageLongPressTimer){clearTimeout(messageLongPressTimer);messageLongPressTimer=null}},{passive:true})
