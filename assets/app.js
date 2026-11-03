@@ -19,6 +19,10 @@ let activeChatMessages = []
 let chatRealtimeChannel = null
 let chatTypingChannel=null;
 let chatTypingStopTimer=null;
+let voiceRecorder=null;
+let voiceRecorderStream=null;
+let voiceRecorderChunks=[];
+let voiceRecordingStartedAt=0;
 let callSignalChannel = null
 let callPeer = null
 let callLocalStream = null
@@ -534,6 +538,45 @@ function renderChatWelcome(message='Choose a chat to catch up or start a new con
   room.innerHTML=`<div class="chat-welcome"><span class="chat-welcome-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.7 8.7 0 0 1-4-.95L3 21l1.95-5.5A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg></span><strong>${session?'Your conversations, all in one place':'Sign in to see your messages'}</strong><p>${esc(message)}</p>${session?'<button class="button button-soft" type="button" data-chat-new>Start a conversation</button>':'<a class="button button-primary" href="/login/">Sign in</a>'}</div>`
 }
 
+async function attachVoiceMessageUrls(messages){
+ const rows=messages.filter(m=>m.message_type==='audio'&&m.media_path&&!m.audio_url);
+ if(!rows.length)return;
+ const results=await Promise.all(rows.map(async m=>{const {data}=await supabase.storage.from('chat-voice-notes').createSignedUrl(m.media_path,3600);return [m.id,data?.signedUrl||'']}));
+ const urls=new Map(results);messages.forEach(m=>{if(urls.has(m.id))m.audio_url=urls.get(m.id)});
+}
+async function startVoiceRecording(button){
+ if(!session||!activeConversationId)return openAuth();
+ if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){toast('Voice recording is not supported in this browser.','error');return}
+ try{
+  voiceRecorderStream=await navigator.mediaDevices.getUserMedia({audio:true});
+  voiceRecorderChunks=[];
+  const mime=['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/mp4'].find(t=>MediaRecorder.isTypeSupported(t));
+  voiceRecorder=new MediaRecorder(voiceRecorderStream,mime?{mimeType:mime}:{});
+  voiceRecorderStartedAt=Date.now();voiceRecordingStartedAt=voiceRecorderStartedAt;
+  voiceRecorder.ondataavailable=e=>{if(e.data?.size)voiceRecorderChunks.push(e.data)};
+  voiceRecorder.onstop=async()=>{
+   const blob=new Blob(voiceRecorderChunks,{type:voiceRecorder.mimeType||'audio/webm'});
+   voiceRecorderStream?.getTracks().forEach(t=>t.stop());voiceRecorderStream=null;
+   voiceRecorder=null;voiceRecorderChunks=[];
+   const elapsed=Date.now()-voiceRecordingStartedAt;
+   const btn=document.querySelector('[data-voice-record]');if(btn){btn.disabled=true;btn.classList.remove('recording');btn.innerHTML=voiceMicSvg();btn.setAttribute('aria-label','Record voice message')}
+   if(blob.size<1000||elapsed<500){if(btn)btn.disabled=false;return}
+   if(blob.size>15*1024*1024){toast('That voice message is too large. Please record a shorter one.','error');if(btn)btn.disabled=false;return}
+   const ext=blob.type.includes('ogg')?'ogg':blob.type.includes('mp4')?'m4a':'webm';
+   const path=activeConversationId+'/'+session.user.id+'/'+crypto.randomUUID()+'.'+ext;
+   const {error:uploadError}=await supabase.storage.from('chat-voice-notes').upload(path,blob,{contentType:blob.type,upsert:false});
+   if(uploadError){toast('Voice message could not be uploaded: '+uploadError.message,'error');if(btn)btn.disabled=false;return}
+   const {data,error}=await supabase.from('messages').insert({conversation_id:activeConversationId,sender_id:session.user.id,content:'Voice message',message_type:'audio',media_path:path}).select('id,conversation_id,sender_id,content,created_at,edited_at,reply_to_message_id,message_type,media_path').single();
+   if(error){await supabase.storage.from('chat-voice-notes').remove([path]);toast(error.message,'error');if(btn)btn.disabled=false;return}
+   await attachVoiceMessageUrls([data]);if(activeConversationId===data.conversation_id){activeChatMessages.push(data);renderChatRoom(chatItems.find(x=>x.conversation_id===activeConversationId))}
+   const item=chatItems.find(x=>x.conversation_id===data.conversation_id);if(item){item.last_message='🎤 Voice message';item.last_message_id=data.id;item.last_message_at=data.created_at;item.last_sender_id=session.user.id;renderChatList()}
+   if(btn)btn.disabled=false;
+  };
+  voiceRecorder.start();button.classList.add('recording');button.setAttribute('aria-label','Stop recording');button.innerHTML=voiceStopSvg();toast('Recording… tap the microphone again to send.');
+ }catch(error){voiceRecorderStream?.getTracks().forEach(t=>t.stop());voiceRecorderStream=null;voiceRecorder=null;toast(error.name==='NotAllowedError'?'Allow microphone access to record a voice message.':error.message,'error')}
+}
+function voiceMicSvg(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6"/></svg>'}
+function voiceStopSvg(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>'}
 function renderChatRoom(item,messages=activeChatMessages) {
  const room=document.querySelector('#chat-room');if(!room||!item)return;
  document.querySelector('#chat-layout')?.classList.add('has-active-conversation');
@@ -548,13 +591,14 @@ function renderChatRoom(item,messages=activeChatMessages) {
   const groupClass=(samePrev?'group-middle':'group-start')+(sameNext?'':' group-end');
   const parent=messages.find(m=>m.id===message.reply_to_message_id);
   const quote=message.reply_to_message_id?`<div class="message-reply-quote ${parent?'':'missing-reply'}"><span class="reply-quote-accent"></span><div class="reply-quote-content"><strong>${parent?(parent.sender_id===session?.user?.id?'You':esc(item.peer_name||'Contact')):'Original message'}</strong><span>${parent?esc(parent.content.slice(0,180)):'This message is no longer available'}</span></div></div>`:'';
+  const messageBody=message.message_type==='audio'?(message.audio_url?'<audio class="chat-voice-player" controls preload="none" src="'+esc(message.audio_url)+'"></audio>':'<span class="voice-message-unavailable">Voice message unavailable</span>'):esc(message.content);
   const reactions=activeMessageReactions.filter(r=>r.message_id===message.id);
   const reactionBar=reactions.length?`<div class="message-reactions">${[...new Set(reactions.map(r=>r.reaction))].map(reaction=>{const mine=reactions.some(r=>r.reaction===reaction&&r.user_id===session?.user?.id);return `<button type="button" class="message-reaction ${mine?'mine':''}" data-toggle-reaction="${esc(reaction)}" data-message-id="${esc(message.id)}">${reaction} <small>${reactions.filter(r=>r.reaction===reaction).length}</small></button>`}).join('')}</div>`:'';
-  groups.push(`<div class="message-wrap ${own?'own-message':'other-message'} ${groupClass}" data-message-wrap="${esc(message.id)}"><div class="message ${own?'sent':'received'}" data-message-id="${esc(message.id)}">${senderLabel}${quote}${esc(message.content)}<small>${esc(new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'}).format(new Date(message.created_at)))}${message.edited_at?' · edited':''}</small>${reactionBar}</div>${own?`<button type="button" class="message-more" data-message-menu="${esc(message.id)}" aria-label="Message options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>`:''}</div>`)
+  groups.push(`<div class="message-wrap ${own?'own-message':'other-message'} ${groupClass}" data-message-wrap="${esc(message.id)}"><div class="message ${own?'sent':'received'}" data-message-id="${esc(message.id)}"}>${senderLabel}${quote}${messageBody}<small>${esc(new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'}).format(new Date(message.created_at)))}${message.edited_at?' · edited':''}</small>${reactionBar}</div>${own?`<button type="button" class="message-more" data-message-menu="${esc(message.id)}" aria-label="Message options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>`:''}</div>`)
  }
  const replyBar=pendingReplyTo?`<div class="reply-composer-bar"><span><strong>Replying to ${pendingReplyTo.sender_id===session?.user?.id?'yourself':esc(item.peer_name)}</strong><small>${esc(pendingReplyTo.content.slice(0,120))}</small></span><button type="button" data-cancel-reply aria-label="Cancel reply">×</button></div>`:'';
  room.innerHTML=`<header class="chat-room-head"><button class="chat-room-back" type="button" data-chat-back aria-label="Back to conversations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12"/></svg></button>${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<div class="chat-room-person"><strong>${esc(item.peer_name)}</strong><small><span class="status-dot"></span> Your friend</small></div><div class="chat-header-menu-wrap"><button class="chat-header-menu-toggle" type="button" data-chat-menu-toggle aria-label="More chat options" aria-expanded="false" title="More options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button><div class="chat-header-menu" data-chat-menu hidden>
-<button type="button" data-chat-menu-action="contact">Contact info</button><button type="button" data-chat-menu-action="search">Search messages</button><button type="button" data-chat-menu-action="select">Select messages</button><button type="button" data-chat-menu-action="mute">Mute notifications</button><button type="button" data-chat-menu-action="theme">Chat theme</button><div class="chat-menu-divider"></div>${item.is_group?'':'<button type="button" data-start-call="audio">Voice call</button><button type="button" data-start-call="video">Video call</button>'}<button type="button" data-chat-menu-action="favorite">Add to Favorites</button><button type="button" data-chat-menu-action="export">Export chat</button><div class="chat-menu-divider"></div><button type="button" data-chat-menu-action="close">Close chat</button></div></div>${item.is_group?'':'<a class="chat-room-profile" href="/'+encodeURIComponent(item.peer_username||'')+'" aria-label="View profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a>'}</header><div class="chat-history" id="chat-history" role="log" aria-live="polite" aria-label="Conversation with ${esc(item.peer_name)}">${groups.join('')||'<p class="chat-history-empty">Say hello and start the conversation.</p>'}</div><div class="chat-typing-indicator" id="chat-typing-indicator" hidden aria-live="polite"></div><form class="message-composer" id="message-form">${replyBar}<input name="message" maxlength="4000" required autocomplete="off" placeholder="Write a message…" aria-label="Write a message"><button class="send-button" aria-label="Send message" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button></form>`;
+<button type="button" data-chat-menu-action="contact">Contact info</button><button type="button" data-chat-menu-action="search">Search messages</button><button type="button" data-chat-menu-action="select">Select messages</button><button type="button" data-chat-menu-action="mute">Mute notifications</button><button type="button" data-chat-menu-action="theme">Chat theme</button><div class="chat-menu-divider"></div>${item.is_group?'':'<button type="button" data-start-call="audio">Voice call</button><button type="button" data-start-call="video">Video call</button>'}<button type="button" data-chat-menu-action="favorite">Add to Favorites</button><button type="button" data-chat-menu-action="export">Export chat</button><div class="chat-menu-divider"></div><button type="button" data-chat-menu-action="close">Close chat</button></div></div>${item.is_group?'':'<a class="chat-room-profile" href="/'+encodeURIComponent(item.peer_username||'')+'" aria-label="View profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a>'}</header><div class="chat-history" id="chat-history" role="log" aria-live="polite" aria-label="Conversation with ${esc(item.peer_name)}">${groups.join('')||'<p class="chat-history-empty">Say hello and start the conversation.</p>'}</div><div class="chat-typing-indicator" id="chat-typing-indicator" hidden aria-live="polite"></div><form class="message-composer" id="message-form">${replyBar}<input name="message" maxlength="4000" required autocomplete="off" placeholder="Write a message…" aria-label="Write a message"><button class="voice-record-button" type="button" data-voice-record aria-label="Record voice message">${voiceMicSvg()}</button><button class="send-button" aria-label="Send message" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button></form>`;
  const history=document.querySelector('#chat-history');if(history)history.scrollTop=history.scrollHeight;
 }
 async function markConversationRead(conversationId) {
@@ -604,10 +648,11 @@ async function selectConversation(conversationId,updateUrl=true) {
   if(room)room.innerHTML=`<header class="chat-room-head"><button class="chat-room-back" type="button" data-chat-back aria-label="Back to conversations"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6M9 12h12"/></svg></button>${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<div class="chat-room-person"><strong>${esc(item.peer_name)}</strong><small><span class="status-dot"></span> Your friend</small></div></header><div class="chat-history" id="chat-history"><div class="chat-loading"><span class="friends-loading-dot"></span>Loading messages</div></div>`
   document.querySelector('#chat-layout')?.classList.add('has-active-conversation')
   if(updateUrl)history.replaceState(null,'',`/chats/?id=${encodeURIComponent(conversationId)}`)
-  const {data,error}=await supabase.from('messages').select('id,conversation_id,sender_id,content,created_at,edited_at,reply_to_message_id').eq('conversation_id',conversationId).order('created_at',{ascending:false}).limit(100)
+  const {data,error}=await supabase.from('messages').select('id,conversation_id,sender_id,content,created_at,edited_at,reply_to_message_id,message_type,media_path').eq('conversation_id',conversationId).order('created_at',{ascending:false}).limit(100)
   if(activeConversationId!==conversationId)return
   if(error){toast('Messages could not load. Try selecting this chat again.','error');renderChatRoom(item,[]);return}
   activeChatMessages=(data||[]).reverse()
+  await attachVoiceMessageUrls(activeChatMessages)
   const senderIds=[...new Set(activeChatMessages.map(m=>m.sender_id))];if(senderIds.length){const {data:senders}=await supabase.from('profiles').select('id,full_name,username').in('id',senderIds);const names=new Map((senders||[]).map(p=>[p.id,p.full_name||p.username]));activeChatMessages=activeChatMessages.map(m=>({...m,sender_name:names.get(m.sender_id)||'Member'}))}
   const reactionResult=await supabase.from('message_reactions').select('id,message_id,user_id,reaction').in('message_id',activeChatMessages.map(m=>m.id))
   activeMessageReactions=reactionResult.data||[]
@@ -941,7 +986,7 @@ function bindChatPageEvents() {
   document.querySelector('#chat-inbox-toggle')?.addEventListener('click',()=>showCallHistory(false))
   document.querySelector('#chat-inbox-heading')?.addEventListener('click',e=>{if(e.target.closest('[data-toggle-chat-selection]')){chatSelectionMode=!chatSelectionMode;selectedChatIds.clear();renderChatList();return}if(e.target.closest('[data-delete-selected-chats]'))deleteSelectedChats()})
   document.querySelector('#conversation-list')?.addEventListener('click',e=>{if(e.target.closest('[data-chat-new]'))return openNewChatDialog();if(e.target.closest('[data-retry-chats]'))return loadChats();if(e.target.closest('[data-retry-call-history]'))return loadCallHistory();const callRow=e.target.closest('[data-call-conversation]');if(callRow){showCallHistory(false);return selectConversation(callRow.dataset.callConversation)}const row=e.target.closest('[data-conversation-id]');if(row){if(chatSelectionMode){const id=row.dataset.conversationId;selectedChatIds.has(id)?selectedChatIds.delete(id):selectedChatIds.add(id);renderChatList();return}selectConversation(row.dataset.conversationId)}})
-  document.querySelector('#chat-room')?.addEventListener('click',e=>{if(e.target.closest('[data-chat-back]')){document.querySelector('#chat-layout')?.classList.remove('has-active-conversation');history.replaceState(null,'','/chats/')}})
+  document.querySelector('#chat-room')?.addEventListener('click',e=>{const voice=e.target.closest('[data-voice-record]');if(voice){if(voiceRecorder&&voiceRecorder.state==='recording'){voice.disabled=true;voiceRecorder.stop()}else startVoiceRecording(voice);return}if(e.target.closest('[data-chat-back]')){document.querySelector('#chat-layout')?.classList.remove('has-active-conversation');history.replaceState(null,'','/chats/')}})
   document.querySelector('#chat-room')?.addEventListener('click',e=>{
     const toggle=e.target.closest('[data-chat-menu-toggle]');
     if(toggle){const menu=document.querySelector('[data-chat-menu]');if(menu){menu.hidden=!menu.hidden;toggle.setAttribute('aria-expanded',String(!menu.hidden))}return}
@@ -979,7 +1024,7 @@ function bindChatPageEvents() {
  const editForm=e.target.closest('[data-edit-message-form]');if(editForm){e.preventDefault();const id=editForm.dataset.messageId,content=editForm.querySelector('textarea').value.trim();if(!content)return;if(!messageCanEdit(activeChatMessages.find(m=>m.id===id))){toast('Messages can only be edited within 5 minutes.','info');document.querySelector('#modal-root').innerHTML='';return}const save=editForm.querySelector('[type="submit"]');save.disabled=true;await updateChatMessage(id,content);return}
  const form=e.target.closest('[data-edit-message-form]');if(!form)return;e.preventDefault();const content=form.querySelector('textarea').value.trim();if(!content)return;const btn=form.querySelector('[type=submit]');btn.disabled=true;await updateChatMessage(form.dataset.messageId,content);btn.disabled=false})
   document.querySelector('#chat-room')?.addEventListener('input',e=>{if(e.target.matches('#message-form [name="message"]'))setChatTyping(!!e.target.value.trim())});
-  document.querySelector('#chat-room')?.addEventListener('submit',async e=>{const form=e.target.closest('#message-form');if(!form)return;e.preventDefault();if(!session)return openAuth();const input=form.querySelector('[name="message"]'),content=String(input.value||'').trim();if(!content||!activeConversationId)return;setChatTyping(false);const submit=form.querySelector('[type="submit"]');submit.disabled=true;const replyId=pendingReplyTo?.id||null;const {data,error}=await supabase.from('messages').insert({conversation_id:activeConversationId,sender_id:session.user.id,content,reply_to_message_id:replyId}).select('id,conversation_id,sender_id,content,created_at,edited_at,reply_to_message_id').single();submit.disabled=false;if(error){toast(error.message,'error');return}pendingReplyTo=null;handleChatMessage(data);await markConversationRead(activeConversationId);document.querySelector('#message-form [name="message"]')?.focus()})
+  document.querySelector('#chat-room')?.addEventListener('submit',async e=>{const form=e.target.closest('#message-form');if(!form)return;e.preventDefault();if(!session)return openAuth();const input=form.querySelector('[name="message"]'),content=String(input.value||'').trim();if(!content||!activeConversationId)return;setChatTyping(false);const submit=form.querySelector('[type="submit"]');submit.disabled=true;const replyId=pendingReplyTo?.id||null;const {data,error}=await supabase.from('messages').insert({conversation_id:activeConversationId,sender_id:session.user.id,content,reply_to_message_id:replyId}).select('id,conversation_id,sender_id,content,created_at,edited_at,reply_to_message_id,message_type,media_path').single();submit.disabled=false;if(error){toast(error.message,'error');return}pendingReplyTo=null;handleChatMessage(data);await markConversationRead(activeConversationId);document.querySelector('#message-form [name="message"]')?.focus()})
   document.querySelector('#modal-root')?.addEventListener('click',async e=>{
     if(e.target.closest('[data-close-chat-modal]')||e.target.matches('[data-chat-modal-backdrop]')){document.querySelector('#modal-root').innerHTML='';return}
     if(e.target.closest('[data-open-new-group]')){openNewGroupDialog();return}
