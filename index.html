@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f5f6fa">
   <meta name="description" content="Flexoverse is a place for your people.">
   <title>Home · Flexoverse</title>
-  <link rel="stylesheet" href="./assets/site.css">
+  <link rel="stylesheet" href="./assets/site.css?v=20261103-homefix">
 </head>
 <body data-page="home">
   <div id="site-header"></div>
@@ -47,6 +47,6 @@
   <nav id="mobile-nav"></nav>
   <div id="modal-root"></div>
   <div id="toast" role="status"></div>
-  <script type="module" src="./assets/app.js"></script>
+  <script type="module" src="./assets/app.js?v=20261103-homefix" onerror="document.querySelector('#feed-list')?.replaceChildren(Object.assign(document.createElement('div'),{className:'feed-state card',textContent:'Flexoverse could not load its app scripts. Please refresh the page.'}))"></script>
 </body>
 </html>
