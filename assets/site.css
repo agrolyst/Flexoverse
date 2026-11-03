@@ -1209,3 +1209,23 @@ html[data-theme="dark"] .profile-completion-card .auth-page-form>label>textarea{
   .comment-avatar .avatar{width:34px;height:34px}
   .comment-replies{margin-left:38px;padding-left:10px}
 }
+
+/* Post options and reporting */
+.post-menu-wrap{position:relative;margin-left:auto;flex:none}
+.post-menu-wrap .more-button{display:grid;place-items:center;width:36px;height:36px;border:0;border-radius:50%;background:transparent;color:var(--muted,#737b8c);font-size:24px;line-height:1;cursor:pointer}
+.post-menu-wrap .more-button:hover,.post-menu-wrap .more-button[aria-expanded="true"]{background:var(--paper,#f3f5f9);color:var(--ink)}
+.post-options-menu{position:absolute;z-index:30;right:0;top:calc(100% + 5px);width:190px;padding:6px;border:1px solid var(--line,#e8eaf0);border-radius:13px;background:#fff;box-shadow:0 12px 34px rgba(22,30,55,.16)}
+.post-options-menu[hidden]{display:none}
+.post-options-menu button{display:block;width:100%;padding:11px 12px;border:0;border-radius:8px;background:transparent;color:var(--ink,#202637);text-align:left;font-size:13px;cursor:pointer}
+.post-options-menu button:hover{background:#f4f5f9}
+.post-options-menu .post-option-report{color:#c47720}
+.post-options-menu .post-option-danger{color:#d64545}
+.report-modal-backdrop{position:fixed;z-index:10000;inset:0;display:grid;place-items:center;padding:18px;background:rgba(15,20,35,.58)}
+.report-modal{position:relative;width:min(100%,440px);padding:26px;border-radius:18px;background:#fff;box-shadow:0 24px 70px rgba(0,0,0,.22);display:flex;flex-direction:column;gap:11px}
+.report-modal h2{margin:0;color:#202637;font-size:21px}
+.report-modal p{margin:0 0 6px;color:#737b8c;font-size:13px;line-height:1.5}
+.report-modal label{margin-top:5px;color:#30384a;font-size:12px;font-weight:700}
+.report-modal select,.report-modal textarea{width:100%;padding:12px;border:1px solid #e1e5ed;border-radius:10px;background:#fff;color:#202637;font:inherit;font-size:13px}
+.report-modal textarea{min-height:92px;resize:vertical}
+.report-modal .button{margin-top:8px;justify-content:center}
+.report-close{position:absolute;right:14px;top:10px;width:34px;height:34px;border:0;border-radius:50%;background:#f3f5f9;color:#596174;font-size:22px;cursor:pointer}
