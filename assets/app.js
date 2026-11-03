@@ -48,7 +48,7 @@ const toast = (message,type='info') => {
 const relationCount = value => { const raw=Array.isArray(value)?value[0]?.count:value?.count??value; const count=Number(raw??0); return Number.isFinite(count)?count:0 }
 
 function mountShell() {
-  const navItems = [['home','Home','/'],['friends','Friends','/friends/'],['reels','Reels','/reels/'],['chats','Chats','/chats/'],['notifications','Notifications','/notifications/'],['settings','Settings','/settings/']]
+  const navItems = [['home','Home','/'],['friends','Friends','/friends/'],['reels','Reels','/reels/'],['my-content','My content','/my-content/'],['chats','Chats','/chats/'],['notifications','Notifications','/notifications/'],['settings','Settings','/settings/']]
   const activePage=key=>page===key||(key==='reels'&&page==='reel-create')||(key==='settings'&&page.startsWith('settings-'))
   const brandIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.8 19a5.2 5.2 0 0 1 10.4 0v1H2.8zM14 15.3a4.4 4.4 0 0 1 7.2 3.4v1h-6"/></svg>'
   const searchIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.3 4.3"/></svg>'
@@ -350,6 +350,42 @@ function prepareUnifiedComposer(){
     previewUrl=URL.createObjectURL(selected);preview.src=previewUrl;preview.hidden=false;prompt.hidden=true
   })
   document.querySelector('#video-caption')?.addEventListener('input',e=>{const count=document.querySelector('#video-caption-count');if(count)count.textContent=`${e.target.value.length} / 500`})
+}
+
+async function loadMyContent(){
+  const postsList=document.querySelector('#my-content-posts')
+  const videosList=document.querySelector('#my-content-videos')
+  if(!postsList||!videosList)return
+  if(!session){postsList.innerHTML=friendEmptyState('Sign in to view your content','Your posts, reels and videos will be collected here.','<a class="button button-primary" href="/login/">Sign in</a>');videosList.innerHTML='';return}
+  postsList.innerHTML='<div class="feed-state card">Loading your posts…</div>'
+  videosList.innerHTML='<div class="feed-state card">Loading your videos…</div>'
+  const [postResult,reelResult]=await Promise.all([
+    supabase.from('posts').select('id,user_id,content,image_path,created_at,profiles!posts_user_id_fkey(full_name,username,avatar_url),likes(count),comments(count)').eq('user_id',session.user.id).order('created_at',{ascending:false}).limit(100),
+    supabase.from('reels').select('id,user_id,caption,video_path,created_at').eq('user_id',session.user.id).order('created_at',{ascending:false}).limit(100)
+  ])
+  if(postResult.error){console.error('Could not load your posts:',postResult.error);postsList.innerHTML='<div class="feed-state card"><strong>Your posts could not load</strong><span>Please refresh and try again.</span></div>'}
+  else{
+    const posts=postResult.data||[]
+    liked=new Set()
+    if(posts.length){const {data:mineLikes}=await supabase.from('likes').select('post_id').eq('user_id',session.user.id).in('post_id',posts.map(post=>post.id));liked=new Set((mineLikes||[]).map(row=>String(row.post_id)))}
+    postsList.innerHTML=posts.length?posts.map(postCard).join():'<div class="empty-inline card">You have not shared any posts yet. <a class="text-link" href="/create/">Create your first post</a>.</div>'
+    const count=document.querySelector('#my-post-count');if(count)count.textContent=String(posts.length)
+  }
+  if(reelResult.error){console.error('Could not load your videos:',reelResult.error);videosList.innerHTML='<div class="feed-state card"><strong>Your videos could not load</strong><span>Please refresh and try again.</span></div>'}
+  else{
+    const rows=reelResult.data||[]
+    let urlByPath={}
+    if(rows.length){
+      const {data:urls,error:urlError}=await supabase.storage.from('reels').createSignedUrls(rows.map(row=>row.video_path),3600)
+      if(urlError){console.error('Could not sign your video URLs:',urlError);videosList.innerHTML='<div class="feed-state card">Your videos could not be displayed. Please refresh and try again.</div>';return}
+      urlByPath=Object.fromEntries((urls||[]).filter(item=>item.signedUrl).map(item=>[item.path,item.signedUrl]))
+    }
+    reelItems=rows.map(row=>({id:row.id,user_id:row.user_id,caption:row.caption||'',video_path:row.video_path,video_url:urlByPath[row.video_path],created_at:row.created_at,user:{full_name:myName(),username:myUsername(),avatar_url:profile?.avatar_url}})).filter(item=>item.video_url)
+    videosList.innerHTML=reelItems.length?reelItems.map((reel,index)=>`<article class="my-content-video card"><video src="${esc(reel.video_url)}" muted playsinline preload="metadata"></video><button class="my-content-watch" type="button" data-open-my-video="${index}" aria-label="Watch your video">▶</button><div class="my-content-video-copy"><strong>${esc(reel.caption||'Your video')}</strong><small>${esc(timeAgo(reel.created_at))}</small></div></article>`).join(''):'<div class="empty-inline card">You have not shared any reels or videos yet. <a class="text-link" href="/create/">Share a video</a>.</div>'
+    const count=document.querySelector('#my-video-count');if(count)count.textContent=String(reelItems.length)
+  }
+  const total=document.querySelector('#my-total-count')
+  if(total)total.textContent=String(Number(document.querySelector('#my-post-count')?.textContent||0)+Number(document.querySelector('#my-video-count')?.textContent||0))
 }
 
 async function loadProfilePage() {
@@ -951,6 +987,7 @@ async function initialize() {
   if(page==='chats')await loadChats()
   if(page==='notifications')await loadNotifications()
   if(page==='reels')await loadReels()
+  if(page==='my-content')await loadMyContent()
   if(page==='profile')await loadProfilePage()
   if(page==='reel-create')prepareReelComposer()
   if(page==='create'){const name=document.querySelector('#post-author-name');if(name)name.textContent=myName();const handle=document.querySelector('#post-author-handle');if(handle)handle.textContent='@'+myUsername();const photo=document.querySelector('#post-author-avatar');if(photo)photo.outerHTML=avatar(initials(myName()),'blue',profile?.avatar_url);prepareUnifiedComposer()}
@@ -1080,6 +1117,8 @@ function bindEvents() {
   document.querySelector('#requests-list')?.addEventListener('click',async e=>{const accept=e.target.closest('[data-accept]');const ignore=e.target.closest('[data-ignore]');if(accept){accept.disabled=true;const {error}=await supabase.from('friend_requests').update({status:'accepted'}).eq('id',accept.dataset.accept);if(error){accept.disabled=false;toast(error.message,'error')}else{await loadFriends();toast('You’re friends now.','success')}}if(ignore){ignore.disabled=true;const {error}=await supabase.from('friend_requests').delete().eq('id',ignore.dataset.ignore);if(error){ignore.disabled=false;toast(error.message,'error')}else{await loadFriends();toast('Request dismissed.','success')}}})
   document.querySelectorAll('[data-friends-filter]').forEach(input=>input.addEventListener('input',()=>{const list=document.querySelector(input.dataset.friendsFilter);if(!list)return;const query=input.value.trim().toLowerCase();let visible=0;list.querySelectorAll(input.dataset.filterItems).forEach(item=>{const matches=String(item.dataset.searchText||'').includes(query);item.hidden=!matches;if(matches)visible++});const empty=list.querySelector('[data-empty-results]');if(empty)empty.hidden=visible>0||!query}))
   document.querySelectorAll('[data-retry-friends]').forEach(button=>button.addEventListener('click',()=>loadFriends()))
+  document.querySelector('#my-content-videos')?.addEventListener('click',e=>{const open=e.target.closest('[data-open-my-video]');if(open)openReelViewer(Number(open.dataset.openMyVideo))})
+  document.querySelectorAll('[data-my-content-filter]').forEach(button=>button.addEventListener('click',()=>{const selected=button.dataset.myContentFilter;document.querySelectorAll('[data-my-content-filter]').forEach(item=>{const active=item===button;item.classList.toggle('active',active);item.setAttribute('aria-pressed',String(active))});document.querySelectorAll('[data-my-content-type]').forEach(section=>{section.hidden=selected!=='all'&&section.dataset.myContentType!==selected})}))
   document.querySelector('#reels-list')?.addEventListener('click',e=>{const retry=e.target.closest('[data-retry-reels]');if(retry)return loadReels();const share=e.target.closest('[data-share-reel]');if(share){shareReel(share.dataset.shareReel);return}const open=e.target.closest('[data-open-reel]');if(open)openReelViewer(Number(open.dataset.openReel))})
   const viewerRoot=document.querySelector('#reel-viewer-root')
   viewerRoot?.addEventListener('click',e=>{const close=e.target.closest('[data-close-reel]');if(close){closeReelViewer();return}const step=e.target.closest('[data-reel-step]');if(step){stepReelViewer(Number(step.dataset.reelStep));return}const share=e.target.closest('[data-share-reel]');if(share)shareReel(share.dataset.shareReel)})
