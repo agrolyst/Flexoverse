@@ -104,7 +104,7 @@ async function loadHome() {
   const feed = document.querySelector('#feed-list')
   if (!feed) return
   feed.innerHTML = '<div class="feed-state card">Loading posts from the community…</div>'
-  const {data,error}=await supabase.from('posts').select('id,user_id,content,image_path,created_at,profiles(full_name,username,avatar_url),likes(count),comments(count)').order('created_at',{ascending:false}).limit(30)
+  const {data,error}=await supabase.from('posts').select('id,user_id,content,image_path,created_at,profiles!posts_user_id_fkey(full_name,username,avatar_url),likes(count),comments(count)').order('created_at',{ascending:false}).limit(30)
   if (error) {
     console.error('Could not load public posts:', error)
     feed.innerHTML = '<div class="feed-state card"><strong>Posts could not load</strong><span>Check your connection and try again.</span><button class="button button-outline" data-retry-feed>Try again</button></div>'
