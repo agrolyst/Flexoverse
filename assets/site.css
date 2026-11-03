@@ -1425,3 +1425,25 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
 .wa-menu-icon{width:17px;height:17px;flex:0 0 17px;color:#667085}
 .wa-reaction-picker{background:#fff;box-shadow:0 12px 32px #17203325}
 @media(max-width:760px){.message-wrap{max-width:92%}.message-more{display:none!important}.wa-message-menu{width:185px}}
+
+/* Tight, grouped chat bubbles */
+.message-wrap{width:fit-content;max-width:min(78%,620px);margin:2px 0;gap:4px;align-items:flex-end}
+.message-wrap.group-start{margin-top:8px}.message-wrap.group-middle,.message-wrap.group-end{margin-top:1px}
+.message-wrap.own-message{margin-left:auto;justify-content:flex-end}.message-wrap.other-message{margin-right:auto;justify-content:flex-start}
+.message{width:fit-content;max-width:100%;padding:7px 10px 5px;border-radius:10px;box-shadow:0 1px 1px #17203310;line-height:1.35;font-size:13px;overflow-wrap:anywhere}
+.message.sent{background:#075e46;color:#f7fff9;border-top-right-radius:5px}
+.message.received{background:#fff;color:#273244;border-top-left-radius:5px}
+.message-wrap.own-message.group-middle .message,.message-wrap.own-message.group-end .message{border-top-right-radius:10px}
+.message-wrap.own-message.group-middle .message,.message-wrap.own-message.group-start .message{border-bottom-right-radius:4px}
+.message-wrap.other-message.group-middle .message,.message-wrap.other-message.group-end .message{border-top-left-radius:10px}
+.message-wrap.other-message.group-middle .message,.message-wrap.other-message.group-start .message{border-bottom-left-radius:4px}
+.message>small{display:inline-flex;align-items:center;gap:4px;margin:0 0 0 10px;font-size:9px;line-height:1;color:#a9c9bc;white-space:nowrap;vertical-align:bottom}
+.message.received>small{color:#8a929c}
+.message-more{align-self:center;flex:0 0 24px;width:24px;height:24px}
+.message-wrap.own-message .message-more{order:2;margin-left:1px}
+.message-wrap.own-message .message{order:1}
+.message-wrap.other-message .message{order:1}
+.message-reply-quote{max-width:100%;margin:0 0 5px;padding:5px 8px}
+.reply-composer-bar{width:100%;box-sizing:border-box}
+.wa-message-menu{min-width:190px}
+@media(max-width:760px){.message-wrap{max-width:92%}}
