@@ -833,6 +833,34 @@ async function markNotificationRead(notificationId) {
   await loadNotificationCount()
 }
 
+let incomingRingContext=null,incomingRingTimer=null;
+function stopIncomingRingtone(){
+ if(incomingRingTimer){clearInterval(incomingRingTimer);incomingRingTimer=null}
+ if(incomingRingContext){incomingRingContext.close().catch(()=>{});incomingRingContext=null}
+}
+async function playIncomingRingtone(){
+ stopIncomingRingtone();
+ try{
+  const AudioCtx=window.AudioContext||window.webkitAudioContext;if(!AudioCtx)return;
+  incomingRingContext=new AudioCtx();await incomingRingContext.resume();
+  const ctx=incomingRingContext;
+  const ring=()=>{
+   if(!ctx||ctx.state==='closed')return;
+   [0,0.42].forEach(offset=>{
+    const osc=ctx.createOscillator(),gain=ctx.createGain();
+    osc.type='sine';osc.frequency.setValueAtTime(440,ctx.currentTime+offset);
+    osc.frequency.setValueAtTime(480,ctx.currentTime+offset+0.18);
+    gain.gain.setValueAtTime(0.0001,ctx.currentTime+offset);
+    gain.gain.linearRampToValueAtTime(0.13,ctx.currentTime+offset+0.025);
+    gain.gain.setValueAtTime(0.13,ctx.currentTime+offset+0.18);
+    gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+offset+0.24);
+    osc.connect(gain);gain.connect(ctx.destination);osc.start(ctx.currentTime+offset);osc.stop(ctx.currentTime+offset+0.25);
+   });
+  };
+  ring();incomingRingTimer=setInterval(ring,1800);
+ }catch(error){console.warn('Incoming ringtone could not play:',error)}
+}
+
 function callUi(html='') { const root=document.querySelector('#call-root'); if(root)root.innerHTML=html }
 function callSignal(event,payload) { if(!callSignalChannel)return Promise.reject(new Error('Call connection is not ready'));return callSignalChannel.send({type:'broadcast',event,payload:{...payload,from:session.user.id}}) }
 async function ensureCallChannel(conversationId) {
@@ -918,6 +946,7 @@ async function handleCallSignal(payload) {
     if(currentCall){await callSignal('signal',{kind:'busy',callId:payload.callId,to:payload.from});return}
     currentCall={id:payload.callId,mode:payload.mode,initiator:false,from:payload.from,answeredAt:null}
     callHistoryId=payload.callLogId||null
+    playIncomingRingtone()
     const peer=chatItems.find(x=>x.conversation_id===activeConversationId)
     callUi(`<div class="call-backdrop"><section class="call-window call-incoming" role="dialog" aria-modal="true"><h2>Incoming ${payload.mode==='video'?'video':'voice'} call</h2><p>${esc(peer?.peer_name||'Your friend')} is calling you.</p><div class="call-controls"><button class="call-end-button" type="button" data-reject-call>Decline</button><button class="call-accept-button" type="button" data-accept-call>Answer</button></div></section></div>`)
     window.__pendingCallOffer=payload
@@ -933,10 +962,12 @@ async function handleCallSignal(payload) {
   }catch(error){console.error('Call signal error:',error);toast('The call connection could not be completed.','error');await endCall(false)}
 }
 async function acceptCall() {
+  stopIncomingRingtone()
   const offer=window.__pendingCallOffer;if(!offer||!currentCall)return
   try{currentCall.answeredAt=Date.now();await updateCallHistory('answered');callUi();await createCallPeer(offer.mode==='video');await callPeer.setRemoteDescription(new RTCSessionDescription(offer.sdp));for(const c of pendingIceCandidates.splice(0))await callPeer.addIceCandidate(new RTCIceCandidate(c));const answer=await callPeer.createAnswer();await callPeer.setLocalDescription(answer);await callSignal('signal',{kind:'answer',callId:currentCall.id,to:offer.from,sdp:answer});renderCallScreen('Connecting…',offer.mode==='video')}catch(error){console.error(error);toast(error.message||'Could not answer the call. Check microphone and camera permissions.','error');await endCall(true)}
 }
 async function endCall(notify=true) {
+  stopIncomingRingtone()
   if(currentCall&&callHistoryId)await updateCallHistory(currentCall.answeredAt?'ended':(currentCall.initiator?'missed':'declined'))
   callHistoryId=null
   if(notify&&currentCall&&callSignalChannel)callSignal('signal',{kind:'end',callId:currentCall.id,to:currentCall.from}).catch(()=>{})
