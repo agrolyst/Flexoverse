@@ -1175,3 +1175,37 @@ html[data-theme="dark"] .profile-completion-card .auth-page-form>label>textarea{
 .modal-comment-form button{display:grid;place-items:center;width:40px;height:40px;flex:none;border:0;border-radius:50%;background:var(--brand);color:white}
 .modal-comment-form svg{width:18px;height:18px}
 @media(max-width:560px){.comments-modal-backdrop{padding:0}.comments-modal{width:100%;height:100dvh;max-height:100dvh;border-radius:0}.home-reel-card{flex-basis:132px;height:190px}}
+
+
+/* TikTok-style comment threads */
+.comment-thread{margin:0 0 18px;padding:0;border:0}
+.comment-item{display:flex;align-items:flex-start;gap:10px;padding:0}
+.comment-avatar .avatar{width:38px;height:38px;font-size:11px}
+.comment-content{min-width:0;flex:1}
+.comment-bubble{padding:0;background:transparent;border-radius:0}
+.comment-bubble>strong{display:block;color:var(--ink);font-size:13px;font-weight:750;line-height:1.4}
+.comment-bubble>p{margin:4px 0 6px;color:var(--ink);font-size:13px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.comment-actions{display:flex;align-items:center;gap:16px;margin:0 0 2px}
+.comment-actions small{color:#8b93a2;font-size:11px}
+.comment-actions button{padding:0;border:0;background:none;color:#777f8d;font-size:11px;font-weight:700}
+.comment-actions button:hover{color:var(--brand)}
+.comment-like{display:flex;flex-direction:column;align-items:center;gap:3px;flex:none;min-width:28px;margin:5px 1px 0;padding:3px 2px;border:0;background:transparent;color:#8b93a2;font-size:10px}
+.comment-like svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.comment-like.is-liked{color:#f04468}
+.comment-like.is-liked svg{fill:#f04468;stroke:#f04468}
+.comment-like:disabled{opacity:.55}
+.comment-replies{margin:11px 0 0 47px;padding-left:13px;border-left:1px solid #e7e9ef}
+.comment-replies .comment-thread{margin-bottom:13px}
+.comment-replies .comment-avatar .avatar{width:30px;height:30px}
+.reply-form{display:flex;align-items:center;gap:8px;margin:10px 0 4px;padding:8px;border:1px solid #e8eaf0;border-radius:14px;background:#fff}
+.reply-form[hidden]{display:none}
+.reply-form input{padding:9px 11px;border:0!important;background:transparent!important;outline:none;font-size:12px}
+.reply-form button{min-height:34px;padding:0 14px;border-radius:999px;background:var(--brand);font-size:11px}
+.modal-comment-list{padding:20px 22px}
+.modal-comment-form{padding:14px 18px;background:var(--paper)}
+.modal-comment-form input{padding:12px 15px;background:#f7f8fb;border-color:#e9ebf1}
+@media(max-width:560px){
+  .modal-comment-list{padding:17px 15px}
+  .comment-avatar .avatar{width:34px;height:34px}
+  .comment-replies{margin-left:38px;padding-left:10px}
+}
