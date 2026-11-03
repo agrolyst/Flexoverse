@@ -663,7 +663,7 @@ async function selectConversation(conversationId,updateUrl=true) {
 function handleChatMessage(message) {
   const item=chatItems.find(chat=>chat.conversation_id===message.conversation_id)
   if(!item||item.last_message_id===message.id)return
-  item.last_message=message.content
+  item.last_message=message.message_type==='audio'?'🎤 Voice message':message.content
   item.last_message_id=message.id
   item.last_message_at=message.created_at
   item.last_sender_id=message.sender_id
@@ -675,6 +675,7 @@ function handleChatMessage(message) {
     const history=document.querySelector('#chat-history')
     const wasNearBottom=history&&history.scrollHeight-history.scrollTop-history.clientHeight<100
     renderChatRoom(item)
+    if(message.message_type==='audio')attachVoiceMessageUrls([message]).then(()=>{if(activeConversationId===message.conversation_id)renderChatRoom(item)})
     if(message.sender_id!==session?.user?.id)markConversationRead(message.conversation_id)
     else if(wasNearBottom){const updatedHistory=document.querySelector('#chat-history');if(updatedHistory)updatedHistory.scrollTop=updatedHistory.scrollHeight}
   }
