@@ -86,7 +86,7 @@ function postCard(p) {
   const id = String(p.id), safeId = esc(id)
   const likeCount = relationCount(p.likes), commentCount = relationCount(p.comments)
   const isLiked = liked.has(id), timestamp = timeAgo(p.created_at)
-  return `<article class="post card" id="post-${safeId}" data-post="${safeId}"><div class="post-top">${avatar(p.initials||initials(name),p.color||'blue',p.avatar_url||user.avatar_url)}<div class="post-user"><a href="/${encodeURIComponent(handle)}"><strong>${esc(name)}</strong></a><small>@${esc(handle)} · ${esc(timestamp)}</small></div><button class="more-button" data-toast="More post options" aria-label="Post options">···</button></div><p class="post-text">${esc(p.content)}</p>${image?`<img class="post-photo" src="${esc(image)}" alt="Post image">`:''}<div class="post-meta"><span data-like-count="${safeId}" data-count="${likeCount}">${heartSvg(false)} <span>${likeCount} ${likeCount===1?'person':'people'}</span></span><button class="post-comment-total" type="button" data-comment="${safeId}" data-comment-count="${safeId}">${commentCount} ${commentCount===1?'comment':'comments'}</button></div><div class="post-actions"><button data-like="${safeId}" class="${isLiked?'liked':''}" aria-pressed="${isLiked}">${heartSvg(isLiked)} <span>${isLiked?'Liked':'Like'}</span></button><button data-comment="${safeId}" aria-expanded="false">${commentSvg()} <span>Comment</span></button><button data-share><svg class="action-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Share</span></button></div></article>`
+  return `<article class="post card" id="post-${safeId}" data-post="${safeId}"><div class="post-top">${avatar(p.initials||initials(name),p.color||'blue',p.avatar_url||user.avatar_url)}<div class="post-user"><a href="/${encodeURIComponent(handle)}"><strong>${esc(name)}</strong></a><small>@${esc(handle)} · ${esc(timestamp)}</small></div><div class="post-menu-wrap"><button class="more-button" type="button" data-post-menu-toggle="\${safeId}" aria-label="Post options" aria-expanded="false">···</button><div class="post-options-menu" data-post-menu="\${safeId}" hidden><button type="button" data-save-post="\${safeId}">Save post</button><button type="button" data-copy-post="\${safeId}">Copy link</button><button type="button" data-report-post="\${safeId}" class="post-option-report">Report post</button>\${session&&session.user.id===p.user_id?\`<button type="button" data-delete-post="\${safeId}" class="post-option-danger">Delete post</button>\`:''}</div></div></div><p class="post-text">${esc(p.content)}</p>${image?`<img class="post-photo" src="${esc(image)}" alt="Post image">`:''}<div class="post-meta"><span data-like-count="${safeId}" data-count="${likeCount}">${heartSvg(false)} <span>${likeCount} ${likeCount===1?'person':'people'}</span></span><button class="post-comment-total" type="button" data-comment="${safeId}" data-comment-count="${safeId}">${commentCount} ${commentCount===1?'comment':'comments'}</button></div><div class="post-actions"><button data-like="${safeId}" class="${isLiked?'liked':''}" aria-pressed="${isLiked}">${heartSvg(isLiked)} <span>${isLiked?'Liked':'Like'}</span></button><button data-comment="${safeId}" aria-expanded="false">${commentSvg()} <span>Comment</span></button><button data-share><svg class="action-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Share</span></button></div></article>`
 }
 function timeAgo(value) {
   if (!value) return 'just now'
@@ -1086,9 +1086,33 @@ function bindEvents() {
     if(page==='create')setTimeout(()=>location.href='/',700)
     else{submit.disabled=false;submit.textContent='Share post';await loadHome()}
   })
+  document.addEventListener('submit',async e=>{
+    const form=e.target.closest('[data-report-form]');if(!form)return;e.preventDefault();if(!session)return openAuth()
+    const submit=form.querySelector('[type="submit"]');submit.disabled=true;submit.textContent='Submitting…';const values=new FormData(form)
+    const {error}=await supabase.from('post_reports').insert({post_id:form.dataset.reportForm,reporter_id:session.user.id,reason:values.get('reason'),details:String(values.get('details')||'').trim()||null})
+    if(error){submit.disabled=false;submit.textContent='Submit report';toast(error.code==='23505'?'You have already reported this post.':error.message,'error');return}
+    document.querySelector('#modal-root').innerHTML='';toast('Thanks. Your report has been submitted for review.','success')
+  })
   document.querySelector('#post-content')?.addEventListener('input',e=>{const count=document.querySelector('#post-count');if(count)count.textContent=`${e.target.value.length} / 2000`})
   document.addEventListener('click',async e=>{
     if(e.target.closest('[data-retry-feed]'))return loadHome()
+    const menuToggle=e.target.closest('[data-post-menu-toggle]')
+    if(menuToggle){
+      const post=menuToggle.closest('.post'),menu=post?.querySelector('[data-post-menu]'),opening=menu?.hidden
+      document.querySelectorAll('[data-post-menu]').forEach(item=>item.hidden=true)
+      document.querySelectorAll('[data-post-menu-toggle]').forEach(item=>item.setAttribute('aria-expanded','false'))
+      if(menu){menu.hidden=!opening;menuToggle.setAttribute('aria-expanded',String(!!opening))}
+      return
+    }
+    if(!e.target.closest('.post-menu-wrap')){document.querySelectorAll('[data-post-menu]').forEach(item=>item.hidden=true);document.querySelectorAll('[data-post-menu-toggle]').forEach(item=>item.setAttribute('aria-expanded','false'))}
+    const savePost=e.target.closest('[data-save-post]')
+    if(savePost){if(!session)return openAuth();const postId=savePost.dataset.savePost;const {error}=await supabase.from('saved_posts').insert({post_id:postId,user_id:session.user.id});if(error?.code==='23505'){toast('Post is already saved.');return}if(error){toast(error.message,'error');return}savePost.textContent='Saved';toast('Post saved.','success');return}
+    const copyPost=e.target.closest('[data-copy-post]')
+    if(copyPost){const url=location.origin+'/#post-'+copyPost.dataset.copyPost;try{await navigator.clipboard.writeText(url);toast('Post link copied.','success')}catch{toast('Could not copy the link.','error')}return}
+    const reportPost=e.target.closest('[data-report-post]')
+    if(reportPost){if(!session)return openAuth();const postId=reportPost.dataset.reportPost;const root=document.querySelector('#modal-root');root.innerHTML='<div class="report-modal-backdrop" data-close-report><form class="report-modal" data-report-form="'+esc(postId)+'" role="dialog" aria-modal="true" aria-label="Report post"><button type="button" class="report-close" data-close-report aria-label="Close">×</button><h2>Report post</h2><p>Tell us why this post should be reviewed.</p><label for="post-report-reason">Reason</label><select id="post-report-reason" name="reason" required><option value="">Choose a reason</option><option>Spam</option><option>Harassment or bullying</option><option>Hate speech</option><option>Violence or dangerous content</option><option>Nudity or sexual content</option><option>Scam or fraud</option><option>Other</option></select><label for="post-report-details">Additional details (optional)</label><textarea id="post-report-details" name="details" maxlength="1000" placeholder="Add details to help our team review…"></textarea><button class="button button-primary" type="submit">Submit report</button></form></div>';return}
+    const deletePost=e.target.closest('[data-delete-post]')
+    if(deletePost){if(!session)return openAuth();if(!confirm('Delete this post? This cannot be undone.'))return;const postId=deletePost.dataset.deletePost;const {error}=await supabase.from('posts').delete().eq('id',postId).eq('user_id',session.user.id);if(error){toast(error.message,'error');return}deletePost.closest('.post')?.remove();toast('Post deleted.','success');return}
     const likeButton=e.target.closest('[data-like]')
     if(likeButton){
       if(!session)return openAuth()
@@ -1125,7 +1149,7 @@ function bindEvents() {
     }
   })
   document.querySelector('#modal-root')?.addEventListener('click',async e=>{
-    if(e.target.matches('[data-close-comments]')){document.querySelector('#modal-root').innerHTML='';document.body.classList.remove('comments-open');return}
+    if(e.target.matches('[data-close-comments],[data-close-report]')){document.querySelector('#modal-root').innerHTML='';document.body.classList.remove('comments-open');return}
     const like=e.target.closest('[data-like-comment]')
     if(like){
       if(!session){openAuth();return}
