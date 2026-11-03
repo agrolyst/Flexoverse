@@ -137,10 +137,10 @@ async function loadHome() {
 }
 
 async function loadComments(postId) {
-  const list=document.querySelector('#comments-modal [data-modal-comment-list]')
+  const list=document.querySelector('#modal-root [data-modal-comment-list]')
   if(!list)return
   list.innerHTML='<p class="comment-state">Loading comments…</p>'
-  const {data,error}=await supabase.from('comments').select('id,post_id,user_id,parent_comment_id,content,created_at,profiles(full_name,username,avatar_url)').eq('post_id',postId).order('created_at',{ascending:true}).limit(150)
+  const {data,error}=await supabase.from('comments').select('id,post_id,user_id,parent_comment_id,content,created_at,profiles!comments_user_id_fkey(full_name,username,avatar_url)').eq('post_id',postId).order('created_at',{ascending:true}).limit(150)
   if(error){console.error('Could not load comments:',error);list.innerHTML='<p class="comment-state">Comments could not load. Please try again.</p>';return}
   const rows=data||[],children=new Map()
   rows.forEach(row=>{const key=row.parent_comment_id||'root';if(!children.has(key))children.set(key,[]);children.get(key).push(row)})
