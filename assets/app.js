@@ -102,13 +102,13 @@ function timeAgo(value) {
 async function loadHomeReels(){
   const section=document.querySelector('#home-reels-section'),list=document.querySelector('#home-reels-list')
   if(!section||!list)return
-  const {data,error}=await supabase.from('reels').select('id,user_id,caption,video_path,created_at,profiles(full_name,username,avatar_url)').eq('is_public',true).order('created_at',{ascending:false}).limit(12)
+  const {data,error}=await supabase.from('reels').select('id,user_id,caption,video_path,created_at,profiles!reels_user_id_fkey(full_name,username,avatar_url)').eq('is_public',true).order('created_at',{ascending:false}).limit(12)
   if(error){console.warn('Homepage reels unavailable:',error);section.hidden=true;return}
   const rows=data||[]
   if(!rows.length){section.hidden=true;return}
   const {data:urls,error:urlError}=await supabase.storage.from('reels').createSignedUrls(rows.map(row=>row.video_path),3600)
   if(urlError){console.warn('Could not sign homepage reel URLs:',urlError);section.hidden=true;return}
-  const urlByPath=Object.fromEntries((urls||[]).filter(item=>item.signedUrl).map(item=>[item.path,item.signedUrl]))
+  const urlByPath=Object.fromEntries((urls||[]).filter(item=>item.signedUrl&&!item.error).map(item=>[item.path,item.signedUrl]))
   reelItems=rows.map(row=>{const user=Array.isArray(row.profiles)?row.profiles[0]||{}:row.profiles||{};return{id:row.id,user_id:row.user_id,caption:row.caption||'',video_path:row.video_path,video_url:urlByPath[row.video_path],created_at:row.created_at,user}}).filter(row=>row.video_url)
   if(!reelItems.length){section.hidden=true;return}
   section.hidden=false
@@ -161,6 +161,16 @@ async function loadComments(postId) {
   const count=document.querySelector(`#post-${CSS.escape(postId)} [data-comment-count]`)
   if(count)count.textContent=`${rows.length} ${rows.length===1?'comment':'comments'}`
 }
+function openComments(postId){
+  const root=document.querySelector('#modal-root')
+  if(!root)return toast('Comments are unavailable on this page.','error')
+  const post=document.querySelector(`#post-${CSS.escape(postId)}`)
+  const title=post?.querySelector('.post-user strong')?.textContent||'this post'
+  root.innerHTML=`<div class="comments-modal-backdrop" data-close-comments><section class="comments-modal" role="dialog" aria-modal="true" aria-label="Comments"><header><div><span class="overline">CONVERSATION</span><h2>Comments</h2><p>On ${esc(title)}’s post</p></div><button type="button" data-close-comments aria-label="Close comments">×</button></header><div class="modal-comment-list" data-modal-comment-list><p class="comment-state">Loading comments…</p></div>${session?`<form class="modal-comment-form" data-new-comment="${esc(postId)}"><input name="content" maxlength="1000" required placeholder="Write a comment…" aria-label="Write a comment"><button type="submit" aria-label="Send comment"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 17 8-17 8 3-8-3-8Zm3 8h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button></form>`:`<p class="comment-signin"><a href="/login/">Sign in</a> to join the conversation.</p>`}</section></div>`
+  document.body.classList.add('comments-open')
+  loadComments(postId)
+}
+
 function friendEmptyState(title,description,action='') {
   return `<div class="friends-empty-state"><span class="friends-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.8 19a5.2 5.2 0 0 1 10.4 0v1H2.8zM14 15.3a4.4 4.4 0 0 1 7.2 3.4v1h-6"/></svg></span><strong>${esc(title)}</strong><p>${esc(description)}</p>${action}</div>`
 }
@@ -1084,22 +1094,25 @@ function bindEvents() {
       if(!session)return openAuth()
       const postId=likeButton.dataset.like
       const wasLiked=liked.has(postId)
-      likeButton.disabled=true
-      const result=wasLiked
-        ?await supabase.from('likes').delete().eq('post_id',postId).eq('user_id',session.user.id)
-        :await supabase.from('likes').insert({post_id:postId,user_id:session.user.id})
-      likeButton.disabled=false
-      if(result.error){
-        if(result.error.code==='23505'&&!wasLiked){liked.add(postId);likeButton.classList.add('liked');likeButton.setAttribute('aria-pressed','true');likeButton.innerHTML=heartSvg(true)+' <span>Liked</span>';return}
-        toast(result.error.message,'error');return
-      }
-      if(wasLiked)liked.delete(postId);else liked.add(postId)
-      likeButton.classList.toggle('liked',!wasLiked)
-      likeButton.setAttribute('aria-pressed',String(!wasLiked))
-      likeButton.innerHTML=heartSvg(!wasLiked)+' <span>'+(wasLiked?'Like':'Liked')+'</span>'
+      const nextLiked=!wasLiked
       const total=likeButton.closest('.post')?.querySelector('[data-like-count]')
-      if(total){const count=Math.max(0,Number(total.dataset.count||0)+(wasLiked?-1:1));total.dataset.count=String(count);total.innerHTML=heartSvg(false)+' <span>'+count+' '+(count===1?'person':'people')+'</span>'}
-      toast(wasLiked?'Like removed.':'You liked this post.','success')
+      const previousCount=total?Number(total.dataset.count||0):0
+      if(nextLiked)liked.add(postId);else liked.delete(postId)
+      likeButton.classList.toggle('liked',nextLiked)
+      likeButton.setAttribute('aria-pressed',String(nextLiked))
+      likeButton.innerHTML=heartSvg(nextLiked)+' <span>'+(nextLiked?'Liked':'Like')+'</span>'
+      if(total){const count=Math.max(0,previousCount+(nextLiked?1:-1));total.dataset.count=String(count);total.innerHTML=heartSvg(false)+' <span>'+count+' '+(count===1?'person':'people')+'</span>'}
+      const result=nextLiked
+        ?await supabase.from('likes').insert({post_id:postId,user_id:session.user.id})
+        :await supabase.from('likes').delete().eq('post_id',postId).eq('user_id',session.user.id)
+      if(result.error&&!(result.error.code==='23505'&&nextLiked)){
+        if(wasLiked)liked.add(postId);else liked.delete(postId)
+        likeButton.classList.toggle('liked',wasLiked)
+        likeButton.setAttribute('aria-pressed',String(wasLiked))
+        likeButton.innerHTML=heartSvg(wasLiked)+' <span>'+(wasLiked?'Liked':'Like')+'</span>'
+        if(total){total.dataset.count=String(previousCount);total.innerHTML=heartSvg(false)+' <span>'+previousCount+' '+(previousCount===1?'person':'people')+'</span>'}
+        toast(result.error.message,'error')
+      }
       return
     }
     const commentButton=e.target.closest('[data-comment]')
