@@ -1688,3 +1688,12 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
 
 .post-user-name{display:inline-flex;align-items:center;gap:5px;width:max-content;max-width:100%}
 .post-user-name .post-verified-badge{margin:0;flex:0 0 auto}
+
+/* Individual SVG icons for the membership badge roadmap */
+.badge-roadmap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:11px;margin-top:13px}
+.badge-roadmap-item{display:flex;align-items:flex-start;gap:11px;min-width:0;padding:13px;border:1px solid #e9ebf2;border-radius:13px;background:#fff}
+.badge-roadmap-icon{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border-radius:11px;background:#f0f3f8;color:#586579}
+.badge-roadmap-icon svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.badge-roadmap-copy{min-width:0}.badge-roadmap-copy b{display:block;margin:1px 0 4px;color:#30394b;font-size:12px}.badge-roadmap-copy p{margin:0;color:#788294;font-size:10px;line-height:1.55}
+.badge-verified .badge-roadmap-icon{background:#e8f4ff;color:#1682df}.badge-plus .badge-roadmap-icon{background:#f1edff;color:#7259c9}.badge-admin .badge-roadmap-icon{background:#fff4df;color:#b47a20}.badge-moderator .badge-roadmap-icon{background:#e8f7f1;color:#218b68}.badge-founder .badge-roadmap-icon{background:#fff0e8;color:#bd7043}.badge-og .badge-roadmap-icon{background:#f3efff;color:#805fc8}.badge-creator .badge-roadmap-icon{background:#ffedf3;color:#c35c86}.badge-top .badge-roadmap-icon{background:#fff5dc;color:#b68a25}
+@media(max-width:520px){.badge-roadmap-grid{grid-template-columns:1fr}.badge-roadmap-item{padding:11px}}
