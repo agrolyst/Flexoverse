@@ -1572,3 +1572,75 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
 .flexoverse-group-call .call-screen-controls button.call-end-button{background:#ed0645!important;color:#fff!important}
 .flexoverse-group-call .call-screen-controls button:focus-visible,.call-screen-controls button:focus-visible{outline:3px solid #7bb8ff!important;outline-offset:3px!important}
 @media(max-width:420px){.flexoverse-group-call .call-screen-controls button svg{width:25px!important;height:25px!important}}
+
+
+/* WhatsApp-style inbox filters and message selection */
+.chat-filter-tabs{display:flex;align-items:center;gap:4px;padding:10px 8px 12px;overflow:visible;position:relative}
+.chat-filter-tab{flex:1 1 auto;min-width:0;padding:8px 5px;border:1px solid transparent;border-radius:18px;background:#f3f4f8;color:#687385;font-size:9px;font-weight:700;white-space:nowrap}
+.chat-filter-tab.active{background:#eae9ff;border-color:#d8d5ff;color:#5148d2}
+.chat-plus-wrap{position:relative;flex:0 0 30px}
+.chat-plus-button{width:29px;height:29px;border:0;border-radius:50%;background:var(--brand);color:#fff;font-size:22px;line-height:1;display:grid;place-items:center;box-shadow:0 4px 10px #655ce833}
+.chat-plus-menu{position:absolute;z-index:20;right:0;top:36px;width:145px;padding:5px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 30px #1b234022}
+.chat-plus-menu[hidden]{display:none}
+.chat-plus-menu button{display:block;width:100%;padding:10px;border:0;border-radius:7px;background:#fff;text-align:left;color:var(--ink);font-size:11px}
+.chat-plus-menu button:hover{background:#f4f3ff;color:var(--brand)}
+.conversation-favourite{color:#e6a83c;font-size:12px;line-height:1;margin-right:3px}
+.message,.message *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none}
+.message{position:relative;cursor:default}
+.message-wrap.is-message-selected .message{outline:2px solid #655ce8;outline-offset:2px;box-shadow:0 0 0 5px #655ce81c}
+.message-select-check{display:inline-grid;place-items:center;width:17px;height:17px;margin:0 6px 5px 0;border-radius:50%;background:var(--brand);color:#fff;font-size:11px;font-weight:800;vertical-align:middle}
+.message-selection-bar{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid #e8eaf0;background:#f7f6ff;color:#4546a5}
+.message-selection-bar strong{margin-right:auto;font-size:11px}
+.message-selection-bar button{border:1px solid #dedcff;border-radius:7px;background:#fff;color:#5148d2;padding:6px 10px;font-size:10px;font-weight:700}
+.message-selection-bar button:disabled{opacity:.4;cursor:not-allowed}
+.chat-room.chat-room-soft-theme .message-wrap.is-message-selected .message{outline-color:#5148d2}
+
+/* Polished incoming and outgoing voice-call presentation */
+.call-screen-stage[data-audio-call] .call-audio-avatar:before,.call-screen-stage[data-audio-call] .call-audio-avatar:after{content:"";position:absolute;width:180px;height:180px;border:1px solid #ffffff32;border-radius:50%;animation:callAvatarPulse 2.6s ease-out infinite}
+.call-screen-stage[data-audio-call] .call-audio-avatar:after{animation-delay:1.3s}
+.call-screen-stage[data-audio-call] .call-audio-avatar .avatar{width:112px;height:112px;font-size:32px;border:4px solid #ffffff2b;box-shadow:0 0 0 12px #ffffff0d,0 18px 60px #0005}
+.call-screen-stage[data-audio-call] .call-audio-avatar strong{position:absolute;top:calc(50% + 82px);font-size:18px;color:#fff;text-shadow:0 2px 12px #0008}
+@keyframes callAvatarPulse{0%{transform:scale(.72);opacity:.8}100%{transform:scale(1.55);opacity:0}}
+.incoming-call-screen{display:flex!important;align-items:center!important;justify-content:center!important;background:radial-gradient(ellipse at 50% 36%,#48565b 0%,#202b31 52%,#10171b 100%)!important}
+.incoming-call-content{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;width:min(440px,100%);padding:28px 22px}
+.incoming-call-label{color:#a9c5b7;font-size:10px;font-weight:800;letter-spacing:2px;margin-bottom:34px}
+.incoming-call-avatar-wrap{position:relative;width:150px;height:150px;display:grid;place-items:center;margin-bottom:28px}
+.incoming-call-avatar-wrap .avatar{position:relative;z-index:2;width:116px;height:116px;border:4px solid #ffffff35;font-size:32px;box-shadow:0 14px 45px #0006}
+.call-avatar-pulse{position:absolute;inset:0;border:1px solid #8bd6b066;border-radius:50%;animation:callAvatarPulse 2.5s ease-out infinite}
+.incoming-call-content h2{margin:0;color:#fff;font:750 27px Manrope,sans-serif;letter-spacing:-.5px}
+.incoming-call-content p{margin:10px 0 0;color:#c0cbc8;font-size:13px}
+.incoming-call-actions{display:flex;align-items:center;justify-content:center;gap:74px;margin-top:78px}
+.incoming-call-actions button{display:flex;flex-direction:column;align-items:center;gap:9px;border:0;background:transparent;color:#fff}
+.incoming-call-actions button span{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;font-size:25px;font-weight:700;box-shadow:0 8px 24px #0004}
+.incoming-call-actions button small{font-size:11px;color:#e5ece9}
+.incoming-call-actions .incoming-decline span{background:#ed3654}
+.incoming-call-actions .incoming-answer span{background:#20b879}
+@media(max-width:760px){.chat-filter-tabs{padding-left:5px;padding-right:5px;gap:3px}.chat-filter-tab{font-size:8px;padding:8px 3px}.chat-plus-wrap{flex-basis:28px}.chat-plus-button{width:28px;height:28px}.incoming-call-actions{margin-top:58px;gap:58px}}
+
+.homepage-call-alert{position:sticky;top:0;z-index:1000;padding:0 18px}
+.home-incoming-call-card{max-width:920px;margin:12px auto;display:flex;align-items:center;gap:13px;padding:14px 18px;border:1px solid #d9e9e1;border-radius:16px;background:linear-gradient(110deg,#f1fbf5,#fff);box-shadow:0 12px 35px #172c2315}
+.home-incoming-call-card .avatar{width:48px;height:48px;flex:0 0 48px}
+.home-incoming-call-copy{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.home-incoming-call-copy strong{font-size:14px;color:#1d2b25}
+.home-incoming-call-copy span{font-size:11px;color:#63736b}
+.home-incoming-call-card button{border:0;border-radius:22px;padding:10px 16px;font-size:11px;font-weight:750}
+.home-incoming-call-card [data-home-call-decline]{background:#fce9ec;color:#c72e4d}
+.home-incoming-call-card [data-home-call-answer]{background:#18a86e;color:#fff}
+@media(max-width:560px){.homepage-call-alert{padding:0 8px}.home-incoming-call-card{gap:8px;padding:11px;border-radius:12px}.home-incoming-call-card button{padding:9px 11px;font-size:10px}}
+
+.header-notification-wrap{position:relative;display:flex;align-items:center}
+.header-notification-dropdown{position:absolute;z-index:1500;right:0;top:calc(100% + 12px);width:min(360px,calc(100vw - 28px));max-height:440px;overflow:auto;padding:8px;background:#fff;border:1px solid #e8eaf0;border-radius:15px;box-shadow:0 18px 50px #19233a22}
+.header-notification-dropdown[hidden]{display:none}
+.header-notification-row{display:flex;align-items:center;gap:10px;padding:11px 9px;border-bottom:1px solid #f0f1f4}
+.header-notification-row>div{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.header-notification-row strong{font-size:11px;color:#273044}
+.header-notification-row span,.header-notification-row small{font-size:10px;color:#7b8494;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.header-notification-row>a{padding:7px 10px;border-radius:8px;background:#f0efff;color:#5d54d7;font-size:10px;font-weight:750;white-space:nowrap}
+.header-notification-footer{display:block;padding:12px 8px 7px;text-align:center;color:var(--brand);font-size:10px;font-weight:750}
+.header-notification-loading{padding:22px 12px;text-align:center;color:#7b8494;font-size:11px}
+
+.header-quick-reply{display:flex;gap:5px;margin-top:7px;max-width:245px}
+.header-quick-reply input{min-width:0;flex:1;border:1px solid #e5e7ef;border-radius:8px;padding:7px 8px;font:inherit;font-size:10px;outline:none}
+.header-quick-reply input:focus{border-color:#8b83ee;box-shadow:0 0 0 2px #6b62e91a}
+.header-quick-reply button{border:0;border-radius:8px;padding:0 10px;background:#655ce8;color:#fff;font-size:10px;font-weight:750}
+.header-quick-reply button:disabled{opacity:.55}
