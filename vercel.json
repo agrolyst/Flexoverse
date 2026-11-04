@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/profile/view/:username", "destination": "/profile/view/index.html" },
+    { "source": "/:username", "destination": "/profile/view/index.html" }
+  ]
+}
