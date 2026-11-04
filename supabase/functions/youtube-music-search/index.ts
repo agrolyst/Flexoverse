@@ -13,7 +13,10 @@ Deno.serve(async (req: Request) => {
   try {
     const token = (req.headers.get("Authorization") || "").replace(/^Bearer\\s+/i, "");
     if (!token) return new Response(JSON.stringify({ error: "Sign in to search music." }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: `Bearer ${token}` } } });
+    const publishableKeys = JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") || "{}");
+    const publishableKey = publishableKeys.default || Deno.env.get("SUPABASE_ANON_KEY");
+    if (!publishableKey) throw new Error("Supabase publishable key is unavailable.");
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, publishableKey, { global: { headers: { Authorization: `Bearer ${token}` } } });
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) return new Response(JSON.stringify({ error: "Your session is invalid. Sign in again." }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const apiKey = Deno.env.get("YOUTUBE_API_KEY");
