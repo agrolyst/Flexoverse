@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "Flexoverse",
+  "short_name": "Flexoverse",
+  "description": "Connect with friends, share updates, photos, videos, and conversations on Flexoverse.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#655ce8",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
