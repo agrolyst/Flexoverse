@@ -609,6 +609,25 @@ function prepareReelComposer() {
     }catch(error){if(requestId===musicRequestId&&musicStatus)musicStatus.textContent=error.message||'Could not load sounds.'}
     finally{if(requestId===musicRequestId&&musicSearchButton){musicSearchButton.disabled=false;musicSearchButton.textContent='Search'}}
   }
+  const mobileSounds=document.querySelector('#reel-mobile-sounds')
+  const mobileSheet=document.querySelector('#reel-mobile-tool-sheet')
+  const mobileSheetContent=document.querySelector('#reel-mobile-tool-content')
+  const closeMobileSheet=()=>{if(mobileSheet)mobileSheet.hidden=true}
+  mobileSounds?.addEventListener('click',()=>openMusicModal('trending'))
+  document.querySelector('#reel-mobile-sheet-close')?.addEventListener('click',closeMobileSheet)
+  const openMobileTool=(kind)=>{
+    if(!mobileSheet||!mobileSheetContent)return
+    mobileSheet.hidden=false
+    if(kind==='text'){mobileSheetContent.innerHTML='<h3>Add text</h3><p>Type a caption to place over your video.</p>';const field=document.createElement('input');field.type='text';field.maxLength=80;field.placeholder='Write something…';field.value=overlayInput?.value||'';field.addEventListener('input',()=>{if(overlayInput){overlayInput.value=field.value;overlayInput.dispatchEvent(new Event('input',{bubbles:true}))}});mobileSheetContent.append(field);field.focus()}
+    else if(kind==='stickers'){mobileSheetContent.innerHTML='<h3>Stickers</h3><p>Tap a sticker to add it to your reel.</p>';['❤️','✨','😂','🔥','😍','🎉'].forEach(symbol=>{const b=document.createElement('button');b.type='button';b.className='reel-mobile-sticker';b.textContent=symbol;b.addEventListener('click',()=>{if(overlayInput){overlayInput.value=(overlayInput.value+' '+symbol).trim();overlayInput.dispatchEvent(new Event('input',{bubbles:true}))}});mobileSheetContent.append(b)})}
+    else if(kind==='clips'){mobileSheetContent.innerHTML='<h3>Adjust clips</h3><p>Trim the beginning and end of your video.</p>';const tools=document.querySelector('.reel-editor-tools');if(tools)mobileSheetContent.append(tools.cloneNode(true));}
+    else if(kind==='voiceover'){mobileSheetContent.innerHTML='<h3>Add voiceover</h3><p>Select an audio recording from your device.</p>';const pick=document.createElement('button');pick.type='button';pick.textContent='Choose audio';pick.addEventListener('click',()=>audioFile?.click());mobileSheetContent.append(pick)}
+    else if(kind==='privacy'){mobileSheetContent.innerHTML='<h3>Privacy settings</h3><p>Your reel is currently set to Public community. Audience controls will be available when private audience publishing is enabled.</p>'}
+    else if(kind==='filters'||kind==='effects'){const styles=['none','grayscale(1)','sepia(.65)','contrast(1.2) saturate(1.25)','brightness(1.15)'];const names=['Original','Mono','Warm','Vivid','Bright'];let current=0;mobileSheetContent.innerHTML='<h3>'+ (kind==='filters'?'Filters':'Effects')+'</h3><p>Choose a look for your preview.</p>';const row=document.createElement('div');row.className='reel-mobile-filter-row';styles.forEach((filter,i)=>{const b=document.createElement('button');b.type='button';b.textContent=names[i];b.addEventListener('click',()=>{current=i;if(preview)preview.style.filter=filter;row.querySelectorAll('button').forEach((x,j)=>x.classList.toggle('active',j===i))});row.append(b)});mobileSheetContent.append(row)}
+  }
+  document.querySelectorAll('[data-mobile-tool]').forEach(button=>button.addEventListener('click',()=>openMobileTool(button.dataset.mobileTool)))
+  document.querySelector('#reel-mobile-next')?.addEventListener('click',()=>{const details=document.querySelector('.reel-studio-details');if(details){details.classList.add('mobile-details-open');details.scrollIntoView({block:'nearest',behavior:'smooth'});const next=document.querySelector('#reel-mobile-next');if(next)next.textContent='Share reel'}})
+  document.querySelector('#reel-mobile-story')?.addEventListener('click',()=>{if(!fileInput?.files?.length){fileInput?.click();return}form.requestSubmit()})
   musicSearchButton?.addEventListener('click',()=>searchMusic(musicQuery?.value))
   musicQuery?.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();searchMusic(musicQuery.value)}})
   document.querySelector('#reel-music-trending-tab')?.addEventListener('click',()=>{if(musicQuery)musicQuery.value='';searchMusic('trending music 2026',true)})
