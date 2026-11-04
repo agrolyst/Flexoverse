@@ -1729,3 +1729,13 @@ body.standalone-auth-page .main-column.auth-page{max-width:100%;margin:0 auto}
 .auth-success{color:#20835a;font-size:11px;line-height:1.5}
 @media(max-width:760px){body.standalone-auth-page .page-layout{padding:18px 14px 38px}.auth-layout-grid{grid-template-columns:1fr;gap:20px}.auth-copy-panel{padding:0}.auth-copy-panel h1{font-size:32px}.auth-benefit-list{grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}.auth-benefit-list li{font-size:10px}.auth-brand-lockup{margin-bottom:20px}}
 @media(max-width:440px){body.standalone-auth-page .page-layout{padding:12px 9px 26px}.auth-page-card{padding:22px 16px;border-radius:18px}.auth-benefit-list{grid-template-columns:1fr}.auth-form-panel{padding:18px 14px}.auth-copy-panel h1{font-size:29px}}
+
+
+/* Google OAuth buttons */
+.auth-divider{display:flex;align-items:center;gap:12px;margin:17px 0;color:#98a0af;font-size:10px;font-weight:700}
+.auth-divider:before,.auth-divider:after{content:"";height:1px;flex:1;background:#e9ebf2}
+.google-auth-button{display:flex;align-items:center;justify-content:center;gap:11px;width:100%;min-height:45px;padding:10px 14px;border:1px solid #dfe3eb;border-radius:11px;background:#fff;color:#343b4c;font-size:12px;font-weight:750;cursor:pointer;transition:border-color .18s,box-shadow .18s,transform .18s}
+.google-auth-button:hover{border-color:#bfc5d4;box-shadow:0 5px 16px #222b430d;transform:translateY(-1px)}
+.google-auth-button:disabled{opacity:.65;cursor:wait;transform:none}
+.google-auth-button svg{width:18px;height:18px;flex:0 0 auto}
+.google-auth-button.is-loading{opacity:.7}
