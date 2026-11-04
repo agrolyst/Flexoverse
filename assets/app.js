@@ -158,6 +158,20 @@ async function loadHome() {
     return
   }
   const posts = data || []
+  // Resolve author verification separately for consistent homepage badges.
+  const authorIds = [...new Set(posts.map(post => post.user_id).filter(Boolean))]
+  if (authorIds.length) {
+    const { data: authorProfiles, error: authorProfilesError } = await supabase.from('profiles').select('id,is_verified').in('id', authorIds)
+    if (authorProfilesError) console.warn('Could not load homepage verification badges:', authorProfilesError)
+    else {
+      const verificationByUser = new Map((authorProfiles || []).map(author => [author.id, author.is_verified === true]))
+      posts.forEach(post => {
+        const profile = Array.isArray(post.profiles) ? post.profiles[0] || {} : post.profiles || {}
+        profile.is_verified = verificationByUser.get(post.user_id) === true
+        post.profiles = profile
+      })
+    }
+  }
   liked = new Set()
   if (session && posts.length) {
     const {data:myLikes,error:likesError}=await supabase.from('likes').select('post_id').eq('user_id',session.user.id).in('post_id',posts.map(post=>post.id))
