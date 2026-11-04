@@ -478,7 +478,61 @@ function prepareReelComposer() {
   speed?.addEventListener('change',()=>{if(preview)preview.playbackRate=Number(speed.value)||1})
   aspect?.addEventListener('change',()=>{if(stage)stage.style.aspectRatio=aspect.value})
   overlayInput?.addEventListener('input',()=>{if(!overlay)return;overlay.textContent=overlayInput.value;overlay.hidden=!overlayInput.value.trim()})
-  audioFile?.addEventListener('change',()=>{const file=audioFile.files?.[0];if(!file||!audio)return;if(audioUrl)URL.revokeObjectURL(audioUrl);audioUrl=URL.createObjectURL(file);audio.src=audioUrl;audioControls.hidden=false;audio.volume=Number(audioVolume?.value??.5)})
+  const audioStartRange=document.querySelector('#reel-audio-trim-start')
+  const audioEndRange=document.querySelector('#reel-audio-trim-end')
+  const audioStartLabel=document.querySelector('#reel-audio-start-value')
+  const audioEndLabel=document.querySelector('#reel-audio-end-value')
+  const audioWaveform=document.querySelector('#reel-audio-waveform')
+  let audioTrimStart=0,audioTrimEnd=0
+  const paintAudioWaveform=async file=>{
+    if(!audioWaveform)return
+    audioWaveform.innerHTML=''
+    try{
+      const AudioContextClass=window.AudioContext||window.webkitAudioContext
+      if(!AudioContextClass)return
+      const context=new AudioContextClass()
+      const buffer=await context.decodeAudioData(await file.arrayBuffer())
+      const channel=buffer.getChannelData(0),bars=72,step=Math.max(1,Math.floor(channel.length/bars))
+      const values=[]
+      for(let i=0;i<bars;i++){let peak=0;for(let j=i*step;j<Math.min(channel.length,(i+1)*step);j+=Math.max(1,Math.floor(step/40)))peak=Math.max(peak,Math.abs(channel[j]));values.push(Math.max(5,Math.round(peak*100)))}
+      audioWaveform.innerHTML=values.map(v=>`<i style="height:${v}%"></i>`).join('')
+      await context.close()
+    }catch{audioWaveform.innerHTML='<span>Audio waveform preview unavailable</span>'}
+  }
+  const updateAudioTrim=()=>{
+    if(audioStartLabel)audioStartLabel.textContent=audioTrimStart.toFixed(1)+'s'
+    if(audioEndLabel)audioEndLabel.textContent=audioTrimEnd.toFixed(1)+'s'
+  }
+  audioFile?.addEventListener('change',async()=>{
+    const file=audioFile.files?.[0];if(!file||!audio)return
+    if(audioUrl)URL.revokeObjectURL(audioUrl)
+    audioUrl=URL.createObjectURL(file);audio.src=audioUrl;audioControls.hidden=false
+    audio.volume=Number(audioVolume?.value??.5);audio.load()
+    await paintAudioWaveform(file)
+  })
+  audio?.addEventListener('loadedmetadata',()=>{
+    audioTrimStart=0;audioTrimEnd=Number.isFinite(audio.duration)?audio.duration:0
+    ;[audioStartRange,audioEndRange].forEach(el=>{if(el){el.max=String(audioTrimEnd);el.disabled=!audioTrimEnd}})
+    if(audioStartRange)audioStartRange.value='0'
+    if(audioEndRange)audioEndRange.value=String(audioTrimEnd)
+    updateAudioTrim()
+  })
+  audioStartRange?.addEventListener('input',()=>{
+    audioTrimStart=Math.min(Number(audioStartRange.value),Math.max(0,audioTrimEnd-.1))
+    audioStartRange.value=String(audioTrimStart)
+    if(audio&&audio.currentTime<audioTrimStart)audio.currentTime=audioTrimStart
+    updateAudioTrim()
+  })
+  audioEndRange?.addEventListener('input',()=>{
+    audioTrimEnd=Math.max(Number(audioEndRange.value),audioTrimStart+.1)
+    audioEndRange.value=String(audioTrimEnd)
+    if(audio&&audio.currentTime>audioTrimEnd){audio.pause();audio.currentTime=audioTrimStart}
+    updateAudioTrim()
+  })
+  audio?.addEventListener('timeupdate',()=>{
+    if(audioTrimEnd>audioTrimStart&&audio.currentTime>=audioTrimEnd){audio.pause();audio.currentTime=audioTrimStart}
+  })
+  audio?.addEventListener('play',()=>{if(audio.currentTime<audioTrimStart||audio.currentTime>=audioTrimEnd)audio.currentTime=audioTrimStart})
   audioVolume?.addEventListener('input',()=>{if(audio)audio.volume=Number(audioVolume.value)})
   let selectedYoutubeTrack=null
   const musicModal=document.querySelector('#reel-music-modal')
