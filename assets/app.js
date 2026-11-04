@@ -912,7 +912,17 @@ function openCallPopup(){
  popup.document.open();
  popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Flexoverse Call</title><link rel="stylesheet" href="${location.origin}/assets/site.css"><style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#10171b}#call-root{position:fixed;inset:0;z-index:99999}.call-backdrop{position:absolute!important;inset:0!important}.call-window{width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;border-radius:0!important}@media(max-width:600px){.call-window{padding-top:env(safe-area-inset-top)!important;padding-bottom:env(safe-area-inset-bottom)!important}}</style></head><body><div id="call-window-host"></div></body></html>`);
  popup.document.close();
- const root=document.querySelector('#call-root');
+ let root=document.querySelector('#call-root');
+ if(!root){root=document.createElement('div');root.id='call-root';document.body.appendChild(root);
+  root.addEventListener('click',e=>{
+   if(e.target.closest('[data-end-call]')){endCall(true);return}
+   if(e.target.closest('[data-accept-call]')){acceptCall();return}
+   if(e.target.closest('[data-reject-call]')){const p=window.__pendingCallOffer;if(p)callSignal('signal',{kind:'reject',callId:p.callId,to:p.from}).catch(()=>{});endCall(false);return}
+   if(e.target.closest('[data-call-speaker]')){const audio=(callRootElement||document).querySelector('[data-remote-video]');if(audio){audio.muted=!audio.muted;e.target.closest('[data-call-speaker]').classList.toggle('is-muted',audio.muted)}return}
+   if(e.target.closest('[data-call-mute]')&&callLocalStream){const track=callLocalStream.getAudioTracks()[0];if(track)track.enabled=!track.enabled;return}
+   if(e.target.closest('[data-call-camera]')&&callLocalStream){const track=callLocalStream.getVideoTracks()[0];if(track)track.enabled=!track.enabled;return}
+  });
+ }
  if(root){callRootElement=root;popup.document.querySelector('#call-window-host').appendChild(root)}
  popup.addEventListener('beforeunload',()=>{if(currentCall)endCall(true);if(callRootElement&&callRootElement.ownerDocument!==document)document.body.appendChild(callRootElement);callRootElement=null;callWindowRef=null});
  popup.focus();
