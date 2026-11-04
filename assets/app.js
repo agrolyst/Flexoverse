@@ -1606,9 +1606,9 @@ function bindProfileCompletionEvents(){
     const {error:addressError}=await supabase.from('private_profile_details').upsert(privateDetails,{onConflict:'user_id'})
     if(addressError){save.disabled=false;save.textContent='Save and continue';toast(addressError.message,'error');return}
     const {data:updated,error}=await supabase.from('profiles').update({full_name:fullName,username,bio,account_type:accountType}).eq('id',session.user.id).select('id,username,full_name,bio,avatar_url,is_public,account_type').single()
-    if(error){save.disabled=false;if(skip)skip.disabled=false;save.textContent='Save and continue';toast(error.code==='23505'?'That username is taken. Try another one.':error.message,'error');return}
+    if(error){save.disabled=false;save.textContent='Save and continue';toast(error.code==='23505'?'That username is taken. Try another one.':error.message,'error');return}
     const {error:authError}=await supabase.auth.updateUser({data:{full_name:fullName,username,profile_completed:true,account_type:accountType}})
-    if(authError){save.disabled=false;if(skip)skip.disabled=false;save.textContent='Save and continue';toast('Your details were saved, but setup could not finish. Please try again.','error');return}
+    if(authError){save.disabled=false;save.textContent='Save and continue';toast('Your details were saved, but setup could not finish. Please try again.','error');return}
     profile=updated;location.replace(authReturnPath())
   })
 
