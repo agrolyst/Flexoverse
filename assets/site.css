@@ -1977,3 +1977,6 @@ body.standalone-auth-page .main-column.auth-page{max-width:100%;margin:0 auto}
   .reel-tool-grid{grid-template-columns:1fr 1fr}
   .reel-tool-wide{grid-column:1/-1}
 }
+
+/* Reel audio waveform and trim controls */
+.reel-audio-preview-controls{display:grid;gap:12px;margin-top:14px;padding:13px;border:1px solid var(--border,#e8e8ef);border-radius:13px;background:var(--surface-soft,#f8f8fc)}.reel-audio-waveform{height:54px;display:flex;align-items:center;justify-content:center;gap:3px;overflow:hidden;padding:5px 8px;border-radius:9px;background:rgba(102,91,232,.07)}.reel-audio-waveform i{display:block;flex:1;min-width:2px;max-width:7px;border-radius:5px;background:linear-gradient(180deg,#9188ff,#6257df);opacity:.9}.reel-audio-waveform span{font-size:11px;color:var(--muted,#777)}.reel-audio-preview-controls audio{width:100%;height:34px}.reel-audio-trim{display:grid;grid-template-columns:1fr 1fr;gap:12px}.reel-audio-trim label,.reel-audio-preview-controls>label{display:grid;gap:6px;font-size:11px;color:var(--text,#34364a)}.reel-audio-trim label b{font-variant-numeric:tabular-nums;color:#665ce8}.reel-audio-trim input,.reel-audio-preview-controls>label input{width:100%;accent-color:#665ce8}.reel-audio-preview-controls small{font-size:10px;line-height:1.5;color:var(--muted,#777)}@media(max-width:520px){.reel-audio-trim{grid-template-columns:1fr}}
