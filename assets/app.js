@@ -107,6 +107,18 @@ function mountShell() {
 
 function heartSvg(filled=false){return `<svg class="action-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.7c0 4.2-8.8 10-8.8 10S3.2 12.9 3.2 8.7A4.2 4.2 0 0 1 11 6.4l1 1.1 1-1.1a4.2 4.2 0 0 1 7.8 2.3Z" fill="${filled?'currentColor':'none'}" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`}
 function commentSvg(){return '<svg class="action-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-8 8 8.4 8.4 0 0 1-3.8-.9L4 20l1.4-4.2A8 8 0 1 1 20 11.5Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'}
+// Central badge renderer: add future badge types here and reuse renderBadge() anywhere.
+const BADGE_TYPES = {
+  verified: { className: 'post-verified-badge', title: 'Verified by Flexoverse', label: 'Verified account', icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>' },
+  member: { className: 'post-member-badge', title: 'Flexoverse member', label: 'Member', text: 'Member' }
+}
+function renderBadge(type) {
+  const badge = BADGE_TYPES[type]
+  if (!badge) return ''
+  if (type === 'verified') return `<span class="${badge.className}" title="${badge.title}" aria-label="${badge.label}">${badge.icon}</span>`
+  return `<span class="${badge.className}" title="${badge.title}">${badge.text}</span>`
+}
+
 function postCard(p) {
   const user = Array.isArray(p.profiles) ? p.profiles[0] || {} : p.profiles || {}
   const name = p.name || user.full_name || 'Flexoverse member'
@@ -114,8 +126,8 @@ function postCard(p) {
   const image = p.image || p.image_path || ''
   const id = String(p.id), safeId = esc(id)
   const likeCount = relationCount(p.likes), commentCount = relationCount(p.comments)
-  const verifiedBadge = user.is_verified?'<span class="post-verified-badge" title="Verified by Flexoverse" aria-label="Verified account"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>':''
-  const badges = user.membership_status==='active'?'<span class="post-member-badge">Member</span>':''
+  const verifiedBadge = user.is_verified === true ? renderBadge('verified') : ''
+  const badges = user.membership_status === 'active' ? renderBadge('member') : ''
   const isLiked = liked.has(id), timestamp = timeAgo(p.created_at)
   return `<article class="post card" id="post-${safeId}" data-post="${safeId}"><div class="post-top">${avatar(p.initials||initials(name),p.color||'blue',p.avatar_url||user.avatar_url)}<div class="post-user"><a class="post-user-name" href="/${encodeURIComponent(handle)}">${verifiedBadge}<strong>${esc(name)}</strong></a>${badges}<small>@${esc(handle)} · ${esc(timestamp)}</small></div><div class="post-menu-wrap"><button class="more-button" type="button" data-post-menu-toggle="${safeId}" aria-label="Post options" aria-expanded="false">···</button><div class="post-options-menu" data-post-menu="${safeId}" hidden><button type="button" data-save-post="${safeId}">Save post</button><button type="button" data-copy-post="${safeId}">Copy link</button><button type="button" data-report-post="${safeId}" class="post-option-report">Report post</button>${session&&session.user.id===p.user_id?`<button type="button" data-delete-post="${safeId}" class="post-option-danger">Delete post</button>`:''}</div></div></div><p class="post-text">${esc(p.content)}</p>${image?`<img class="post-photo" src="${esc(image)}" alt="Post image">`:''}<div class="post-meta"><span data-like-count="${safeId}" data-count="${likeCount}">${heartSvg(false)} <span>${likeCount} ${likeCount===1?'person':'people'}</span></span><button class="post-comment-total" type="button" data-comment="${safeId}" data-comment-count="${safeId}">${commentCount} ${commentCount===1?'comment':'comments'}</button></div><div class="post-actions"><button data-like="${safeId}" class="${isLiked?'liked':''}" aria-pressed="${isLiked}">${heartSvg(isLiked)} <span>${isLiked?'Liked':'Like'}</span></button><button data-comment="${safeId}" aria-expanded="false">${commentSvg()} <span>Comment</span></button><button data-share><svg class="action-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Share</span></button></div></article>`
 }
@@ -158,6 +170,28 @@ async function loadHome() {
     return
   }
   const posts = data || []
+  // Fetch badge flags independently of the nested post/profile relation. This avoids
+  // missing homepage checks when the relation payload omits profile badge columns.
+  const authorIds = [...new Set(posts.map(post => post.user_id).filter(Boolean))]
+  if (authorIds.length) {
+    const { data: authors, error: authorsError } = await supabase
+      .from('profiles')
+      .select('id,is_verified,membership_status')
+      .in('id', authorIds)
+    if (authorsError) console.warn('Could not load homepage author badges:', authorsError)
+    else {
+      const badgeByAuthor = new Map((authors || []).map(author => [author.id, author]))
+      posts.forEach(post => {
+        const nested = Array.isArray(post.profiles) ? post.profiles[0] || {} : post.profiles || {}
+        const author = badgeByAuthor.get(post.user_id)
+        if (author) {
+          nested.is_verified = author.is_verified === true
+          nested.membership_status = author.membership_status || nested.membership_status
+        }
+        post.profiles = nested
+      })
+    }
+  }
   liked = new Set()
   if (session && posts.length) {
     const {data:myLikes,error:likesError}=await supabase.from('likes').select('post_id').eq('user_id',session.user.id).in('post_id',posts.map(post=>post.id))
