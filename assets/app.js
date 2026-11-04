@@ -24,6 +24,9 @@ let voiceRecorderStream=null;
 let voiceRecorderChunks=[];
 let voiceRecordingStartedAt=0;
 let callSignalChannel = null
+let callWindowRef = null
+let callRootElement = null
+let homeIncomingCallChannel = null
 let callPeer = null
 let callLocalStream = null
 let callRemoteStream = null
@@ -882,7 +885,27 @@ async function playIncomingRingtone(){
  try{if(navigator.vibrate){navigator.vibrate([500,180,500,650]);incomingVibrationTimer=setInterval(()=>navigator.vibrate([500,180,500,650]),1900)}}catch(error){console.warn('Call vibration unavailable:',error)}
 }
 
-function callUi(html='') { const root=document.querySelector('#call-root'); if(root)root.innerHTML=html }
+function openCallPopup(){
+ if(callWindowRef&&!callWindowRef.closed){callWindowRef.focus();return true}
+ const popup=window.open('','flexoverse-call-window','popup=yes,width=440,height=760,resizable=yes,scrollbars=no');
+ if(!popup)return false;
+ callWindowRef=popup;
+ popup.document.open();
+ popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Flexoverse Call</title><link rel="stylesheet" href="${location.origin}/assets/site.css"><style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#10171b}#call-root{position:fixed;inset:0;z-index:99999}.call-backdrop{position:absolute!important;inset:0!important}.call-window{width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;border-radius:0!important}@media(max-width:600px){.call-window{padding-top:env(safe-area-inset-top)!important;padding-bottom:env(safe-area-inset-bottom)!important}}</style></head><body><div id="call-window-host"></div></body></html>`);
+ popup.document.close();
+ const root=document.querySelector('#call-root');
+ if(root){callRootElement=root;popup.document.querySelector('#call-window-host').appendChild(root)}
+ popup.addEventListener('beforeunload',()=>{if(currentCall)endCall(true);if(callRootElement&&callRootElement.ownerDocument!==document)document.body.appendChild(callRootElement);callRootElement=null;callWindowRef=null});
+ popup.focus();
+ return true;
+}
+function closeCallPopup(){
+ const popup=callWindowRef,root=callRootElement;
+ if(root&&root.ownerDocument!==document)document.body.appendChild(root);
+ callRootElement=null;callWindowRef=null;
+ if(popup&&!popup.closed){try{popup.close()}catch{}}
+}
+function callUi(html='') { const root=callRootElement||document.querySelector('#call-root'); if(root)root.innerHTML=html }
 function callSignal(event,payload) { if(!callSignalChannel)return Promise.reject(new Error('Call connection is not ready'));return callSignalChannel.send({type:'broadcast',event,payload:{...payload,from:session.user.id}}) }
 async function ensureCallChannel(conversationId) {
   if(callSignalChannel&&callSignalChannel.topic===`call:${conversationId}`)return callSignalChannel
@@ -902,19 +925,19 @@ function renderCallScreen(status='Calling…',video=false) {
  <header class="call-screen-top"><button type="button" data-call-participants aria-label="Participants" title="Participants"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.9M16 3.2a4 4 0 0 1 0 7.6"/></svg></button><div class="call-screen-title"><strong>${esc(peer?.peer_name||'Flexoverse call')}</strong><span data-call-status>${esc(status)}</span></div><button type="button" data-call-flip aria-label="Switch camera" title="Switch camera" ${video?'':'hidden'}><svg viewBox="0 0 24 24"><path d="M20 7h-3l-2-3H9L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Z"/><circle cx="12" cy="13" r="3"/></svg></button></header>
  <div class="call-video-stage call-screen-stage" ${video?'':'data-audio-call'}><video data-remote-video autoplay playsinline></video><video data-local-video autoplay muted playsinline></video><div class="call-audio-avatar">${avatar(initials(peer?.peer_name||'Friend'),'blue',peer?.peer_avatar_url||'')}<strong>${esc(peer?.peer_name||'Flexoverse')}</strong></div></div>
  <div class="call-screen-controls"><button type="button" data-call-more aria-label="More call options" title="More options"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button><button type="button" data-call-speaker aria-label="Speaker on" title="Speaker"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4Zm12-1a6 6 0 0 1 0 8m2-11a10 10 0 0 1 0 14"/></svg></button><button type="button" data-call-camera aria-label="Turn camera off" title="Camera" ${video?'':'hidden'}><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg></button><button type="button" data-call-mute aria-label="Mute microphone" title="Microphone"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5m-4 0h8"/></svg></button><button type="button" class="call-end-button" data-end-call aria-label="End call" title="End call"><svg viewBox="0 0 24 24"><path d="m4 14 3-3a2 2 0 0 1 2-.4l2 .7a2 2 0 0 0 2 0l2-.7a2 2 0 0 1 2 .4l3 3-2 4-4-1-2-2-2 2-4 1z"/></svg></button></div></section></div>`);
- const local=document.querySelector('[data-local-video]');if(local&&callLocalStream){local.srcObject=callLocalStream;local.hidden=!video}
- const remote=document.querySelector('[data-remote-video]');if(remote&&callRemoteStream)remote.srcObject=callRemoteStream;
+ const local=(callRootElement||document).querySelector('[data-local-video]');if(local&&callLocalStream){local.srcObject=callLocalStream;local.hidden=!video}
+ const remote=(callRootElement||document).querySelector('[data-remote-video]');if(remote&&callRemoteStream)remote.srcObject=callRemoteStream;
 }
 async function createCallPeer(video) {
   callPeer=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]})
   callRemoteStream=new MediaStream()
-  const remote=document.querySelector('[data-remote-video]');if(remote)remote.srcObject=callRemoteStream
-  callPeer.ontrack=e=>{e.streams[0]?.getTracks().forEach(track=>callRemoteStream.addTrack(track));const v=document.querySelector('[data-remote-video]');if(v)v.srcObject=callRemoteStream}
+  const remote=(callRootElement||document).querySelector('[data-remote-video]');if(remote)remote.srcObject=callRemoteStream
+  callPeer.ontrack=e=>{e.streams[0]?.getTracks().forEach(track=>callRemoteStream.addTrack(track));const v=(callRootElement||document).querySelector('[data-remote-video]');if(v)v.srcObject=callRemoteStream}
   callPeer.onicecandidate=e=>{if(e.candidate&&currentCall)callSignal('signal',{kind:'ice',callId:currentCall.id,candidate:e.candidate})}
-  callPeer.onconnectionstatechange=()=>{if(callPeer&&['failed','disconnected'].includes(callPeer.connectionState)){const st=document.querySelector('[data-call-status]');if(st)st.textContent='Connection interrupted…'}}
+  callPeer.onconnectionstatechange=()=>{if(callPeer&&['failed','disconnected'].includes(callPeer.connectionState)){const st=(callRootElement||document).querySelector('[data-call-status]');if(st)st.textContent='Connection interrupted…'}}
   callLocalStream=await navigator.mediaDevices.getUserMedia({audio:true,video:!!video})
   callLocalStream.getTracks().forEach(track=>callPeer.addTrack(track,callLocalStream))
-  const local=document.querySelector('[data-local-video]');if(local){local.srcObject=callLocalStream;local.hidden=!video}
+  const local=(callRootElement||document).querySelector('[data-local-video]');if(local){local.srcObject=callLocalStream;local.hidden=!video}
   return callPeer
 }
 
@@ -953,6 +976,7 @@ async function updateCallHistory(status) {
 }
 async function startCall(mode) {
   if(!session||!activeConversationId)return openAuth()
+  if(!openCallPopup())return toast('Please allow pop-ups for Flexoverse to open the call window.','error')
   if(!navigator.mediaDevices?.getUserMedia||!window.RTCPeerConnection)return toast('Calls need a supported browser and a secure HTTPS connection.','error')
   if(!navigator.onLine)return toast('You appear to be offline.','error')
   try {
@@ -964,7 +988,7 @@ async function startCall(mode) {
     await createCallPeer(mode==='video')
     const offer=await callPeer.createOffer();await callPeer.setLocalDescription(offer)
     await callSignal('signal',{kind:'offer',callId:currentCall.id,conversationId:activeConversationId,to:receiverId,mode,sdp:offer,callLogId:callHistoryId})
-    const status=document.querySelector('[data-call-status]');if(status)status.textContent='Ringing…'
+    const status=(callRootElement||document).querySelector('[data-call-status]');if(status)status.textContent='Ringing…'
   } catch(error){console.error('Call start failed:',error);await endCall(false);toast(error.message||'Could not start the call. Check microphone and camera permissions.','error')}
 }
 async function loadLiveKitSdk(){
@@ -1015,6 +1039,7 @@ async function joinLiveKitGroupCall(invite){
  const st=document.querySelector('[data-group-call-status]');if(st)st.textContent='Connected · '+liveKitRoom.numParticipants+' people';
 }
 async function startGroupCall(mode){
+ if(!openCallPopup())return toast('Please allow pop-ups for Flexoverse to open the call window.','error')
  const item=chatItems.find(x=>x.conversation_id===activeConversationId);
  if(!session||!item?.is_group)return openAuth();
  if(currentCall)return toast('You are already in a call.','info');
@@ -1061,7 +1086,7 @@ async function handleCallSignal(payload) {
   }
   if(!currentCall||payload.callId!==currentCall.id)return
   try {
-    if(payload.kind==='answer'&&callPeer){currentCall.answeredAt=Date.now();await updateCallHistory('answered');await callPeer.setRemoteDescription(new RTCSessionDescription(payload.sdp));for(const c of pendingIceCandidates.splice(0))await callPeer.addIceCandidate(new RTCIceCandidate(c));const st=document.querySelector('[data-call-status]');if(st)st.textContent='Connected'}
+    if(payload.kind==='answer'&&callPeer){currentCall.answeredAt=Date.now();await updateCallHistory('answered');await callPeer.setRemoteDescription(new RTCSessionDescription(payload.sdp));for(const c of pendingIceCandidates.splice(0))await callPeer.addIceCandidate(new RTCIceCandidate(c));const st=(callRootElement||document).querySelector('[data-call-status]');if(st)st.textContent='Connected'}
     if(payload.kind==='ice'&&callPeer){if(callPeer.remoteDescription)await callPeer.addIceCandidate(new RTCIceCandidate(payload.candidate));else pendingIceCandidates.push(payload.candidate)}
     if(payload.kind==='reject'){await updateCallHistory('declined');toast('The call was declined.');await endCall(false)}
     if(payload.kind==='busy'){toast('They are already on another call.');await endCall(false)}
@@ -1078,7 +1103,7 @@ async function endCall(notify=true) {
   if(currentCall&&callHistoryId)await updateCallHistory(currentCall.answeredAt?'ended':(currentCall.initiator?'missed':'declined'))
   callHistoryId=null
   if(notify&&currentCall&&callSignalChannel)callSignal('signal',{kind:'end',callId:currentCall.id,to:currentCall.from}).catch(()=>{})
-  callPeer?.close();callPeer=null;callLocalStream?.getTracks().forEach(t=>t.stop());callLocalStream=null;callRemoteStream=null;pendingIceCandidates=[];currentCall=null;window.__pendingCallOffer=null;callUi()
+  callPeer?.close();callPeer=null;callLocalStream?.getTracks().forEach(t=>t.stop());callLocalStream=null;callRemoteStream=null;pendingIceCandidates=[];currentCall=null;window.__pendingCallOffer=null;callUi();closeCallPopup()
 }
 
 
@@ -1162,7 +1187,7 @@ function bindChatPageEvents() {
     if(action==='favorite'){const id=activeConversationId;if(!id)return;chatFavoriteIds.has(id)?chatFavoriteIds.delete(id):chatFavoriteIds.add(id);try{localStorage.setItem('flexoverse-chat-favorites:'+session.user.id,JSON.stringify([...chatFavoriteIds]))}catch{}const button=e.target.closest('[data-chat-menu-action="favorite"]');if(button)button.textContent=chatFavoriteIds.has(id)?'Remove from Favorites':'Add to Favorites';renderChatList();toast(chatFavoriteIds.has(id)?'Added to Favorites.':'Removed from Favorites.','success');return}
     if(action==='export'){const item=chatItems.find(x=>x.conversation_id===activeConversationId);const lines=activeChatMessages.map(m=>{const who=m.sender_id===session?.user?.id?'You':(item?.peer_name||'Friend');return '['+new Date(m.created_at).toLocaleString()+'] '+who+': '+m.content});const blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='flexoverse-chat.txt';a.click();URL.revokeObjectURL(url);return}
   })
-  document.querySelector('#call-root')?.addEventListener('click',e=>{if(e.target.closest('[data-accept-group-call]')){const invite=pendingGroupInvite;if(invite)joinLiveKitGroupCall(invite).catch(error=>{console.error(error);toast(error.message||'Could not join group call.','error');endGroupCall(false)});return}if(e.target.closest('[data-reject-group-call]')){stopIncomingRingtone();pendingGroupInvite=null;currentCall=null;callUi();return}if(e.target.closest('[data-end-group-call]')){endGroupCall(true);return}if(e.target.closest('[data-group-speaker]')&&liveKitRoom){liveKitRoom.startAudio().then(()=>{const b=e.target.closest('[data-group-speaker]');b.classList.toggle('is-muted',false);b.setAttribute('aria-label','Audio output enabled')}).catch(()=>toast('Tap again to enable call audio.','info'));return}if(e.target.closest('[data-group-mute]')&&liveKitRoom){const b=e.target.closest('[data-group-mute]'),p=liveKitRoom.localParticipant,next=!p.isMicrophoneEnabled;p.setMicrophoneEnabled(next).then(()=>{b.classList.toggle('is-muted',!next);b.setAttribute('aria-label',next?'Mute microphone':'Unmute microphone')}).catch(error=>toast(error.message,'error'));return}if(e.target.closest('[data-group-camera]')&&liveKitRoom){const b=e.target.closest('[data-group-camera]'),p=liveKitRoom.localParticipant,next=!p.isCameraEnabled;p.setCameraEnabled(next).then(()=>{b.classList.toggle('is-muted',!next);b.setAttribute('aria-label',next?'Turn camera off':'Turn camera on')}).catch(error=>toast(error.message,'error'));return}if(e.target.closest('[data-end-call]'))endCall(true);if(e.target.closest('[data-call-speaker]')){const audio=document.querySelector('[data-remote-video]');if(audio){audio.muted=!audio.muted;e.target.closest('[data-call-speaker]').classList.toggle('is-muted',audio.muted)}return}if(e.target.closest('[data-call-flip]')&&callLocalStream){const track=callLocalStream.getVideoTracks()[0];if(track&&track.applyConstraints)track.applyConstraints({facingMode:track.getSettings().facingMode==='user'?'environment':'user'}).catch(()=>{});return}if(e.target.closest('[data-reject-call]')){const p=window.__pendingCallOffer;if(p)callSignal('signal',{kind:'reject',callId:p.callId,to:p.from}).catch(()=>{});endCall(false)}if(e.target.closest('[data-accept-call]'))acceptCall();if(e.target.closest('[data-call-mute]')&&callLocalStream){const track=callLocalStream.getAudioTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-mute]').classList.toggle('is-muted',!track.enabled)}}if(e.target.closest('[data-call-camera]')&&callLocalStream){const track=callLocalStream.getVideoTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-camera]').classList.toggle('is-muted',!track.enabled)}}})
+  document.querySelector('#call-root')?.addEventListener('click',e=>{if(e.target.closest('[data-accept-group-call]')){if(!openCallPopup())return toast('Please allow pop-ups for Flexoverse to open the call window.','error');const invite=pendingGroupInvite;if(invite)joinLiveKitGroupCall(invite).catch(error=>{console.error(error);toast(error.message||'Could not join group call.','error');endGroupCall(false)});return}if(e.target.closest('[data-reject-group-call]')){stopIncomingRingtone();pendingGroupInvite=null;currentCall=null;callUi();return}if(e.target.closest('[data-end-group-call]')){endGroupCall(true);return}if(e.target.closest('[data-group-speaker]')&&liveKitRoom){liveKitRoom.startAudio().then(()=>{const b=e.target.closest('[data-group-speaker]');b.classList.toggle('is-muted',false);b.setAttribute('aria-label','Audio output enabled')}).catch(()=>toast('Tap again to enable call audio.','info'));return}if(e.target.closest('[data-group-mute]')&&liveKitRoom){const b=e.target.closest('[data-group-mute]'),p=liveKitRoom.localParticipant,next=!p.isMicrophoneEnabled;p.setMicrophoneEnabled(next).then(()=>{b.classList.toggle('is-muted',!next);b.setAttribute('aria-label',next?'Mute microphone':'Unmute microphone')}).catch(error=>toast(error.message,'error'));return}if(e.target.closest('[data-group-camera]')&&liveKitRoom){const b=e.target.closest('[data-group-camera]'),p=liveKitRoom.localParticipant,next=!p.isCameraEnabled;p.setCameraEnabled(next).then(()=>{b.classList.toggle('is-muted',!next);b.setAttribute('aria-label',next?'Turn camera off':'Turn camera on')}).catch(error=>toast(error.message,'error'));return}if(e.target.closest('[data-end-call]'))endCall(true);if(e.target.closest('[data-call-speaker]')){const audio=(callRootElement||document).querySelector('[data-remote-video]');if(audio){audio.muted=!audio.muted;e.target.closest('[data-call-speaker]').classList.toggle('is-muted',audio.muted)}return}if(e.target.closest('[data-call-flip]')&&callLocalStream){const track=callLocalStream.getVideoTracks()[0];if(track&&track.applyConstraints)track.applyConstraints({facingMode:track.getSettings().facingMode==='user'?'environment':'user'}).catch(()=>{});return}if(e.target.closest('[data-reject-call]')){const p=window.__pendingCallOffer;if(p)callSignal('signal',{kind:'reject',callId:p.callId,to:p.from}).catch(()=>{});endCall(false)}if(e.target.closest('[data-accept-call]')){if(!openCallPopup())return toast('Please allow pop-ups for Flexoverse to open the call window.','error');acceptCall()}if(e.target.closest('[data-call-mute]')&&callLocalStream){const track=callLocalStream.getAudioTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-mute]').classList.toggle('is-muted',!track.enabled)}}if(e.target.closest('[data-call-camera]')&&callLocalStream){const track=callLocalStream.getVideoTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-camera]').classList.toggle('is-muted',!track.enabled)}}})
   document.querySelector('#chat-room')?.addEventListener('touchstart',e=>{if(messageSelectionMode)return;const bubble=e.target.closest('.message');if(!bubble)return;const wrap=bubble.closest('[data-message-wrap]');const id=bubble.dataset.messageId;if(!id)return;messageLongPressTimer=setTimeout(()=>{messageLongPressTimer=null;openWhatsAppMessageMenu(id,wrap)},520)},{passive:true})
   document.querySelector('#chat-room')?.addEventListener('touchend',()=>{if(messageLongPressTimer){clearTimeout(messageLongPressTimer);messageLongPressTimer=null}},{passive:true})
   document.querySelector('#chat-room')?.addEventListener('touchmove',()=>{if(messageLongPressTimer){clearTimeout(messageLongPressTimer);messageLongPressTimer=null}},{passive:true})
