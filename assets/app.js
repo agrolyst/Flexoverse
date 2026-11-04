@@ -1466,7 +1466,7 @@ async function renderSettingsSection(){
     content=settingPanel('Your Flexoverse account','Manage your current sign-in session.',`<div class="settings-detail-row"><span><small>Signed in as</small><strong>${esc(session.user.email||myUsername())}</strong></span></div><div class="settings-note"><strong>Sign out</strong><p>This signs out this browser on this device.</p><button id="settings-signout" class="button button-outline" type="button">Sign out</button></div><div class="settings-note settings-note-warning"><strong>Account deletion</strong><p>Self-serve account deletion is not available yet. Add the Flexoverse privacy contact email before offering requests through this page.</p></div>`)
   }
   root.innerHTML=`<header class="settings-section-heading"><div><p class="overline">SETTINGS</p><h1>${meta.title}</h1><p class="muted">${meta.description}</p></div></header><div class="settings-content">${content}</div>`
-  if(key==='profile'){const preview=root.querySelector('#profile-avatar-preview');if(preview)preview.innerHTML=avatar(initials(myName()),'blue',profile?.avatar_url);const profileForm=root.querySelector('#profile-form');initInternationalPhone(profileForm?.querySelector('[name="phone"]'));bindGoogleAddressAutocomplete(profileForm?.querySelector('[data-google-address]'));loadLocationChoices(profileForm,privateDetails||{})}
+  if(key==='profile'){const preview=root.querySelector('#profile-avatar-preview');if(preview)preview.innerHTML=avatar(initials(myName()),'blue',profile?.avatar_url);const profileForm=root.querySelector('#profile-form');initInternationalPhone(profileForm?.querySelector('[name="phone"]'));bindGoogleAddressAutocomplete(profileForm?.querySelector('[data-google-address]'));loadLocationChoices(profileForm,privateDetails||{}).then(()=>setupProfileInlineEditing(profileForm))}
   if(key==='blocked')await loadBlockedAccounts(root)
 }
 
@@ -1521,6 +1521,58 @@ function readInternationalPhone(input){
   }
   return ''
 }
+
+function setupProfileInlineEditing(form){
+  if(!form||form.dataset.inlineEditingReady==='true')return
+  form.dataset.inlineEditingReady='true'
+  form.querySelectorAll('.form-label').forEach((label,index)=>{
+    const control=label.querySelector('input:not([type="hidden"]),select,textarea')
+    if(!control)return
+    const wrap=control.matches('[data-google-address]')?control.closest('.google-address-wrap'):(control.closest('.iti')||control)
+    if(!wrap)return
+    const valueText=()=>{
+      if(control.tagName==='SELECT')return control.selectedOptions?.[0]?.textContent?.trim()||'Not added yet'
+      if(control.type==='date'&&control.value){
+        const date=new Date(control.value+'T00:00:00')
+        return Number.isNaN(date.getTime())?control.value:new Intl.DateTimeFormat(undefined,{day:'numeric',month:'long',year:'numeric'}).format(date)
+      }
+      if(control.matches('[name="phone"]')&&control._iti?.getNumber)return control._iti.getNumber()||'Not added yet'
+      return control.value?.trim()||'Not added yet'
+    }
+    const row=document.createElement('div')
+    row.className='profile-field-value-row'
+    const summary=document.createElement('span')
+    summary.className='profile-field-value'
+    summary.textContent=valueText()
+    const edit=document.createElement('button')
+    edit.type='button';edit.className='profile-field-edit';edit.textContent=(control.value?'Edit':'Add')
+    edit.setAttribute('aria-label',(control.value?'Edit ':'Add ')+(label.childNodes[0]?.textContent?.trim()||'profile detail'))
+    row.append(summary,edit)
+    wrap.hidden=true
+    wrap.classList.add('profile-field-control')
+    wrap.insertAdjacentElement('afterend',row)
+    edit.addEventListener('click',()=>{
+      row.hidden=true
+      wrap.hidden=false
+      label.classList.add('profile-field-editing')
+      control.focus?.()
+    })
+    control.addEventListener('change',()=>{summary.textContent=valueText();edit.textContent='Edit'})
+    control.addEventListener('input',()=>{summary.textContent=valueText();edit.textContent='Edit'})
+  })
+  const cancel=document.createElement('button')
+  cancel.type='button';cancel.className='button button-soft profile-edit-cancel';cancel.textContent='Cancel editing'
+  cancel.addEventListener('click',()=>{
+    form.querySelectorAll('.form-label').forEach(label=>{
+      const row=label.querySelector('.profile-field-value-row'),control=label.querySelector('input:not([type="hidden"]),select,textarea')
+      if(!row||!control)return
+      const wrap=control.matches('[data-google-address]')?control.closest('.google-address-wrap'):(control.closest('.iti')||control)
+      if(wrap){wrap.hidden=true;row.hidden=false;label.classList.remove('profile-field-editing')}
+    })
+  })
+  form.querySelector('.settings-form-actions')?.prepend(cancel)
+}
+
 async function loadLocationChoices(root,saved={}){
   const country=root?.querySelector('[name="country"]'),state=root?.querySelector('[name="state"]'),lga=root?.querySelector('[name="lga"]')
   if(!country||!state||!lga)return
