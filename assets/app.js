@@ -87,6 +87,15 @@ const toast = (message,type='info') => {
 const relationCount = value => { const raw=Array.isArray(value)?value[0]?.count:value?.count??value; const count=Number(raw??0); return Number.isFinite(count)?count:0 }
 
 function mountShell() {
+  // Login and signup are standalone layouts: they intentionally do not include
+  // the authenticated app's sidebars or mobile navigation containers.
+  if (page === 'login' || page === 'signup') {
+    const header = document.querySelector('#site-header')
+    if (header) header.innerHTML = '<header class="site-header auth-site-header"><a class="wordmark" href="/" aria-label="Flexoverse home"><span class="logo-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.8 19a5.2 5.2 0 0 1 10.4 0v1H2.8zM14 15.3a4.4 4.4 0 0 1 7.2 3.4v1h-7.2"/></svg></span><span>Flexoverse</span></a></header>'
+    const modalRoot = document.querySelector('#modal-root')
+    if (modalRoot) modalRoot.innerHTML = ''
+    return
+  }
   const navItems = [['home','Home','/'],['friends','Friends','/friends/'],['reels','Reels','/reels/'],['my-content','My content','/my-content/'],['chats','Chats','/chats/'],['notifications','Notifications','/notifications/'],['settings','Settings','/settings/']]
   const activePage=key=>page===key||(key==='reels'&&page==='reel-create')||(key==='settings'&&page.startsWith('settings-'))
   const brandIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.8 19a5.2 5.2 0 0 1 10.4 0v1H2.8zM14 15.3a4.4 4.4 0 0 1 7.2 3.4v1h-6"/></svg>'
