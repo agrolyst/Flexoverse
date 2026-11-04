@@ -397,6 +397,8 @@ function prepareReelComposer() {
   if(!session){form.innerHTML=`<div class="reel-auth-state"><span class="friends-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/></svg></span><strong>Sign in to share a reel</strong><p>Connect with the community before you upload a video.</p><a class="button button-primary" href="${authPageHref('login')}">Sign in</a></div>`;return}
   const fileInput=document.querySelector('#reel-video-file')
   const preview=document.querySelector('#reel-video-preview')
+  const cameraPreview=document.querySelector('#reel-camera-live')
+  const cameraPlaceholder=document.querySelector('#reel-camera-placeholder')
   const prompt=document.querySelector('#reel-upload-prompt')
   const caption=document.querySelector('#reel-caption')
   const submit=document.querySelector('#reel-submit')
@@ -424,9 +426,26 @@ function prepareReelComposer() {
   const recordStop=document.querySelector('#reel-record-stop')
   const recordStatus=document.querySelector('#reel-record-status')
   let cameraStream=null,mediaRecorder=null,recordedChunks=[]
+  const stopCameraPreview=()=>{cameraStream?.getTracks().forEach(track=>track.stop());cameraStream=null;if(cameraPreview)cameraPreview.srcObject=null}
+  const startCameraPreview=async()=>{
+    if(!cameraPreview||!navigator.mediaDevices?.getUserMedia)return
+    try{
+      cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'user'}},audio:false})
+      cameraPreview.srcObject=cameraStream
+      cameraPreview.hidden=false
+      cameraPlaceholder?.classList.add('camera-ready')
+      await cameraPreview.play().catch(()=>{})
+      stage?.classList.add('has-camera')
+      if(cameraPlaceholder)cameraPlaceholder.hidden=true
+    }catch(error){
+      if(cameraPlaceholder){cameraPlaceholder.hidden=false;cameraPlaceholder.innerHTML='<strong>Camera unavailable</strong><small>Allow camera access or attach a video.</small>'}
+    }
+  }
+  if(window.matchMedia('(max-width: 700px)').matches)startCameraPreview()
   recordStart?.addEventListener('click',async()=>{
     if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){toast('Camera recording is not supported in this browser. Upload a video instead.','error');return}
     try{
+      stopCameraPreview()
       cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:true})
       preview.srcObject=cameraStream;preview.hidden=false;prompt.hidden=true
       stage?.classList.add('has-video')
@@ -457,6 +476,7 @@ function prepareReelComposer() {
     if(!file){submit.disabled=true;preview.hidden=true;prompt.hidden=false;enableTools(false);return}
     if(!['video/mp4','video/webm','video/quicktime'].includes(file.type)){toast('Choose an MP4, WebM or MOV video.','error');fileInput.value='';preview.hidden=true;prompt.hidden=false;submit.disabled=true;enableTools(false);return}
     if(file.size>50*1024*1024){toast('This video is larger than 50 MB.','error');fileInput.value='';preview.hidden=true;prompt.hidden=false;submit.disabled=true;enableTools(false);return}
+    stopCameraPreview()
     if(previewUrl)URL.revokeObjectURL(previewUrl)
     previewUrl=URL.createObjectURL(file);preview.src=previewUrl;preview.hidden=false;prompt.hidden=true;submit.disabled=false;enableTools(true);preview.load()
   })
@@ -477,7 +497,16 @@ function prepareReelComposer() {
   preview?.addEventListener('play',()=>{if(preview.currentTime<trimStart||preview.currentTime>=trimEnd)preview.currentTime=trimStart})
   speed?.addEventListener('change',()=>{if(preview)preview.playbackRate=Number(speed.value)||1})
   aspect?.addEventListener('change',()=>{if(stage)stage.style.aspectRatio=aspect.value})
-  overlayInput?.addEventListener('input',()=>{if(!overlay)return;overlay.textContent=overlayInput.value;overlay.hidden=!overlayInput.value.trim()})
+  let overlayPosition={x:50,y:45},overlayDrag=null
+  const paintOverlay=()=>{if(!overlay)return;overlay.textContent=overlayInput?.value||'';overlay.hidden=!(overlayInput?.value||'').trim();overlay.style.left=overlayPosition.x+'%';overlay.style.top=overlayPosition.y+'%';overlay.style.right='auto';overlay.style.transform='translate(-50%,-50%)'}
+  overlayInput?.addEventListener('input',paintOverlay)
+  if(overlay){
+    overlay.style.pointerEvents='auto';overlay.style.touchAction='none';overlay.style.cursor='move'
+    overlay.addEventListener('pointerdown',event=>{if(overlay.hidden)return;event.preventDefault();overlay.setPointerCapture(event.pointerId);const rect=stage.getBoundingClientRect();overlayDrag={id:event.pointerId,rect};overlay.style.cursor='grabbing'})
+    overlay.addEventListener('pointermove',event=>{if(!overlayDrag||overlayDrag.id!==event.pointerId)return;const r=overlayDrag.rect;overlayPosition={x:Math.max(8,Math.min(92,(event.clientX-r.left)/r.width*100)),y:Math.max(6,Math.min(94,(event.clientY-r.top)/r.height*100))};paintOverlay()})
+    const endOverlayDrag=event=>{if(overlayDrag?.id===event.pointerId){overlayDrag=null;overlay.style.cursor='move'}}
+    overlay.addEventListener('pointerup',endOverlayDrag);overlay.addEventListener('pointercancel',endOverlayDrag)
+  }
   const audioStartRange=document.querySelector('#reel-audio-trim-start')
   const audioEndRange=document.querySelector('#reel-audio-trim-end')
   const audioStartLabel=document.querySelector('#reel-audio-start-value')
@@ -619,7 +648,7 @@ function prepareReelComposer() {
   const openMobileTool=(kind)=>{
     if(!mobileSheet||!mobileSheetContent)return
     mobileSheet.hidden=false
-    if(kind==='text'){mobileSheetContent.innerHTML='<h3>Add text</h3><p>Type a caption to place over your video.</p>';const field=document.createElement('input');field.type='text';field.maxLength=80;field.placeholder='Write something…';field.value=overlayInput?.value||'';field.addEventListener('input',()=>{if(overlayInput){overlayInput.value=field.value;overlayInput.dispatchEvent(new Event('input',{bubbles:true}))}});mobileSheetContent.append(field);field.focus()}
+    if(kind==='text'){mobileSheetContent.innerHTML='<h3>Add text</h3><p>Type your text, then drag it anywhere on the video preview.</p>';const field=document.createElement('input');field.type='text';field.maxLength=80;field.placeholder='Write something…';field.value=overlayInput?.value||'';field.addEventListener('input',()=>{if(overlayInput){overlayInput.value=field.value;overlayInput.dispatchEvent(new Event('input',{bubbles:true}))}});mobileSheetContent.append(field);field.focus()}
     else if(kind==='stickers'){mobileSheetContent.innerHTML='<h3>Stickers</h3><p>Tap a sticker to add it to your reel.</p>';['❤️','✨','😂','🔥','😍','🎉'].forEach(symbol=>{const b=document.createElement('button');b.type='button';b.className='reel-mobile-sticker';b.textContent=symbol;b.addEventListener('click',()=>{if(overlayInput){overlayInput.value=(overlayInput.value+' '+symbol).trim();overlayInput.dispatchEvent(new Event('input',{bubbles:true}))}});mobileSheetContent.append(b)})}
     else if(kind==='clips'){mobileSheetContent.innerHTML='<h3>Adjust clips</h3><p>Trim the beginning and end of your video.</p>';const tools=document.querySelector('.reel-editor-tools');if(tools)mobileSheetContent.append(tools);}
     else if(kind==='voiceover'){mobileSheetContent.innerHTML='<h3>Add voiceover</h3><p>Select an audio recording from your device.</p>';const pick=document.createElement('button');pick.type='button';pick.textContent='Choose audio';pick.addEventListener('click',()=>audioFile?.click());mobileSheetContent.append(pick)}
