@@ -1569,7 +1569,7 @@ function setupProfileInlineEditing(form){
     const control=form.querySelector('[name="'+name+'"]')
     const label=control?.closest('.form-label')
     const row=label?.querySelector('.profile-field-value-row')
-    const wrap=control?.matches('[data-google-address]')?control.closest('.google-address-wrap'):(control?.closest('.iti')||control)
+    const wrap=control?.matches('[data-google-address]')?control.closest('.google-address-wrap'):(control?.closest('.input-with-prefix')||control?.closest('.iti')||control)
     if(row)row.hidden=true
     if(wrap)wrap.hidden=false
     label?.classList.add('profile-field-editing')
@@ -1577,7 +1577,7 @@ function setupProfileInlineEditing(form){
   form.querySelectorAll('.form-label').forEach(label=>{
     const control=label.querySelector('input:not([type="hidden"]),select,textarea')
     if(!control)return
-    const wrap=control.matches('[data-google-address]')?control.closest('.google-address-wrap'):(control.closest('.iti')||control)
+    const wrap=control.matches('[data-google-address]')?control.closest('.google-address-wrap'):(control.closest('.input-with-prefix')||control.closest('.iti')||control)
     if(!wrap)return
     const valueText=()=>{
       if(control.tagName==='SELECT')return control.selectedOptions?.[0]?.textContent?.trim()||'Not added yet'
