@@ -1572,3 +1572,47 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
 .flexoverse-group-call .call-screen-controls button.call-end-button{background:#ed0645!important;color:#fff!important}
 .flexoverse-group-call .call-screen-controls button:focus-visible,.call-screen-controls button:focus-visible{outline:3px solid #7bb8ff!important;outline-offset:3px!important}
 @media(max-width:420px){.flexoverse-group-call .call-screen-controls button svg{width:25px!important;height:25px!important}}
+
+
+/* WhatsApp-style inbox filters and message selection */
+.chat-filter-tabs{display:flex;align-items:center;gap:4px;padding:10px 8px 12px;overflow:visible;position:relative}
+.chat-filter-tab{flex:1 1 auto;min-width:0;padding:8px 5px;border:1px solid transparent;border-radius:18px;background:#f3f4f8;color:#687385;font-size:9px;font-weight:700;white-space:nowrap}
+.chat-filter-tab.active{background:#eae9ff;border-color:#d8d5ff;color:#5148d2}
+.chat-plus-wrap{position:relative;flex:0 0 30px}
+.chat-plus-button{width:29px;height:29px;border:0;border-radius:50%;background:var(--brand);color:#fff;font-size:22px;line-height:1;display:grid;place-items:center;box-shadow:0 4px 10px #655ce833}
+.chat-plus-menu{position:absolute;z-index:20;right:0;top:36px;width:145px;padding:5px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 30px #1b234022}
+.chat-plus-menu[hidden]{display:none}
+.chat-plus-menu button{display:block;width:100%;padding:10px;border:0;border-radius:7px;background:#fff;text-align:left;color:var(--ink);font-size:11px}
+.chat-plus-menu button:hover{background:#f4f3ff;color:var(--brand)}
+.conversation-favourite{color:#e6a83c;font-size:12px;line-height:1;margin-right:3px}
+.message,.message *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none}
+.message{position:relative;cursor:default}
+.message-wrap.is-message-selected .message{outline:2px solid #655ce8;outline-offset:2px;box-shadow:0 0 0 5px #655ce81c}
+.message-select-check{display:inline-grid;place-items:center;width:17px;height:17px;margin:0 6px 5px 0;border-radius:50%;background:var(--brand);color:#fff;font-size:11px;font-weight:800;vertical-align:middle}
+.message-selection-bar{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid #e8eaf0;background:#f7f6ff;color:#4546a5}
+.message-selection-bar strong{margin-right:auto;font-size:11px}
+.message-selection-bar button{border:1px solid #dedcff;border-radius:7px;background:#fff;color:#5148d2;padding:6px 10px;font-size:10px;font-weight:700}
+.message-selection-bar button:disabled{opacity:.4;cursor:not-allowed}
+.chat-room.chat-room-soft-theme .message-wrap.is-message-selected .message{outline-color:#5148d2}
+
+/* Polished incoming and outgoing voice-call presentation */
+.call-screen-stage[data-audio-call] .call-audio-avatar:before,.call-screen-stage[data-audio-call] .call-audio-avatar:after{content:"";position:absolute;width:180px;height:180px;border:1px solid #ffffff32;border-radius:50%;animation:callAvatarPulse 2.6s ease-out infinite}
+.call-screen-stage[data-audio-call] .call-audio-avatar:after{animation-delay:1.3s}
+.call-screen-stage[data-audio-call] .call-audio-avatar .avatar{width:112px;height:112px;font-size:32px;border:4px solid #ffffff2b;box-shadow:0 0 0 12px #ffffff0d,0 18px 60px #0005}
+.call-screen-stage[data-audio-call] .call-audio-avatar strong{position:absolute;top:calc(50% + 82px);font-size:18px;color:#fff;text-shadow:0 2px 12px #0008}
+@keyframes callAvatarPulse{0%{transform:scale(.72);opacity:.8}100%{transform:scale(1.55);opacity:0}}
+.incoming-call-screen{display:flex!important;align-items:center!important;justify-content:center!important;background:radial-gradient(ellipse at 50% 36%,#48565b 0%,#202b31 52%,#10171b 100%)!important}
+.incoming-call-content{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;width:min(440px,100%);padding:28px 22px}
+.incoming-call-label{color:#a9c5b7;font-size:10px;font-weight:800;letter-spacing:2px;margin-bottom:34px}
+.incoming-call-avatar-wrap{position:relative;width:150px;height:150px;display:grid;place-items:center;margin-bottom:28px}
+.incoming-call-avatar-wrap .avatar{position:relative;z-index:2;width:116px;height:116px;border:4px solid #ffffff35;font-size:32px;box-shadow:0 14px 45px #0006}
+.call-avatar-pulse{position:absolute;inset:0;border:1px solid #8bd6b066;border-radius:50%;animation:callAvatarPulse 2.5s ease-out infinite}
+.incoming-call-content h2{margin:0;color:#fff;font:750 27px Manrope,sans-serif;letter-spacing:-.5px}
+.incoming-call-content p{margin:10px 0 0;color:#c0cbc8;font-size:13px}
+.incoming-call-actions{display:flex;align-items:center;justify-content:center;gap:74px;margin-top:78px}
+.incoming-call-actions button{display:flex;flex-direction:column;align-items:center;gap:9px;border:0;background:transparent;color:#fff}
+.incoming-call-actions button span{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;font-size:25px;font-weight:700;box-shadow:0 8px 24px #0004}
+.incoming-call-actions button small{font-size:11px;color:#e5ece9}
+.incoming-call-actions .incoming-decline span{background:#ed3654}
+.incoming-call-actions .incoming-answer span{background:#20b879}
+@media(max-width:760px){.chat-filter-tabs{padding-left:5px;padding-right:5px;gap:3px}.chat-filter-tab{font-size:8px;padding:8px 3px}.chat-plus-wrap{flex-basis:28px}.chat-plus-button{width:28px;height:28px}.incoming-call-actions{margin-top:58px;gap:58px}}
