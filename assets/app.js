@@ -841,8 +841,26 @@ async function loadNotificationCount() {
 function subscribeToNotificationUpdates() {
   if(!session)return
   if(notificationRealtimeChannel)supabase.removeChannel(notificationRealtimeChannel)
-  notificationRealtimeChannel=supabase.channel(`notification-count-${session.user.id}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:`recipient_id=eq.${session.user.id}`},()=>{loadNotificationCount();if(page==='notifications')loadNotifications()}).subscribe()
+  notificationRealtimeChannel=supabase.channel(`notification-count-${session.user.id}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:`recipient_id=eq.${session.user.id}`},payload=>{loadNotificationCount();if(page==='notifications')loadNotifications();if(payload.new?.type==='incoming_call')handleIncomingCallNotification(payload.new)}).subscribe()
 }
+function renderHomepageIncomingCall(peer,mode='audio'){
+ const root=document.querySelector('#homepage-call-alert');if(!root)return;
+ const name=peer?.peer_name||'Flexoverse friend';
+ root.innerHTML='<div class="home-incoming-call-card">'+avatar(initials(name),'blue',peer?.peer_avatar_url||'')+'<div class="home-incoming-call-copy"><strong>'+esc(name)+'</strong><span>Incoming '+(mode==='video'?'video':'voice')+' call</span></div><button type="button" data-home-call-decline>Decline</button><button type="button" data-home-call-answer>Answer</button></div>';
+ root.hidden=false;
+}
+async function handleIncomingCallNotification(notification){
+ if(page!=='home'||!session||!notification?.target_id)return;
+ const {data:history,error}=await supabase.from('call_history').select('id,conversation_id,caller_id,receiver_id,call_type,status').eq('id',notification.target_id).maybeSingle();
+ if(error||!history||history.receiver_id!==session.user.id||history.status!=='calling')return;
+ const {data:caller}=await supabase.from('profiles').select('id,username,full_name,avatar_url').eq('id',history.caller_id).maybeSingle();
+ activeConversationId=history.conversation_id;
+ chatItems=[{conversation_id:history.conversation_id,peer_id:history.caller_id,peer_name:caller?.full_name||caller?.username||'Flexoverse friend',peer_username:caller?.username||'member',peer_avatar_url:caller?.avatar_url||null,is_group:false}];
+ const channel=supabase.channel('call:'+history.conversation_id,{config:{private:true,broadcast:{ack:true}}});
+ channel.on('broadcast',{event:'signal'},({payload})=>{callSignalChannel=channel;handleCallSignal(payload)});
+ await new Promise((resolve,reject)=>{channel.subscribe(status=>{if(status==='SUBSCRIBED'){homeIncomingCallChannel=channel;callSignalChannel=channel;resolve()}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')reject(new Error('Call alerts could not connect'))})}).catch(error=>console.warn(error));
+}
+
 
 async function markNotificationRead(notificationId) {
   const item=notificationItems.find(row=>row.id===notificationId)
@@ -1074,13 +1092,13 @@ async function handleCallSignal(payload) {
   if(payload.kind==='group-busy')return;
   if(payload.kind==='offer')
   if(payload.kind==='offer') {
-    if(payload.to!==session?.user?.id||payload.conversationId!==activeConversationId)return
+    if(payload.to!==session?.user?.id||(activeConversationId&&payload.conversationId!==activeConversationId))return
     if(currentCall){await callSignal('signal',{kind:'busy',callId:payload.callId,to:payload.from});return}
     currentCall={id:payload.callId,mode:payload.mode,initiator:false,from:payload.from,answeredAt:null}
     callHistoryId=payload.callLogId||null
     playIncomingRingtone()
     const peer=chatItems.find(x=>x.conversation_id===activeConversationId)
-    renderIncomingCallScreen(peer,payload.mode);
+    if(page==='home')renderHomepageIncomingCall(peer,payload.mode);else renderIncomingCallScreen(peer,payload.mode);
     window.__pendingCallOffer=payload
     return
   }
@@ -1187,6 +1205,7 @@ function bindChatPageEvents() {
     if(action==='favorite'){const id=activeConversationId;if(!id)return;chatFavoriteIds.has(id)?chatFavoriteIds.delete(id):chatFavoriteIds.add(id);try{localStorage.setItem('flexoverse-chat-favorites:'+session.user.id,JSON.stringify([...chatFavoriteIds]))}catch{}const button=e.target.closest('[data-chat-menu-action="favorite"]');if(button)button.textContent=chatFavoriteIds.has(id)?'Remove from Favorites':'Add to Favorites';renderChatList();toast(chatFavoriteIds.has(id)?'Added to Favorites.':'Removed from Favorites.','success');return}
     if(action==='export'){const item=chatItems.find(x=>x.conversation_id===activeConversationId);const lines=activeChatMessages.map(m=>{const who=m.sender_id===session?.user?.id?'You':(item?.peer_name||'Friend');return '['+new Date(m.created_at).toLocaleString()+'] '+who+': '+m.content});const blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='flexoverse-chat.txt';a.click();URL.revokeObjectURL(url);return}
   })
+  document.querySelector('#homepage-call-alert')?.addEventListener('click',e=>{if(e.target.closest('[data-home-call-answer]')){if(!openCallPopup())return toast('Please allow pop-ups for Flexoverse to open the call window.','error');acceptCall();document.querySelector('#homepage-call-alert').hidden=true;return}if(e.target.closest('[data-home-call-decline]')){const p=window.__pendingCallOffer;if(p)callSignal('signal',{kind:'reject',callId:p.callId,to:p.from}).catch(()=>{});endCall(false);document.querySelector('#homepage-call-alert').hidden=true}})
   document.querySelector('#call-root')?.addEventListener('click',e=>{if(e.target.closest('[data-accept-group-call]')){if(!openCallPopup())return toast('Please allow pop-ups for Flexoverse to open the call window.','error');const invite=pendingGroupInvite;if(invite)joinLiveKitGroupCall(invite).catch(error=>{console.error(error);toast(error.message||'Could not join group call.','error');endGroupCall(false)});return}if(e.target.closest('[data-reject-group-call]')){stopIncomingRingtone();pendingGroupInvite=null;currentCall=null;callUi();return}if(e.target.closest('[data-end-group-call]')){endGroupCall(true);return}if(e.target.closest('[data-group-speaker]')&&liveKitRoom){liveKitRoom.startAudio().then(()=>{const b=e.target.closest('[data-group-speaker]');b.classList.toggle('is-muted',false);b.setAttribute('aria-label','Audio output enabled')}).catch(()=>toast('Tap again to enable call audio.','info'));return}if(e.target.closest('[data-group-mute]')&&liveKitRoom){const b=e.target.closest('[data-group-mute]'),p=liveKitRoom.localParticipant,next=!p.isMicrophoneEnabled;p.setMicrophoneEnabled(next).then(()=>{b.classList.toggle('is-muted',!next);b.setAttribute('aria-label',next?'Mute microphone':'Unmute microphone')}).catch(error=>toast(error.message,'error'));return}if(e.target.closest('[data-group-camera]')&&liveKitRoom){const b=e.target.closest('[data-group-camera]'),p=liveKitRoom.localParticipant,next=!p.isCameraEnabled;p.setCameraEnabled(next).then(()=>{b.classList.toggle('is-muted',!next);b.setAttribute('aria-label',next?'Turn camera off':'Turn camera on')}).catch(error=>toast(error.message,'error'));return}if(e.target.closest('[data-end-call]'))endCall(true);if(e.target.closest('[data-call-speaker]')){const audio=(callRootElement||document).querySelector('[data-remote-video]');if(audio){audio.muted=!audio.muted;e.target.closest('[data-call-speaker]').classList.toggle('is-muted',audio.muted)}return}if(e.target.closest('[data-call-flip]')&&callLocalStream){const track=callLocalStream.getVideoTracks()[0];if(track&&track.applyConstraints)track.applyConstraints({facingMode:track.getSettings().facingMode==='user'?'environment':'user'}).catch(()=>{});return}if(e.target.closest('[data-reject-call]')){const p=window.__pendingCallOffer;if(p)callSignal('signal',{kind:'reject',callId:p.callId,to:p.from}).catch(()=>{});endCall(false)}if(e.target.closest('[data-accept-call]')){if(!openCallPopup())return toast('Please allow pop-ups for Flexoverse to open the call window.','error');acceptCall()}if(e.target.closest('[data-call-mute]')&&callLocalStream){const track=callLocalStream.getAudioTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-mute]').classList.toggle('is-muted',!track.enabled)}}if(e.target.closest('[data-call-camera]')&&callLocalStream){const track=callLocalStream.getVideoTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-camera]').classList.toggle('is-muted',!track.enabled)}}})
   document.querySelector('#chat-room')?.addEventListener('touchstart',e=>{if(messageSelectionMode)return;const bubble=e.target.closest('.message');if(!bubble)return;const wrap=bubble.closest('[data-message-wrap]');const id=bubble.dataset.messageId;if(!id)return;messageLongPressTimer=setTimeout(()=>{messageLongPressTimer=null;openWhatsAppMessageMenu(id,wrap)},520)},{passive:true})
   document.querySelector('#chat-room')?.addEventListener('touchend',()=>{if(messageLongPressTimer){clearTimeout(messageLongPressTimer);messageLongPressTimer=null}},{passive:true})
