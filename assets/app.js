@@ -1,5 +1,14 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0'
 
+// Use the Flexoverse brand mark as the site-wide browser favicon.
+if (!document.querySelector('link[rel~="icon"]')) {
+  const favicon = document.createElement('link')
+  favicon.rel = 'icon'
+  favicon.type = 'image/svg+xml'
+  favicon.href = '/favicon.svg?v=brand-favicon-20261104'
+  document.head.append(favicon)
+}
+
 const supabase = createClient('https://gkgjfbusdyiohiztwuec.supabase.co', 'sb_publishable_Kmm1YLrnBwDKV_1xO2DjNw_e4SzSZly')
 const page = document.body.dataset.page
 let session = null
