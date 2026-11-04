@@ -420,6 +420,38 @@ function prepareReelComposer() {
   const updateTrimLabels=()=>{if(startValue)startValue.textContent=`${trimStart.toFixed(1)}s`;if(endValue)endValue.textContent=preview?.duration? `${trimEnd.toFixed(1)}s`:'—'}
   const enableTools=enabled=>{[startRange,endRange,speed,overlayInput,audioFile].forEach(el=>{if(el)el.disabled=!enabled})}
   if(preview&&stage){preview.controls=true;preview.classList.add('reel-stage-video');stage.prepend(preview)}
+  const recordStart=document.querySelector('#reel-record-start')
+  const recordStop=document.querySelector('#reel-record-stop')
+  const recordStatus=document.querySelector('#reel-record-status')
+  let cameraStream=null,mediaRecorder=null,recordedChunks=[]
+  recordStart?.addEventListener('click',async()=>{
+    if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){toast('Camera recording is not supported in this browser. Upload a video instead.','error');return}
+    try{
+      cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:true})
+      preview.srcObject=cameraStream;preview.hidden=false;prompt.hidden=true
+      stage?.classList.add('has-video')
+      await preview.play().catch(()=>{})
+      const preferredType=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(type=>MediaRecorder.isTypeSupported(type))
+      mediaRecorder=new MediaRecorder(cameraStream,preferredType?{mimeType:preferredType}:{})
+      recordedChunks=[]
+      mediaRecorder.ondataavailable=event=>{if(event.data?.size)recordedChunks.push(event.data)}
+      mediaRecorder.onstop=()=>{
+        const mime=mediaRecorder.mimeType||'video/webm'
+        const extension=mime.includes('mp4')?'mp4':'webm'
+        const recordedFile=new File(recordedChunks,`flexoverse-reel-${Date.now()}.${extension}`,{type:mime})
+        const transfer=new DataTransfer();transfer.items.add(recordedFile);fileInput.files=transfer.files
+        cameraStream?.getTracks().forEach(track=>track.stop());cameraStream=null
+        preview.srcObject=null
+        if(recordStatus)recordStatus.textContent='Recording ready. Preview it, then share your Reel.'
+        recordStart.disabled=false;recordStop.disabled=true
+        fileInput.dispatchEvent(new Event('change',{bubbles:true}))
+      }
+      mediaRecorder.start(500)
+      recordStart.disabled=true;recordStop.disabled=false
+      if(recordStatus)recordStatus.textContent='Recording… speak or move naturally. Select Stop when finished.'
+    }catch(error){cameraStream?.getTracks().forEach(track=>track.stop());cameraStream=null;recordStart.disabled=false;recordStop.disabled=true;toast(error.message||'Camera permission was not granted.','error')}
+  })
+  recordStop?.addEventListener('click',()=>{if(mediaRecorder?.state==='recording')mediaRecorder.stop()})
   fileInput?.addEventListener('change',()=>{
     const file=fileInput.files?.[0]
     if(!file){submit.disabled=true;preview.hidden=true;prompt.hidden=false;enableTools(false);return}
