@@ -41,6 +41,7 @@ let pendingGroupInvite=null;
 let notificationItems = []
 let notificationFilter = 'all'
 let notificationRealtimeChannel = null
+let desktopNotificationPermissionRequested = false
 let notificationDisplayPreferences = {in_app_enabled:true,friend_requests:true,post_likes:true,post_comments:true}
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
@@ -601,7 +602,7 @@ function renderChatRoom(item,messages=activeChatMessages) {
  }
  const replyBar=pendingReplyTo?`<div class="reply-composer-bar"><span><strong>Replying to ${pendingReplyTo.sender_id===session?.user?.id?'yourself':esc(item.peer_name)}</strong><small>${esc(pendingReplyTo.content.slice(0,120))}</small></span><button type="button" data-cancel-reply aria-label="Cancel reply">×</button></div>`:'';
  room.innerHTML=`<header class="chat-room-head"><button class="chat-room-back" type="button" data-chat-back aria-label="Back to conversations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12"/></svg></button>${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<div class="chat-room-person"><strong>${esc(item.peer_name)}</strong><small><span class="status-dot"></span> Your friend</small></div><div class="chat-header-menu-wrap"><button class="chat-header-menu-toggle" type="button" data-chat-menu-toggle aria-label="More chat options" aria-expanded="false" title="More options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button><div class="chat-header-menu" data-chat-menu hidden>
-<button type="button" data-chat-menu-action="contact">Contact info</button><button type="button" data-chat-menu-action="search">Search messages</button><button type="button" data-chat-menu-action="select">Select messages</button><button type="button" data-chat-menu-action="mute">Mute notifications</button><button type="button" data-chat-menu-action="theme">Chat theme</button><div class="chat-menu-divider"></div>${item.is_group?'<button type="button" data-start-group-call="audio">Group voice call</button><button type="button" data-start-group-call="video">Group video call</button>':'<button type="button" data-start-call="audio">Voice call</button><button type="button" data-start-call="video">Video call</button>'}<button type="button" data-chat-menu-action="favorite">Add to Favorites</button><button type="button" data-chat-menu-action="export">Export chat</button><div class="chat-menu-divider"></div><button type="button" data-chat-menu-action="close">Close chat</button></div></div>${item.is_group?'':'<a class="chat-room-profile" href="/'+encodeURIComponent(item.peer_username||'')+'" aria-label="View profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a>'}</header><div class="chat-history" id="chat-history" role="log" aria-live="polite" aria-label="Conversation with ${esc(item.peer_name)}">${groups.join('')||'<p class="chat-history-empty">Say hello and start the conversation.</p>'}</div><div class="chat-typing-indicator" id="chat-typing-indicator" hidden aria-live="polite"></div><form class="message-composer" id="message-form">${replyBar}<input name="message" maxlength="4000" required autocomplete="off" placeholder="Write a message…" aria-label="Write a message"><button class="voice-record-button" type="button" data-voice-record aria-label="Record voice message">${voiceMicSvg()}</button><button class="send-button" aria-label="Send message" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button></form>`;
+<button type="button" data-chat-menu-action="contact">Contact info</button><button type="button" data-chat-menu-action="search">Search messages</button><button type="button" data-chat-menu-action="select">Select messages</button><button type="button" data-chat-menu-action="mute">Mute notifications</button><button type="button" data-chat-menu-action="theme">Chat theme</button><div class="chat-menu-divider"></div>${item.is_group?'<button type="button" data-chat-menu-action="group-info">Group info & admins</button><button type="button" data-start-group-call="audio">Group voice call</button><button type="button" data-start-group-call="video">Group video call</button>':'<button type="button" data-start-call="audio">Voice call</button><button type="button" data-start-call="video">Video call</button>'}<button type="button" data-chat-menu-action="favorite">Add to Favorites</button><button type="button" data-chat-menu-action="export">Export chat</button><div class="chat-menu-divider"></div><button type="button" data-chat-menu-action="close">Close chat</button></div></div>${item.is_group?'':'<a class="chat-room-profile" href="/'+encodeURIComponent(item.peer_username||'')+'" aria-label="View profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a>'}</header><div class="chat-history" id="chat-history" role="log" aria-live="polite" aria-label="Conversation with ${esc(item.peer_name)}">${groups.join('')||'<p class="chat-history-empty">Say hello and start the conversation.</p>'}</div><div class="chat-typing-indicator" id="chat-typing-indicator" hidden aria-live="polite"></div><form class="message-composer" id="message-form">${replyBar}<input name="message" maxlength="4000" required autocomplete="off" placeholder="Write a message…" aria-label="Write a message"><button class="voice-record-button" type="button" data-voice-record aria-label="Record voice message">${voiceMicSvg()}</button><button class="send-button" aria-label="Send message" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button></form>`;
  const history=document.querySelector('#chat-history');if(history)history.scrollTop=history.scrollHeight;
  renderTypingPresence();
 }
@@ -682,7 +683,11 @@ function handleChatMessage(message) {
   item.last_message_id=message.id
   item.last_message_at=message.created_at
   item.last_sender_id=message.sender_id
-  if(message.sender_id!==session?.user?.id&&activeConversationId!==message.conversation_id)item.unread_count=Number(item.unread_count||0)+1
+  if(message.sender_id!==session?.user?.id){
+    if(activeConversationId!==message.conversation_id)item.unread_count=Number(item.unread_count||0)+1
+    const sender=item.peer_name||'Flexoverse friend'
+    notifyDesktop(sender,message.content||'Sent you a voice message',`message-${message.conversation_id}`)
+  }
   renderChatList()
   if(activeConversationId===message.conversation_id){
     if(item.is_group&&message.sender_id!==session?.user?.id){supabase.from('profiles').select('full_name,username').eq('id',message.sender_id).maybeSingle().then(({data})=>{message.sender_name=data?.full_name||data?.username||'Member';if(activeConversationId===message.conversation_id)renderChatRoom(item)})}
@@ -733,6 +738,19 @@ async function openNewGroupDialog() {
  root.querySelectorAll('[name="group_member"]').forEach(input=>input.addEventListener('change',()=>{const n=root.querySelectorAll('[name="group_member"]:checked').length;root.querySelector('[data-group-selected-count]').textContent=n+' selected'}));
 }
 
+
+async function openGroupInfoDialog(){
+ const item=chatItems.find(x=>x.conversation_id===activeConversationId);if(!item?.is_group)return;
+ const root=document.querySelector('#modal-root');if(!root)return;
+ root.innerHTML='<div class="modal-backdrop" data-group-info-backdrop><section class="chat-new-modal" role="dialog" aria-modal="true"><header class="chat-new-modal-head"><div><h2>Group information</h2><p>Members and administrator roles</p></div><button type="button" class="chat-modal-close" data-close-chat-modal aria-label="Close">×</button></header><div class="group-info-members"><div class="chat-loading">Loading members…</div></div></section></div>';
+ const box=root.querySelector('.group-info-members');
+ const {data,error}=await supabase.from('conversation_members').select('user_id,role,profiles!conversation_members_user_id_fkey(full_name,username,avatar_url)').eq('conversation_id',activeConversationId).order('joined_at');
+ if(error){box.textContent='Group members could not load: '+error.message;return}
+ const rows=data||[],mine=rows.find(row=>row.user_id===session.user.id),isAdmin=mine?.role==='admin';
+ box.innerHTML=rows.map(row=>{const p=Array.isArray(row.profiles)?row.profiles[0]||{}:row.profiles||{};const label=p.full_name||p.username||'Member';return '<div class="group-friend-choice">'+avatar(initials(label),'blue',p.avatar_url)+'<span><strong>'+esc(label)+'</strong><small>@'+esc(p.username||'member')+' · '+(row.role==='admin'?'Group admin':'Member')+'</small></span>'+(isAdmin&&row.user_id!==session.user.id?'<button type="button" class="button button-outline" data-group-role="'+esc(row.user_id)+'" data-next-role="'+(row.role==='admin'?'member':'admin')+'">'+(row.role==='admin'?'Remove admin':'Make admin')+'</button>':'')+(isAdmin&&row.user_id!==session.user.id?'<button type="button" class="notification-dismiss" data-group-remove="'+esc(row.user_id)+'" aria-label="Remove member">×</button>':'')+'</div>'}).join('')||'<p class="chat-modal-empty">No members found.</p>';
+ if(!isAdmin){const note=document.createElement('p');note.className='chat-modal-empty';note.textContent='Only group administrators can change member roles or remove members.';box.append(note)}
+}
+
 async function openNewChatDialog() {
   if(!session)return openAuth()
   const root=document.querySelector('#modal-root')
@@ -748,15 +766,20 @@ async function openNewChatDialog() {
   friendList.innerHTML=(friends||[]).map(friend=>`<button class="chat-friend-choice" type="button" data-start-chat="${esc(friend.id)}">${avatar(initials(friend.full_name||friend.username),'blue',friend.avatar_url)}<span><strong>${esc(friend.full_name||friend.username)}</strong><small>@${esc(friend.username)}</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>`).join('')||'<div class="chat-modal-empty"><strong>No friends available</strong><p>Try adding a friend before starting a chat.</p></div>'
 }
 
+function notifyDesktop(title,body,tag='flexoverse') {
+  if(!('Notification' in window)||Notification.permission!=='granted'||document.visibilityState==='visible')return
+  try{new Notification(title,{body,tag,icon:'/assets/icon-192.png',silent:false})}catch(error){console.warn('Desktop notification unavailable:',error)}
+}
+
 function notificationIcon(type) {
-  const icons={friend_request:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M19 8v6m-3-3h6"/></svg>',friend_accepted:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>',post_like:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg>',post_comment:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.7 8.7 0 0 1-4-.95L3 21l1.95-5.5A8.5 8.5 0 1 1 21 11.5Z"/></svg>'}
+  const icons={mention:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M16 12a4 4 0 1 1-1-2.6V13a2 2 0 0 0 4 0v-1a7 7 0 1 0-2 5"/></svg>',chat_message:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.7 8.7 0 0 1-4-.95L3 21l1.95-5.5A8.5 8.5 0 1 1 21 11.5Z"/></svg>',friend_request:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M19 8v6m-3-3h6"/></svg>',friend_accepted:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>',post_like:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg>',post_comment:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.7 8.7 0 0 1-4-.95L3 21l1.95-5.5A8.5 8.5 0 1 1 21 11.5Z"/></svg>'}
   return icons[type]||'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>'
 }
 
 function notificationMessage(item) {
   const actor=item.actor?.full_name||item.actor?.username||'A Flexoverse member'
-  const text={friend_request:'sent you a friend request.',friend_accepted:'accepted your friend request.',post_like:'liked your post.',post_comment:'commented on your post.'}[item.type]||'shared an update with you.'
-  const action={friend_request:'Friend request',friend_accepted:'Friend request accepted',post_like:'Post like',post_comment:'Post comment'}[item.type]||'Activity'
+  const text={friend_request:'sent you a friend request.',friend_accepted:'accepted your friend request.',post_like:'liked your post.',post_comment:'commented on your post.',mention:'mentioned you in a message.',chat_message:'sent you a message.'}[item.type]||'shared an update with you.'
+  const action={friend_request:'Friend request',friend_accepted:'Friend request accepted',post_like:'Post like',post_comment:'Post comment',mention:'Mention',chat_message:'Message'}[item.type]||'Activity'
   return {actor,text,action}
 }
 
@@ -856,8 +879,8 @@ async function playIncomingRingtone(){
     osc.type='triangle';osc.frequency.setValueAtTime(520,ctx.currentTime+offset);
     osc.frequency.setValueAtTime(660,ctx.currentTime+offset+0.16);
     gain.gain.setValueAtTime(0.0001,ctx.currentTime+offset);
-    gain.gain.linearRampToValueAtTime(0.32,ctx.currentTime+offset+0.025);
-    gain.gain.setValueAtTime(0.32,ctx.currentTime+offset+0.2);
+    gain.gain.linearRampToValueAtTime(0.48,ctx.currentTime+offset+0.025);
+    gain.gain.setValueAtTime(0.48,ctx.currentTime+offset+0.2);
     gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+offset+0.27);
     osc.connect(gain);gain.connect(ctx.destination);osc.start(ctx.currentTime+offset);osc.stop(ctx.currentTime+offset+0.28);
    });
@@ -1035,6 +1058,7 @@ async function handleCallSignal(payload) {
     currentCall={id:payload.callId,mode:payload.mode,initiator:false,from:payload.from,answeredAt:null}
     callHistoryId=payload.callLogId||null
     playIncomingRingtone()
+    notifyDesktop('Incoming Flexoverse call',`${payload.mode==='video'?'Video':'Voice'} call from ${chatItems.find(x=>x.conversation_id===activeConversationId)?.peer_name||'your friend'}`,`call-${payload.callId}`)
     const peer=chatItems.find(x=>x.conversation_id===activeConversationId)
     callUi(`<div class="call-backdrop"><section class="call-window call-incoming" role="dialog" aria-modal="true"><h2>Incoming ${payload.mode==='video'?'video':'voice'} call</h2><p>${esc(peer?.peer_name||'Your friend')} is calling you.</p><div class="call-controls"><button class="call-end-button" type="button" data-reject-call>Decline</button><button class="call-accept-button" type="button" data-accept-call>Answer</button></div></section></div>`)
     window.__pendingCallOffer=payload
@@ -1131,6 +1155,7 @@ function bindChatPageEvents() {
     const menu=document.querySelector('[data-chat-menu]');if(menu)menu.hidden=true;
     document.querySelector('[data-chat-menu-toggle]')?.setAttribute('aria-expanded','false');
     if(action==='contact'){document.querySelector('.chat-room-profile')?.click();return}
+    if(action==='group-info'){openGroupInfoDialog();return}
     if(action==='close'){document.querySelector('[data-chat-back]')?.click();return}
     if(action==='search'){let box=document.querySelector('[data-chat-message-search]');if(!box){box=document.createElement('input');box.type='search';box.placeholder='Search messages…';box.setAttribute('data-chat-message-search','');box.className='chat-message-search';document.querySelector('#chat-history')?.before(box);box.addEventListener('input',()=>{const q=box.value.trim().toLowerCase();document.querySelectorAll('#chat-history .message').forEach(m=>m.hidden=!!q&&!m.textContent.toLowerCase().includes(q))})}box.focus();return}
     if(action==='select'){chatSelectionMode=true;renderChatList();toast('Select one or more chats, then choose Delete.');return}
@@ -1160,6 +1185,10 @@ function bindChatPageEvents() {
   document.querySelector('#chat-room')?.addEventListener('input',e=>{if(e.target.matches('#message-form [name="message"]'))setChatTyping(!!e.target.value.trim())});
   document.querySelector('#chat-room')?.addEventListener('submit',async e=>{const form=e.target.closest('#message-form');if(!form)return;e.preventDefault();if(!session)return openAuth();const input=form.querySelector('[name="message"]'),content=String(input.value||'').trim();if(!content||!activeConversationId)return;setChatTyping(false);const submit=form.querySelector('[type="submit"]');submit.disabled=true;const replyId=pendingReplyTo?.id||null;const {data,error}=await supabase.from('messages').insert({conversation_id:activeConversationId,sender_id:session.user.id,content,reply_to_message_id:replyId}).select('id,conversation_id,sender_id,content,created_at,edited_at,reply_to_message_id,message_type,media_path').single();submit.disabled=false;if(error){toast(error.message,'error');return}pendingReplyTo=null;handleChatMessage(data);await markConversationRead(activeConversationId);document.querySelector('#message-form [name="message"]')?.focus()})
   document.querySelector('#modal-root')?.addEventListener('click',async e=>{
+    const roleButton=e.target.closest('[data-group-role]');
+    if(roleButton){roleButton.disabled=true;const {error}=await supabase.from('conversation_members').update({role:roleButton.dataset.nextRole}).eq('conversation_id',activeConversationId).eq('user_id',roleButton.dataset.groupRole);if(error){roleButton.disabled=false;toast(error.message,'error');return}await openGroupInfoDialog();toast('Group role updated.','success');return}
+    const removeButton=e.target.closest('[data-group-remove]');
+    if(removeButton){if(!confirm('Remove this member from the group?'))return;removeButton.disabled=true;const {error}=await supabase.from('conversation_members').delete().eq('conversation_id',activeConversationId).eq('user_id',removeButton.dataset.groupRemove);if(error){removeButton.disabled=false;toast(error.message,'error');return}await openGroupInfoDialog();toast('Member removed.','success');return}
     if(e.target.closest('[data-close-chat-modal]')||e.target.matches('[data-chat-modal-backdrop]')){document.querySelector('#modal-root').innerHTML='';return}
     if(e.target.closest('[data-open-new-group]')){openNewGroupDialog();return}
     const choice=e.target.closest('[data-start-chat]');if(!choice)return
@@ -1178,7 +1207,7 @@ function bindChatPageEvents() {
     const button=form.querySelector('[type="submit"]');button.disabled=true;button.textContent='Creating…';
     const {data:conversation,error:createError}=await supabase.from('conversations').insert({created_by:session.user.id,is_group:true,group_name:groupName}).select('id').single();
     if(createError){button.disabled=false;button.textContent='Create group';toast(createError.message,'error');return}
-    const members=[session.user.id,...memberIds].map(user_id=>({conversation_id:conversation.id,user_id}));
+    const members=[{conversation_id:conversation.id,user_id:session.user.id,role:'admin'},...memberIds.map(user_id=>({conversation_id:conversation.id,user_id,role:'member'}))];
     const {error:membersError}=await supabase.from('conversation_members').insert(members);
     if(membersError){await supabase.from('conversations').delete().eq('id',conversation.id);button.disabled=false;toast(membersError.message,'error');return}
     document.querySelector('#modal-root').innerHTML='';toast('Group created.','success');await loadChats(conversation.id);
