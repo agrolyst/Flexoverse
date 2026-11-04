@@ -7,30 +7,36 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=brand-favicon-20261104">
   <link rel="shortcut icon" href="/favicon.svg?v=brand-favicon-20261104">
   <title>Sign in · Flexoverse</title>
-  <link rel="stylesheet" href="../assets/site.css?v=membership-verification-notification-onboarding-20261104">
+  <link rel="stylesheet" href="/assets/site.css?v=auth-refresh-20261104">
 </head>
-<body data-page="login">
+<body class="standalone-auth-page" data-page="login">
   <div id="site-header"></div>
   <div class="page-layout">
-    <aside id="left-sidebar"></aside>
     <main class="main-column auth-page">
       <section class="auth-page-card card">
-        <p class="overline">WELCOME BACK</p>
-        <h1>Sign in to Flexoverse</h1>
-        <p class="muted">Pick up where you left off with your circle.</p>
-        <form id="login-form" class="auth-page-form">
-          <label>Email address<input name="email" type="email" required autocomplete="email" placeholder="you@example.com"></label>
-          <label>Password<input name="password" type="password" required autocomplete="current-password" placeholder="Your password"></label>
-          <button class="button button-primary" type="submit">Sign in</button>
-        </form>
-        <p class="auth-page-switch">New to Flexoverse? <a id="switch-to-signup" href="/signup/">Create an account</a></p>
+        <a class="auth-brand-lockup" href="/"><span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.8 19a5.2 5.2 0 0 1 10.4 0v1H2.8zM14 15.3a4.4 4.4 0 0 1 7.2 3.4v1h-7.2"/></svg></span><span>Flexoverse</span></a>
+        <div class="auth-layout-grid">
+          <div class="auth-copy-panel">
+            <p class="overline">WELCOME BACK</p>
+            <h1>Your people. Your moments. All in one place.</h1>
+            <p>Sign in to catch up with friends, continue conversations, and share what matters to your circle.</p>
+            <ul class="auth-benefit-list"><li><span>✓</span> Stay connected with friends</li><li><span>✓</span> Pick up your conversations</li><li><span>✓</span> Share updates and moments</li></ul>
+          </div>
+          <div class="auth-form-panel">
+            <h2>Sign in</h2>
+            <p class="muted">Enter your account details to continue.</p>
+            <form id="login-form" class="auth-page-form">
+              <label>Email address<input name="email" type="email" required autocomplete="email" placeholder="you@example.com"></label>
+              <label>Password<input name="password" type="password" required autocomplete="current-password" placeholder="Your password"></label>
+              <button class="button button-primary" type="submit">Sign in to Flexoverse</button>
+            </form>
+            <p class="auth-page-switch">New to Flexoverse? <a id="switch-to-signup" href="/signup/">Create an account</a></p>
+          </div>
+        </div>
       </section>
     </main>
-    <aside id="right-sidebar"></aside>
   </div>
-  <nav id="mobile-nav"></nav>
-  <div id="modal-root"></div>
-  <div id="toast" role="status"></div>
-  <script type="module" src="../assets/app.js?v=brand-favicon-profile-route-20261104"></script>
+  <div id="modal-root"></div><div id="toast" role="status"></div>
+  <script type="module" src="/assets/app.js?v=auth-refresh-20261104"></script>
 </body>
 </html>
