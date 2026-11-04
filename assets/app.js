@@ -1911,7 +1911,18 @@ function showAppLoader() {
 const loaderStartedAt=performance.now()
 const appLoader=showAppLoader()
 initialize()
-  .catch(error=>{console.error(error);const feed=document.querySelector('#feed-list');if(feed)feed.innerHTML='<div class="feed-state card"><strong>The feed is unavailable</strong><span>Check your connection and refresh the page.</span></div>';toast('Could not connect. Refresh and try again.','error')})
+  .catch(error=>{
+    console.error(error)
+    const feed=document.querySelector('#feed-list')
+    if(feed)feed.innerHTML='<div class="feed-state card"><strong>The feed is unavailable</strong><span>Check your connection and refresh the page.</span></div>'
+    if(page==='profile'){
+      const content=document.querySelector('#profile-content')
+      const state=document.querySelector('#profile-state')
+      if(content)content.hidden=true
+      if(state){state.hidden=false;state.innerHTML='<strong>We could not load this profile</strong><p>Please refresh the page. If the problem continues, try again in a moment.</p><a class="button button-outline" href="/">Back to home</a>'}
+    }
+    toast('Could not connect. Refresh and try again.','error')
+  })
   .finally(()=>{
     const minimumTime=320
     const remaining=Math.max(0,minimumTime-(performance.now()-loaderStartedAt))
