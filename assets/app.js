@@ -1605,7 +1605,7 @@ function bindProfileCompletionEvents(){
     }
     const {error:addressError}=await supabase.from('private_profile_details').upsert(privateDetails,{onConflict:'user_id'})
     if(addressError){save.disabled=false;if(skip)skip.disabled=false;save.textContent='Save and continue';toast(addressError.message,'error');return}
-    const {data:updated,error}=await supabase.from('profiles').update({full_name:fullName,username,bio}).eq('id',session.user.id).select('id,username,full_name,bio,avatar_url,is_public').single()
+    const {data:updated,error}=await supabase.from('profiles').update({full_name:fullName,username,bio,account_type:accountType}).eq('id',session.user.id).select('id,username,full_name,bio,avatar_url,is_public,account_type').single()
     if(error){save.disabled=false;if(skip)skip.disabled=false;save.textContent='Save and continue';toast(error.code==='23505'?'That username is taken. Try another one.':error.message,'error');return}
     const {error:authError}=await supabase.auth.updateUser({data:{full_name:fullName,username,profile_completed:true,account_type:accountType}})
     if(authError){save.disabled=false;if(skip)skip.disabled=false;save.textContent='Save and continue';toast('Your details were saved, but setup could not finish. Please try again.','error');return}
@@ -1706,7 +1706,7 @@ function bindSettingsEvents(){
     const form=e.currentTarget,fields=new FormData(form),username=String(fields.get('username')||'').trim().toLowerCase(),fullName=String(fields.get('full_name')||'').trim(),bio=String(fields.get('bio')||'').trim(),button=form.querySelector('[type="submit"]')
     if(!/^[a-z0-9]{3,30}$/.test(username))return toast('Use 3–30 lowercase letters or numbers for your username.','error')
     button.disabled=true;button.textContent='Saving…'
-    const {data,error}=await supabase.from('profiles').update({username,full_name:fullName,bio}).eq('id',session.user.id).select('id,username,full_name,bio,avatar_url,is_public,search_index_enabled').single()
+    const {data,error}=await supabase.from('profiles').update({username,full_name:fullName,bio,account_type:String(fields.get('account_type')||'personal')}).eq('id',session.user.id).select('id,username,full_name,bio,avatar_url,is_public,search_index_enabled,account_type').single()
     if(error){button.disabled=false;button.textContent='Save changes';return toast(error.code==='23505'?'That username is taken. Try another one.':error.message,'error')}
     const detail={user_id:session.user.id,address:String(fields.get('address')||'').trim(),account_type:String(fields.get('account_type')||'personal'),date_of_birth:fields.get('date_of_birth')||null,gender:fields.get('gender')||null,phone:fields.get('phone')||null,city:fields.get('city')||null,hometown:fields.get('hometown')||null,address_place_id:fields.get('address_place_id')||null,updated_at:new Date().toISOString()}
     const {error:detailError}=await supabase.from('private_profile_details').upsert(detail,{onConflict:'user_id'})
@@ -1724,6 +1724,8 @@ function bindSettingsEvents(){
     const {error}=await supabase.from('private_profile_details').upsert({user_id:session.user.id,account_type:accountType,business_name:name||null,business_category:category||null,business_description:String(fields.get('business_description')||'').trim()||null,business_phone:String(fields.get('business_phone')||'').trim()||null,business_website:website||null,business_hours:String(fields.get('business_hours')||'').trim()||null,updated_at:new Date().toISOString()},{onConflict:'user_id'})
     button.disabled=false;button.textContent='Save business details'
     if(error)return toast(error.message,'error')
+    const {error:accountError}=await supabase.from('profiles').update({account_type:accountType}).eq('id',session.user.id)
+    if(accountError)return toast('Business details saved, but account type could not be updated: '+accountError.message,'error')
     await supabase.auth.updateUser({data:{account_type:accountType}})
     toast('Business information saved.','success')
   })
