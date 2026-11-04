@@ -1627,3 +1627,14 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
 .home-incoming-call-card [data-home-call-decline]{background:#fce9ec;color:#c72e4d}
 .home-incoming-call-card [data-home-call-answer]{background:#18a86e;color:#fff}
 @media(max-width:560px){.homepage-call-alert{padding:0 8px}.home-incoming-call-card{gap:8px;padding:11px;border-radius:12px}.home-incoming-call-card button{padding:9px 11px;font-size:10px}}
+
+.header-notification-wrap{position:relative;display:flex;align-items:center}
+.header-notification-dropdown{position:absolute;z-index:1500;right:0;top:calc(100% + 12px);width:min(360px,calc(100vw - 28px));max-height:440px;overflow:auto;padding:8px;background:#fff;border:1px solid #e8eaf0;border-radius:15px;box-shadow:0 18px 50px #19233a22}
+.header-notification-dropdown[hidden]{display:none}
+.header-notification-row{display:flex;align-items:center;gap:10px;padding:11px 9px;border-bottom:1px solid #f0f1f4}
+.header-notification-row>div{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.header-notification-row strong{font-size:11px;color:#273044}
+.header-notification-row span,.header-notification-row small{font-size:10px;color:#7b8494;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.header-notification-row>a{padding:7px 10px;border-radius:8px;background:#f0efff;color:#5d54d7;font-size:10px;font-weight:750;white-space:nowrap}
+.header-notification-footer{display:block;padding:12px 8px 7px;text-align:center;color:var(--brand);font-size:10px;font-weight:750}
+.header-notification-loading{padding:22px 12px;text-align:center;color:#7b8494;font-size:11px}
