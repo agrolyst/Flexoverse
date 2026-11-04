@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /settings/
+Disallow: /chats/
+Disallow: /notifications/
+Disallow: /login/
+Disallow: /signup/
+Disallow: /complete-profile/
+Disallow: /create/
+Disallow: /my-content/
+Disallow: /reels/create/
+Disallow: /profile/view/
+
+Sitemap: https://flexoverse.online/sitemap.xml
