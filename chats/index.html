@@ -24,6 +24,13 @@
       <section class="chat-layout card" id="chat-layout" aria-label="Messages">
         <aside class="chat-inbox">
           <div class="chat-inbox-heading" id="chat-inbox-heading"><div><span class="chat-section-kicker">INBOX</span><h2>Your chats</h2></div><span class="chat-total" id="chat-total">0</span></div><div class="chat-selection-controls" id="chat-selection-controls"><button type="button" data-toggle-chat-selection>Select</button></div>
+          <nav class="chat-filter-tabs" aria-label="Filter conversations">
+            <button class="chat-filter-tab active" type="button" data-chat-filter="all" aria-pressed="true">All</button>
+            <button class="chat-filter-tab" type="button" data-chat-filter="unread" aria-pressed="false">Unread</button>
+            <button class="chat-filter-tab" type="button" data-chat-filter="favourites" aria-pressed="false">Favourites</button>
+            <button class="chat-filter-tab" type="button" data-chat-filter="groups" aria-pressed="false">Groups</button>
+            <div class="chat-plus-wrap"><button class="chat-plus-button" id="chat-plus-button" type="button" aria-label="Create chat or group" aria-expanded="false">+</button><div class="chat-plus-menu" id="chat-plus-menu" hidden><button type="button" data-chat-plus-new>New chat</button><button type="button" data-chat-plus-group>New group</button></div></div>
+          </nav>
           <div class="chat-inbox-tabs"><button class="chat-inbox-tab active" id="chat-inbox-toggle" type="button">Chats</button><button class="chat-inbox-tab" id="call-log-toggle" type="button">Call logs</button></div>
           <label class="inbox-search" for="conversation-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.3 4.3"/></svg><input id="conversation-search" type="search" placeholder="Search chats" aria-label="Search chats"></label>
           <div id="conversation-list" class="conversation-list" aria-live="polite"><div class="chat-loading"><span class="friends-loading-dot"></span>Loading conversations</div></div>
