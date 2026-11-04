@@ -1066,7 +1066,7 @@ async function joinLiveKitGroupCall(invite){
  liveKitRoom=new sdk.Room({adaptiveStream:true,dynacast:true});
  const video=invite.mode==='video';
  renderGroupCallScreen('Joining…',video);
- const host=document.querySelector('[data-group-call-participants]');
+ const host=(callRootElement||document).querySelector('[data-group-call-participants]');
  const addTrack=(track,participant)=>{
   const element=track.attach();
   element.dataset.participant=participant.identity;
@@ -1076,15 +1076,15 @@ async function joinLiveKitGroupCall(invite){
  };
  liveKitRoom.on(sdk.RoomEvent.TrackSubscribed,(track,publication,participant)=>addTrack(track,participant));
  liveKitRoom.on(sdk.RoomEvent.TrackUnsubscribed,(track)=>track.detach().forEach(el=>el.remove()));
- liveKitRoom.on(sdk.RoomEvent.ParticipantConnected,()=>{const st=document.querySelector('[data-group-call-status]');if(st)st.textContent=liveKitRoom.numParticipants+' people in call'});
- liveKitRoom.on(sdk.RoomEvent.ParticipantDisconnected,()=>{const st=document.querySelector('[data-group-call-status]');if(st)st.textContent=liveKitRoom.numParticipants+' people in call'});
+ liveKitRoom.on(sdk.RoomEvent.ParticipantConnected,()=>{const st=(callRootElement||document).querySelector('[data-group-call-status]');if(st)st.textContent=liveKitRoom.numParticipants+' people in call'});
+ liveKitRoom.on(sdk.RoomEvent.ParticipantDisconnected,()=>{const st=(callRootElement||document).querySelector('[data-group-call-status]');if(st)st.textContent=liveKitRoom.numParticipants+' people in call'});
  await liveKitRoom.connect(data.serverUrl,data.participantToken);
  await liveKitRoom.localParticipant.setMicrophoneEnabled(true);
  if(video)await liveKitRoom.localParticipant.setCameraEnabled(true);
  for(const participant of liveKitRoom.remoteParticipants.values()){
   for(const publication of participant.trackPublications.values())if(publication.track)addTrack(publication.track,participant);
  }
- const st=document.querySelector('[data-group-call-status]');if(st)st.textContent='Connected · '+liveKitRoom.numParticipants+' people';
+ const st=(callRootElement||document).querySelector('[data-group-call-status]');if(st)st.textContent='Connected · '+liveKitRoom.numParticipants+' people';
 }
 async function startGroupCall(mode){
  const item=chatItems.find(x=>x.conversation_id===activeConversationId);
