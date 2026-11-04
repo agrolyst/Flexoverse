@@ -1511,7 +1511,7 @@ function renderInfoPage(){
 function initInternationalPhone(input){
   if(!input||input.dataset.phoneBound==='true'||!window.intlTelInput)return
   input.dataset.phoneBound='true'
-  input._iti=window.intlTelInput(input,{initialCountry:'ng',separateDialCode:true,nationalMode:true,autoPlaceholder:'polite',formatOnDisplay:true,allowDropdown:true})
+  input._iti=window.intlTelInput(input,{initialCountry:'ng',separateDialCode:true,nationalMode:true,autoPlaceholder:'polite',formatOnDisplay:true,allowDropdown:true,loadUtils:()=>import('https://cdn.jsdelivr.net/npm/intl-tel-input@25.3.1/build/js/utils.js')})
 }
 function readInternationalPhone(input){
   if(!input||!input.value.trim())return ''
