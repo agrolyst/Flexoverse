@@ -1919,3 +1919,61 @@ body.standalone-auth-page .main-column.auth-page{max-width:100%;margin:0 auto}
 .reel-music-toolbar{display:flex;gap:9px}.reel-music-search-trigger{display:flex;align-items:center;gap:10px;flex:1;min-width:0;height:43px;padding:0 13px;border:1px solid #e8e8f0;border-radius:10px;background:#f8f8fc;color:#85899a;text-align:left;font-size:11px}.reel-music-search-trigger svg,.reel-music-icon-trigger svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.reel-music-icon-trigger{display:grid;place-items:center;width:43px;height:43px;border:0;border-radius:10px;background:#f0edff;color:#655ce8}.reel-music-current{display:flex;align-items:center;gap:10px;margin-top:11px;padding:9px;border-radius:10px;background:#fafaff}.reel-music-current-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;background:#eeeaff;color:#655ce8}.reel-music-current-icon svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.reel-music-current>span:nth-child(2){display:flex;flex:1;flex-direction:column;gap:3px;min-width:0}.reel-music-current strong{overflow:hidden;color:#44495c;font-size:10px;text-overflow:ellipsis;white-space:nowrap}.reel-music-current small{color:#9296a5;font-size:9px}.reel-music-current button{border:0;background:transparent;color:#8c91a0;font-size:20px}.reel-music-preview{position:relative;margin-top:10px;aspect-ratio:16/9;overflow:hidden;border-radius:10px;background:#111}.reel-music-preview[hidden]{display:none}.reel-music-preview iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .reel-music-modal[hidden]{display:none}.reel-music-modal{position:fixed;inset:0;z-index:10050;display:grid;place-items:center;padding:18px}.reel-music-backdrop{position:absolute;inset:0;width:100%;height:100%;border:0;background:rgba(12,13,25,.62);backdrop-filter:blur(5px)}.reel-music-dialog{position:relative;z-index:1;display:flex;flex-direction:column;width:min(520px,100%);max-height:min(760px,90dvh);overflow:hidden;border:1px solid #e8e8f0;border-radius:20px;background:#fff;box-shadow:0 24px 80px #0003}.reel-music-dialog-header{display:flex;align-items:center;justify-content:space-between;padding:19px 20px 13px}.reel-music-dialog-header .overline{margin:0 0 5px;color:#8c83e9;font-size:8px;font-weight:850;letter-spacing:1.3px}.reel-music-dialog-header h2{margin:0;color:#25283a;font:800 20px Manrope,sans-serif}.reel-music-close{width:34px;height:34px;border:0;border-radius:50%;background:#f2f2f7;color:#666b7a;font-size:23px;line-height:1}.reel-music-dialog-search{display:flex;align-items:center;gap:8px;margin:0 20px;padding:0 10px;height:44px;border:1px solid #e7e7ef;border-radius:11px;background:#f8f8fb}.reel-music-dialog-search svg{width:17px;height:17px;flex:0 0 auto;fill:none;stroke:#8b8fa0;stroke-width:1.8}.reel-music-dialog-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:#34384a;font-size:11px}.reel-music-dialog-search button{height:31px;padding:0 12px;border:0;border-radius:8px;background:#655ce8;color:white;font-size:10px;font-weight:750}.reel-music-tabs{display:flex;align-items:center;gap:12px;padding:17px 20px 9px}.reel-music-tabs button{padding:0 0 7px;border:0;border-bottom:2px solid #655ce8;background:transparent;color:#34364b;font-size:11px;font-weight:800}.reel-music-tabs span{color:#9296a4;font-size:9px}.reel-music-status{margin:0;padding:4px 20px 9px;color:#888d9e;font-size:9px}.reel-music-list{min-height:100px;overflow:auto;padding:0 14px 12px}.reel-music-track{display:flex;align-items:center;gap:10px;padding:8px 6px;border-bottom:1px solid #f0f0f5;border-radius:9px}.reel-music-track.selected{background:#f4f2ff}.reel-music-track-play{position:relative;width:66px;height:48px;flex:0 0 auto;padding:0;overflow:hidden;border:0;border-radius:7px;background:#eee}.reel-music-track-play img{width:100%;height:100%;object-fit:cover}.reel-music-play-glyph{position:absolute;inset:0;display:grid;place-items:center;background:#0004;color:#fff;font-size:15px}.reel-music-track-copy{display:flex;flex:1;flex-direction:column;gap:4px;min-width:0}.reel-music-track-copy strong{overflow:hidden;color:#34394b;font-size:10px;text-overflow:ellipsis;white-space:nowrap}.reel-music-track-copy small{overflow:hidden;color:#9296a5;font-size:9px;text-overflow:ellipsis;white-space:nowrap}.reel-music-add{min-width:52px;padding:7px 10px;border:1px solid #dcd9fa;border-radius:8px;background:#fff;color:#655ce8;font-size:9px;font-weight:800}.reel-music-track.selected .reel-music-add{background:#655ce8;color:#fff}.reel-music-dialog-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 20px;border-top:1px solid #eeeef4;background:#fff}.reel-music-dialog-footer span{color:#8d92a0;font-size:9px}.reel-music-dialog-footer button{min-height:37px;padding:0 17px;border:0;border-radius:9px;background:#655ce8;color:white;font-size:10px;font-weight:800}.reel-music-dialog-footer button:disabled{opacity:.45;cursor:not-allowed}body.reel-music-open{overflow:hidden}
 @media(max-width:560px){.reel-music-modal{align-items:end;padding:0}.reel-music-dialog{width:100%;max-height:88dvh;border-radius:20px 20px 0 0}.reel-music-dialog-header{padding:17px 17px 12px}.reel-music-dialog-search{margin:0 17px}.reel-music-tabs{padding:15px 17px 8px}.reel-music-status{padding-left:17px;padding-right:17px}.reel-music-dialog-footer{padding:11px 17px calc(12px + env(safe-area-inset-bottom))}.reel-music-track-play{width:59px;height:43px}}
+
+
+/* Wide TikTok-style Reels Studio: vertical tools rail, centred preview */
+@media(min-width:1101px){
+  body:has(.reel-studio-page) .page-layout{
+    width:100%;max-width:1900px;
+    grid-template-columns:190px minmax(0,1fr);
+    gap:26px;padding:24px 34px 60px;
+  }
+  body:has(.reel-studio-page) #right-sidebar{display:none}
+  .reel-studio-page{width:100%;max-width:none!important;min-width:0}
+  .reel-studio-heading{margin:4px 0 20px;padding:18px 24px}
+  .reel-studio-layout{
+    display:grid;grid-template-columns:minmax(265px,310px) minmax(350px,1fr) minmax(270px,320px);
+    align-items:start;gap:16px;
+  }
+  .reel-studio-main{grid-column:1;grid-row:1;min-height:100%;padding:17px}
+  .reel-studio-side{display:contents}
+  .reel-studio-preview-card{grid-column:2;grid-row:1;position:sticky;top:92px;padding:18px}
+  .reel-studio-details{grid-column:3;grid-row:1;padding:17px}
+  .reel-preview-stage{width:min(100%,390px);max-width:390px;max-height:calc(100vh - 210px)}
+  .reel-studio-upload{min-height:190px}
+  .reel-editor-tools{margin-top:18px}
+  .reel-tool-grid{grid-template-columns:1fr;gap:9px}
+  .reel-tool-wide{grid-column:auto}
+  .reel-studio-main .reel-studio-section-title{margin-bottom:12px}
+}
+@media(min-width:1101px) and (max-width:1350px){
+  body:has(.reel-studio-page) .page-layout{grid-template-columns:165px minmax(0,1fr);gap:18px;padding-left:20px;padding-right:20px}
+  .reel-studio-layout{grid-template-columns:minmax(245px,275px) minmax(300px,1fr) minmax(245px,275px);gap:12px}
+  .reel-studio-main,.reel-studio-preview-card,.reel-studio-details{padding:14px}
+}
+@media(min-width:701px) and (max-width:1100px){
+  body:has(.reel-studio-page) .page-layout{max-width:100%;grid-template-columns:170px minmax(0,1fr);gap:18px;padding:20px}
+  body:has(.reel-studio-page) #right-sidebar{display:none}
+  .reel-studio-page{max-width:none!important;width:100%}
+  .reel-studio-layout{grid-template-columns:minmax(250px,.78fr) minmax(300px,1fr);gap:13px}
+  .reel-studio-main{grid-column:1;grid-row:1 / span 2;padding:15px}
+  .reel-studio-side{display:contents}
+  .reel-studio-preview-card{grid-column:2;grid-row:1;padding:15px}
+  .reel-studio-details{grid-column:2;grid-row:2;padding:15px}
+  .reel-tool-grid{grid-template-columns:1fr}
+  .reel-tool-wide{grid-column:auto}
+}
+@media(max-width:700px){
+  body:has(.reel-studio-page) .page-layout{display:block;width:100%;padding:14px 12px 90px}
+  body:has(.reel-studio-page) #left-sidebar,
+  body:has(.reel-studio-page) #right-sidebar{display:none}
+  .reel-studio-page{width:100%;max-width:none!important}
+  .reel-studio-layout{display:flex;flex-direction:column;gap:12px}
+  .reel-studio-main{order:2;width:100%;padding:14px}
+  .reel-studio-side{display:contents}
+  .reel-studio-preview-card{order:1;width:100%;padding:14px}
+  .reel-studio-details{order:3;width:100%;padding:14px}
+  .reel-preview-stage{max-width:260px}
+  .reel-tool-grid{grid-template-columns:1fr 1fr}
+  .reel-tool-wide{grid-column:1/-1}
+}
