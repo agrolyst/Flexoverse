@@ -41,6 +41,7 @@ let pendingGroupInvite=null;
 let notificationItems = []
 let notificationFilter = 'all'
 let notificationRealtimeChannel = null
+let desktopNotificationPermissionRequested = false
 let notificationDisplayPreferences = {in_app_enabled:true,friend_requests:true,post_likes:true,post_comments:true}
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
@@ -601,7 +602,7 @@ function renderChatRoom(item,messages=activeChatMessages) {
  }
  const replyBar=pendingReplyTo?`<div class="reply-composer-bar"><span><strong>Replying to ${pendingReplyTo.sender_id===session?.user?.id?'yourself':esc(item.peer_name)}</strong><small>${esc(pendingReplyTo.content.slice(0,120))}</small></span><button type="button" data-cancel-reply aria-label="Cancel reply">×</button></div>`:'';
  room.innerHTML=`<header class="chat-room-head"><button class="chat-room-back" type="button" data-chat-back aria-label="Back to conversations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12"/></svg></button>${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<div class="chat-room-person"><strong>${esc(item.peer_name)}</strong><small><span class="status-dot"></span> Your friend</small></div><div class="chat-header-menu-wrap"><button class="chat-header-menu-toggle" type="button" data-chat-menu-toggle aria-label="More chat options" aria-expanded="false" title="More options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button><div class="chat-header-menu" data-chat-menu hidden>
-<button type="button" data-chat-menu-action="contact">Contact info</button><button type="button" data-chat-menu-action="search">Search messages</button><button type="button" data-chat-menu-action="select">Select messages</button><button type="button" data-chat-menu-action="mute">Mute notifications</button><button type="button" data-chat-menu-action="theme">Chat theme</button><div class="chat-menu-divider"></div>${item.is_group?'<button type="button" data-start-group-call="audio">Group voice call</button><button type="button" data-start-group-call="video">Group video call</button>':'<button type="button" data-start-call="audio">Voice call</button><button type="button" data-start-call="video">Video call</button>'}<button type="button" data-chat-menu-action="favorite">Add to Favorites</button><button type="button" data-chat-menu-action="export">Export chat</button><div class="chat-menu-divider"></div><button type="button" data-chat-menu-action="close">Close chat</button></div></div>${item.is_group?'':'<a class="chat-room-profile" href="/'+encodeURIComponent(item.peer_username||'')+'" aria-label="View profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a>'}</header><div class="chat-history" id="chat-history" role="log" aria-live="polite" aria-label="Conversation with ${esc(item.peer_name)}">${groups.join('')||'<p class="chat-history-empty">Say hello and start the conversation.</p>'}</div><div class="chat-typing-indicator" id="chat-typing-indicator" hidden aria-live="polite"></div><form class="message-composer" id="message-form">${replyBar}<input name="message" maxlength="4000" required autocomplete="off" placeholder="Write a message…" aria-label="Write a message"><button class="voice-record-button" type="button" data-voice-record aria-label="Record voice message">${voiceMicSvg()}</button><button class="send-button" aria-label="Send message" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button></form>`;
+<button type="button" data-chat-menu-action="contact">Contact info</button><button type="button" data-chat-menu-action="search">Search messages</button><button type="button" data-chat-menu-action="select">Select messages</button><button type="button" data-chat-menu-action="desktop-notifications">Enable desktop notifications</button><button type="button" data-chat-menu-action="mute">Mute notifications</button><button type="button" data-chat-menu-action="theme">Chat theme</button><div class="chat-menu-divider"></div>${item.is_group?'<button type="button" data-chat-menu-action="group-info">Group info & admins</button><button type="button" data-start-group-call="audio">Group voice call</button><button type="button" data-start-group-call="video">Group video call</button>':'<button type="button" data-start-call="audio">Voice call</button><button type="button" data-start-call="video">Video call</button>'}<button type="button" data-chat-menu-action="favorite">Add to Favorites</button><button type="button" data-chat-menu-action="export">Export chat</button><div class="chat-menu-divider"></div><button type="button" data-chat-menu-action="close">Close chat</button></div></div>${item.is_group?'':'<a class="chat-room-profile" href="/'+encodeURIComponent(item.peer_username||'')+'" aria-label="View profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a>'}</header><div class="chat-history" id="chat-history" role="log" aria-live="polite" aria-label="Conversation with ${esc(item.peer_name)}">${groups.join('')||'<p class="chat-history-empty">Say hello and start the conversation.</p>'}</div><div class="chat-typing-indicator" id="chat-typing-indicator" hidden aria-live="polite"></div><form class="message-composer" id="message-form">${replyBar}<input name="message" maxlength="4000" required autocomplete="off" placeholder="Write a message…" aria-label="Write a message"><button class="voice-record-button" type="button" data-voice-record aria-label="Record voice message">${voiceMicSvg()}</button><button class="send-button" aria-label="Send message" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button></form>`;
  const history=document.querySelector('#chat-history');if(history)history.scrollTop=history.scrollHeight;
  renderTypingPresence();
 }
@@ -682,7 +683,11 @@ function handleChatMessage(message) {
   item.last_message_id=message.id
   item.last_message_at=message.created_at
   item.last_sender_id=message.sender_id
-  if(message.sender_id!==session?.user?.id&&activeConversationId!==message.conversation_id)item.unread_count=Number(item.unread_count||0)+1
+  if(message.sender_id!==session?.user?.id){
+    if(activeConversationId!==message.conversation_id)item.unread_count=Number(item.unread_count||0)+1
+    const sender=item.peer_name||'Flexoverse friend'
+    notifyDesktop(sender,message.content||'Sent you a voice message',`message-${message.conversation_id}`)
+  }
   renderChatList()
   if(activeConversationId===message.conversation_id){
     if(item.is_group&&message.sender_id!==session?.user?.id){supabase.from('profiles').select('full_name,username').eq('id',message.sender_id).maybeSingle().then(({data})=>{message.sender_name=data?.full_name||data?.username||'Member';if(activeConversationId===message.conversation_id)renderChatRoom(item)})}
@@ -694,6 +699,17 @@ function handleChatMessage(message) {
     if(message.sender_id!==session?.user?.id)markConversationRead(message.conversation_id)
     else if(wasNearBottom){const updatedHistory=document.querySelector('#chat-history');if(updatedHistory)updatedHistory.scrollTop=updatedHistory.scrollHeight}
   }
+}
+
+function subscribeToGlobalMessageAlerts(){
+ if(!session)return
+ const channel=supabase.channel(`message-alerts-${session.user.id}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},async payload=>{
+  const message=payload.new;if(!message||message.sender_id===session.user.id)return
+  const {data:sender}=await supabase.from('profiles').select('full_name,username').eq('id',message.sender_id).maybeSingle()
+  const label=sender?.full_name||sender?.username||'A Flexoverse member'
+  notifyDesktop(label,message.message_type==='audio'?'Sent you a voice message':message.content||'Sent you a message',`message-${message.conversation_id}`)
+ }).subscribe()
+ return channel
 }
 
 function subscribeToChatInbox() {
@@ -733,6 +749,19 @@ async function openNewGroupDialog() {
  root.querySelectorAll('[name="group_member"]').forEach(input=>input.addEventListener('change',()=>{const n=root.querySelectorAll('[name="group_member"]:checked').length;root.querySelector('[data-group-selected-count]').textContent=n+' selected'}));
 }
 
+
+async function openGroupInfoDialog(){
+ const item=chatItems.find(x=>x.conversation_id===activeConversationId);if(!item?.is_group)return;
+ const root=document.querySelector('#modal-root');if(!root)return;
+ root.innerHTML='<div class="modal-backdrop" data-group-info-backdrop><section class="chat-new-modal" role="dialog" aria-modal="true"><header class="chat-new-modal-head"><div><h2>Group information</h2><p>Members and administrator roles</p></div><button type="button" class="chat-modal-close" data-close-chat-modal aria-label="Close">×</button></header><div class="group-info-members"><div class="chat-loading">Loading members…</div></div></section></div>';
+ const box=root.querySelector('.group-info-members');
+ const {data,error}=await supabase.from('conversation_members').select('user_id,member_role,profiles!conversation_members_user_id_fkey(full_name,username,avatar_url)').eq('conversation_id',activeConversationId).order('joined_at');
+ if(error){box.textContent='Group members could not load: '+error.message;return}
+ const rows=data||[],mine=rows.find(row=>row.user_id===session.user.id),isAdmin=mine?.member_role==='admin';
+ box.innerHTML=rows.map(row=>{const p=Array.isArray(row.profiles)?row.profiles[0]||{}:row.profiles||{};const label=p.full_name||p.username||'Member';return '<div class="group-friend-choice">'+avatar(initials(label),'blue',p.avatar_url)+'<span><strong>'+esc(label)+'</strong><small>@'+esc(p.username||'member')+' · '+(row.member_role==='admin'?'Group admin':'Member')+'</small></span>'+(isAdmin&&row.user_id!==session.user.id?'<button type="button" class="button button-outline" data-group-role="'+esc(row.user_id)+'" data-next-role="'+(row.member_role==='admin'?'member':'admin')+'">'+(row.role==='admin'?'Remove admin':'Make admin')+'</button>':'')+(isAdmin&&row.user_id!==session.user.id?'<button type="button" class="notification-dismiss" data-group-remove="'+esc(row.user_id)+'" aria-label="Remove member">×</button>':'')+'</div>'}).join('')||'<p class="chat-modal-empty">No members found.</p>';
+ if(!isAdmin){const note=document.createElement('p');note.className='chat-modal-empty';note.textContent='Only group administrators can change member roles or remove members.';box.append(note)}
+}
+
 async function openNewChatDialog() {
   if(!session)return openAuth()
   const root=document.querySelector('#modal-root')
@@ -748,15 +777,20 @@ async function openNewChatDialog() {
   friendList.innerHTML=(friends||[]).map(friend=>`<button class="chat-friend-choice" type="button" data-start-chat="${esc(friend.id)}">${avatar(initials(friend.full_name||friend.username),'blue',friend.avatar_url)}<span><strong>${esc(friend.full_name||friend.username)}</strong><small>@${esc(friend.username)}</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>`).join('')||'<div class="chat-modal-empty"><strong>No friends available</strong><p>Try adding a friend before starting a chat.</p></div>'
 }
 
+function notifyDesktop(title,body,tag='flexoverse') {
+  if(!('Notification' in window)||Notification.permission!=='granted'||document.visibilityState==='visible')return
+  try{new Notification(title,{body,tag,icon:'/assets/icon-192.png',silent:false})}catch(error){console.warn('Desktop notification unavailable:',error)}
+}
+
 function notificationIcon(type) {
-  const icons={friend_request:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M19 8v6m-3-3h6"/></svg>',friend_accepted:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>',post_like:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg>',post_comment:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.7 8.7 0 0 1-4-.95L3 21l1.95-5.5A8.5 8.5 0 1 1 21 11.5Z"/></svg>'}
+  const icons={incoming_call:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h5l2 5-3 2a15 15 0 0 0 5 5l2-3 5 2v5c-8 1-17-8-16-16Z"/></svg>',mention:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M16 12a4 4 0 1 1-1-2.6V13a2 2 0 0 0 4 0v-1a7 7 0 1 0-2 5"/></svg>',chat_message:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.7 8.7 0 0 1-4-.95L3 21l1.95-5.5A8.5 8.5 0 1 1 21 11.5Z"/></svg>',friend_request:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M19 8v6m-3-3h6"/></svg>',friend_accepted:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>',post_like:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg>',post_comment:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.7 8.7 0 0 1-4-.95L3 21l1.95-5.5A8.5 8.5 0 1 1 21 11.5Z"/></svg>'}
   return icons[type]||'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>'
 }
 
 function notificationMessage(item) {
   const actor=item.actor?.full_name||item.actor?.username||'A Flexoverse member'
-  const text={friend_request:'sent you a friend request.',friend_accepted:'accepted your friend request.',post_like:'liked your post.',post_comment:'commented on your post.'}[item.type]||'shared an update with you.'
-  const action={friend_request:'Friend request',friend_accepted:'Friend request accepted',post_like:'Post like',post_comment:'Post comment'}[item.type]||'Activity'
+  const text={friend_request:'sent you a friend request.',friend_accepted:'accepted your friend request.',post_like:'liked your post.',post_comment:'commented on your post.',mention:'mentioned you in a message.',chat_message:'sent you a message.'}[item.type]||'shared an update with you.'
+  const action={friend_request:'Friend request',friend_accepted:'Friend request accepted',post_like:'Post like',post_comment:'Post comment',mention:'Mention',chat_message:'Message'}[item.type]||'Activity'
   return {actor,text,action}
 }
 
@@ -774,7 +808,7 @@ function renderNotifications() {
   if(notificationFilter==='unread')visible=visible.filter(item=>!item.is_read)
   if(notificationFilter==='friend_request')visible=visible.filter(item=>item.type==='friend_request'&&item.pending_request)
   if(!visible.length){const title=notificationFilter==='unread'?'You’re all caught up':notificationFilter==='friend_request'?'No pending friend requests':shown.length?'No activity in this view':'Nothing new yet';const body=!notificationDisplayPreferences.in_app_enabled?'In-app notifications are hidden by your settings.':!shown.length?'Your notification settings currently hide these activity types.':notificationFilter==='unread'?'New activity will appear here when something happens.':notificationFilter==='friend_request'?'New friend requests will appear here.':'Friend requests and post activity will show up here.';list.innerHTML=`<div class="notification-empty"><span class="notification-empty-icon">${notificationIcon(notificationFilter==='friend_request'?'friend_request':'friend_accepted')}</span><strong>${title}</strong><p>${body}</p>${session?'<a class="button button-soft" href="/friends/">Explore friends</a>':'<a class="button button-primary" href="/login/">Sign in</a>'}</div>`;return}
-  list.innerHTML=visible.map(item=>{const description=notificationMessage(item),actorUrl=item.actor?.username?`/${encodeURIComponent(item.actor.username)}`:'/friends/';const pending=item.type==='friend_request'&&item.pending_request;const targetUrl=item.type==='post_like'||item.type==='post_comment'?`/#post-${encodeURIComponent(item.target_id||'')}`:item.type==='friend_accepted'?'/chats/':actorUrl;return `<article class="notification-item ${item.is_read?'':'unread-item'}" data-notification-id="${esc(item.id)}">${avatar(initials(description.actor),'blue',item.actor?.avatar_url)}<div class="notification-copy"><span><strong><a href="${esc(actorUrl)}" data-mark-notification="${esc(item.id)}">${esc(description.actor)}</a></strong> ${esc(description.text)}</span>${item.preview?`<span class="notification-preview">“${esc(item.preview)}”</span>`:''}<small>${esc(timeAgo(item.created_at))}</small><span class="notification-kind">${notificationIcon(item.type)}${esc(description.action)}</span></div><div class="notification-actions">${pending?`<button class="button button-primary" type="button" data-accept-notification="${esc(item.target_id)}" data-notification="${esc(item.id)}">Accept</button><button class="notification-dismiss" type="button" data-ignore-notification="${esc(item.target_id)}" data-notification="${esc(item.id)}" aria-label="Ignore friend request"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>`:`<a class="button button-outline" href="${esc(targetUrl)}" data-mark-notification="${esc(item.id)}">${item.type==='post_like'||item.type==='post_comment'?'View post':item.type==='friend_accepted'?'Open chats':'View profile'}</a>`}</div>${item.is_read?'':'<span class="unread-dot" aria-label="Unread"></span>'}</article>`}).join('')
+  list.innerHTML=visible.map(item=>{const description=notificationMessage(item),actorUrl=item.actor?.username?`/${encodeURIComponent(item.actor.username)}`:'/friends/';const pending=item.type==='friend_request'&&item.pending_request;const targetUrl=item.type==='post_like'||item.type==='post_comment'?`/#post-${encodeURIComponent(item.target_id||'')}`:(item.type==='mention'||item.type==='chat_message')?'/chats/':item.type==='friend_accepted'?'/chats/':actorUrl;return `<article class="notification-item ${item.is_read?'':'unread-item'}" data-notification-id="${esc(item.id)}">${avatar(initials(description.actor),'blue',item.actor?.avatar_url)}<div class="notification-copy"><span><strong><a href="${esc(actorUrl)}" data-mark-notification="${esc(item.id)}">${esc(description.actor)}</a></strong> ${esc(description.text)}</span>${item.preview?`<span class="notification-preview">“${esc(item.preview)}”</span>`:''}<small>${esc(timeAgo(item.created_at))}</small><span class="notification-kind">${notificationIcon(item.type)}${esc(description.action)}</span></div><div class="notification-actions">${pending?`<button class="button button-primary" type="button" data-accept-notification="${esc(item.target_id)}" data-notification="${esc(item.id)}">Accept</button><button class="notification-dismiss" type="button" data-ignore-notification="${esc(item.target_id)}" data-notification="${esc(item.id)}" aria-label="Ignore friend request"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>`:`<a class="button button-outline" href="${esc(targetUrl)}" data-mark-notification="${esc(item.id)}">${item.type==='post_like'||item.type==='post_comment'?'View post':item.type==='friend_accepted'?'Open chats':'View profile'}</a>`}</div>${item.is_read?'':'<span class="unread-dot" aria-label="Unread"></span>'}</article>`}).join('')
 }
 
 async function loadNotifications() {
@@ -856,8 +890,8 @@ async function playIncomingRingtone(){
     osc.type='triangle';osc.frequency.setValueAtTime(520,ctx.currentTime+offset);
     osc.frequency.setValueAtTime(660,ctx.currentTime+offset+0.16);
     gain.gain.setValueAtTime(0.0001,ctx.currentTime+offset);
-    gain.gain.linearRampToValueAtTime(0.32,ctx.currentTime+offset+0.025);
-    gain.gain.setValueAtTime(0.32,ctx.currentTime+offset+0.2);
+    gain.gain.linearRampToValueAtTime(0.48,ctx.currentTime+offset+0.025);
+    gain.gain.setValueAtTime(0.48,ctx.currentTime+offset+0.2);
     gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+offset+0.27);
     osc.connect(gain);gain.connect(ctx.destination);osc.start(ctx.currentTime+offset);osc.stop(ctx.currentTime+offset+0.28);
    });
@@ -1035,6 +1069,7 @@ async function handleCallSignal(payload) {
     currentCall={id:payload.callId,mode:payload.mode,initiator:false,from:payload.from,answeredAt:null}
     callHistoryId=payload.callLogId||null
     playIncomingRingtone()
+    notifyDesktop('Incoming Flexoverse call',`${payload.mode==='video'?'Video':'Voice'} call from ${chatItems.find(x=>x.conversation_id===activeConversationId)?.peer_name||'your friend'}`,`call-${payload.callId}`)
     const peer=chatItems.find(x=>x.conversation_id===activeConversationId)
     callUi(`<div class="call-backdrop"><section class="call-window call-incoming" role="dialog" aria-modal="true"><h2>Incoming ${payload.mode==='video'?'video':'voice'} call</h2><p>${esc(peer?.peer_name||'Your friend')} is calling you.</p><div class="call-controls"><button class="call-end-button" type="button" data-reject-call>Decline</button><button class="call-accept-button" type="button" data-accept-call>Answer</button></div></section></div>`)
     window.__pendingCallOffer=payload
@@ -1131,6 +1166,8 @@ function bindChatPageEvents() {
     const menu=document.querySelector('[data-chat-menu]');if(menu)menu.hidden=true;
     document.querySelector('[data-chat-menu-toggle]')?.setAttribute('aria-expanded','false');
     if(action==='contact'){document.querySelector('.chat-room-profile')?.click();return}
+    if(action==='group-info'){openGroupInfoDialog();return}
+    if(action==='desktop-notifications'){if(!('Notification' in window)){toast('This browser does not support desktop notifications.','error');return}const permission=await Notification.requestPermission();toast(permission==='granted'?'Desktop notifications enabled.':permission==='denied'?'Notifications are blocked in your browser settings.':'Notification permission was not granted.',permission==='granted'?'success':'info');return}
     if(action==='close'){document.querySelector('[data-chat-back]')?.click();return}
     if(action==='search'){let box=document.querySelector('[data-chat-message-search]');if(!box){box=document.createElement('input');box.type='search';box.placeholder='Search messages…';box.setAttribute('data-chat-message-search','');box.className='chat-message-search';document.querySelector('#chat-history')?.before(box);box.addEventListener('input',()=>{const q=box.value.trim().toLowerCase();document.querySelectorAll('#chat-history .message').forEach(m=>m.hidden=!!q&&!m.textContent.toLowerCase().includes(q))})}box.focus();return}
     if(action==='select'){chatSelectionMode=true;renderChatList();toast('Select one or more chats, then choose Delete.');return}
@@ -1160,6 +1197,10 @@ function bindChatPageEvents() {
   document.querySelector('#chat-room')?.addEventListener('input',e=>{if(e.target.matches('#message-form [name="message"]'))setChatTyping(!!e.target.value.trim())});
   document.querySelector('#chat-room')?.addEventListener('submit',async e=>{const form=e.target.closest('#message-form');if(!form)return;e.preventDefault();if(!session)return openAuth();const input=form.querySelector('[name="message"]'),content=String(input.value||'').trim();if(!content||!activeConversationId)return;setChatTyping(false);const submit=form.querySelector('[type="submit"]');submit.disabled=true;const replyId=pendingReplyTo?.id||null;const {data,error}=await supabase.from('messages').insert({conversation_id:activeConversationId,sender_id:session.user.id,content,reply_to_message_id:replyId}).select('id,conversation_id,sender_id,content,created_at,edited_at,reply_to_message_id,message_type,media_path').single();submit.disabled=false;if(error){toast(error.message,'error');return}pendingReplyTo=null;handleChatMessage(data);await markConversationRead(activeConversationId);document.querySelector('#message-form [name="message"]')?.focus()})
   document.querySelector('#modal-root')?.addEventListener('click',async e=>{
+    const roleButton=e.target.closest('[data-group-role]');
+    if(roleButton){roleButton.disabled=true;const {error}=await supabase.from('conversation_members').update({member_role:roleButton.dataset.nextRole}).eq('conversation_id',activeConversationId).eq('user_id',roleButton.dataset.groupRole);if(error){roleButton.disabled=false;toast(error.message,'error');return}await openGroupInfoDialog();toast('Group role updated.','success');return}
+    const removeButton=e.target.closest('[data-group-remove]');
+    if(removeButton){if(!confirm('Remove this member from the group?'))return;removeButton.disabled=true;const {error}=await supabase.from('conversation_members').delete().eq('conversation_id',activeConversationId).eq('user_id',removeButton.dataset.groupRemove);if(error){removeButton.disabled=false;toast(error.message,'error');return}await openGroupInfoDialog();toast('Member removed.','success');return}
     if(e.target.closest('[data-close-chat-modal]')||e.target.matches('[data-chat-modal-backdrop]')){document.querySelector('#modal-root').innerHTML='';return}
     if(e.target.closest('[data-open-new-group]')){openNewGroupDialog();return}
     const choice=e.target.closest('[data-start-chat]');if(!choice)return
@@ -1477,7 +1518,7 @@ async function initialize() {
   const signupLink=document.querySelector('#switch-to-signup');if(signupLink)signupLink.href=authPageHref('signup')
   const loginLink=document.querySelector('#switch-to-login');if(loginLink)loginLink.href=authPageHref('login')
   mountShell()
-  if(session){await loadNotificationPreferences();await loadNotificationCount();subscribeToNotificationUpdates()}
+  if(session){await loadNotificationPreferences();await loadNotificationCount();subscribeToNotificationUpdates();subscribeToGlobalMessageAlerts()}
   const composerAvatar=document.querySelector('[data-user-avatar]');if(composerAvatar)composerAvatar.outerHTML=avatar(session?initials(myName()):'FX','blue',profile?.avatar_url)
   if(page==='home'){await Promise.all([loadHome(),loadHomeReels()])}
   if(page==='friends')await loadFriends()
