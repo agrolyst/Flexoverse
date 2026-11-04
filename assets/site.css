@@ -1681,3 +1681,7 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
 .notification-permission-card .button{width:100%;justify-content:center}
 .notification-permission-later{margin-top:13px;padding:8px 15px;border:0;background:transparent;color:var(--muted);font:600 12px inherit;cursor:pointer}
 @media(max-width:600px){.membership-status-card,.verification-status-card{padding:16px}.notification-permission-card{padding:24px 20px}.profile-name-and-badges{gap:6px}}
+
+.post-member-badge{display:inline-flex;align-items:center;margin-left:5px;padding:2px 6px;border-radius:999px;background:#f1efff;border:1px solid #e7e3ff;color:#6156b8;font-size:8px;font-weight:750;line-height:1;vertical-align:middle}
+.post-verified-badge{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;margin-left:5px;border-radius:50%;background:#1682df;color:#fff;vertical-align:middle}
+.post-verified-badge svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
