@@ -1554,6 +1554,7 @@ async function loadProfileCompletion(){
   if(detailsError)console.warn('Could not load private profile details:',detailsError.message)
   const set=(name,value)=>{const field=form.querySelector(`[name="${name}"]`);if(field&&value!=null)field.value=value}
   set('full_name',row?.full_name||session.user.user_metadata?.full_name||'')
+  set('email',session.user.email||'')
   set('username',row?.username||session.user.user_metadata?.username||'')
   set('bio',row?.bio||'')
   ;['address','account_type','date_of_birth','gender','phone','city','hometown','business_name','business_category','business_description','business_phone','business_website','business_hours','address_place_id'].forEach(name=>set(name,details?.[name]||''))
