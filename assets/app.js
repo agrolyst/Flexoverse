@@ -503,7 +503,7 @@ async function loadProfilePage() {
   if(badgeRoot){
     const activeMembership=data.membership_status==='active'
     const memberLabel=activeMembership&&data.membership_plan==='plus'?'Flexoverse Plus':'Member'
-    badgeRoot.innerHTML=`${activeMembership?`<span class="profile-member-badge" title="Active Flexoverse membership"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 14.4 5l2.9-.1.8 2.8 2.3 1.8-1.1 2.7.5 2.9-2.6 1.3-1.3 2.6-2.9-.5-2.7 1.1-1.8-2.3-2.8-.8.1-2.9-1.5-2.4 1.5-2.4-.1-2.9 2.8-.8 1.8-2.3 2.7 1.1 2.9-.5 1.3 2.6 2.6 1.3-.5 2.9 1.1 2.7-2.3 1.8-.8 2.8-2.9-.1Z"/><path d="m9 12 2 2 4-4"/></svg>${memberLabel}</span>`:''}${data.is_verified?`<span class="profile-verified-badge" title="Identity reviewed by Flexoverse"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8 14.8 4l3-.2.9 2.9 2.3 1.9-1.1 2.8.5 3-2.7 1.3-1.4 2.7-3-.5-2.8 1.1-1.9-2.3-2.9-.9.2-3L3 12l1.1-2.8-.5-3 2.7-1.3 1.4-2.7 3 .5L12 2.8Z"/><path d="m8.5 12.2 2.2 2.2 4.8-5"/></svg>Verified</span>`:''}`
+    badgeRoot.innerHTML=`${activeMembership?`<span class="profile-member-badge" title="Active Flexoverse membership"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 14.4 5l2.9-.1.8 2.8 2.3 1.8-1.1 2.7.5 2.9-2.6 1.3-1.3 2.6-2.9-.5-2.7 1.1-1.8-2.3-2.8-.8.1-2.9-1.5-2.4 1.5-2.4-.1-2.9 2.8-.8 1.8-2.3 2.7 1.1 2.9-.5 1.3 2.6 2.6 1.3-.5 2.9 1.1 2.7-2.3 1.8-.8 2.8-2.9-.1Z"/><path d="m9 12 2 2 4-4"/></svg>${memberLabel}</span>`:''}${data.is_verified?renderBadge('verified'):''}`
   }
   document.querySelector('#profile-bio').textContent=data.bio||''
   const profileAvatar=document.querySelector('#profile-avatar');if(profileAvatar)profileAvatar.outerHTML=avatar(initials(name),'blue',data.avatar_url).replace('class="avatar','class="avatar avatar-large')
