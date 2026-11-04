@@ -666,6 +666,7 @@ async function setChatTyping(isTyping){
 async function selectConversation(conversationId,updateUrl=true) {
   const item=chatItems.find(chat=>chat.conversation_id===conversationId)
   if(!item)return
+  messageSelectionMode=false;selectedMessageIds.clear()
   activeConversationId=conversationId
   await subscribeToChatTyping(conversationId)
   await endCall(false)
