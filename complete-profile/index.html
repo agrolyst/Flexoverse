@@ -49,13 +49,16 @@
                 <div class="onboarding-fields">
                   <label>Date of birth<input name="date_of_birth" type="date" required autocomplete="bday" max="2026-11-04"><small>Enter your real date of birth. It won't be displayed publicly.</small></label>
                   <label>Gender<select name="gender" required><option value="">Select gender</option><option value="female">Female</option><option value="male">Male</option><option value="non_binary">Non-binary</option><option value="self_described">Prefer to self-describe</option><option value="prefer_not_to_say">Prefer not to say</option></select></label>
-                  <label>Phone number <span class="optional-label">Optional</span><input name="phone" type="tel" autocomplete="tel" maxlength="30" placeholder="+234…"></label>
+                  <label class="onboarding-full-width">Phone number <span class="required-label">Required</span><input name="phone" type="tel" autocomplete="tel" required inputmode="tel" placeholder="Select your country code and enter your number"><small>Your number must be unique to one Flexoverse account.</small></label>
                 </div>
               </section>
               <section class="onboarding-section">
-                <div class="onboarding-section-heading"><span class="onboarding-step">04</span><div><h2>Where are you based?</h2><p>Google will suggest matching addresses as you type. Your exact address is private.</p></div></div>
+                <div class="onboarding-section-heading"><span class="onboarding-step">04</span><div><h2>Where are you based?</h2><p>Type your street address and choose a matching verified suggestion. Your exact address is private.</p></div></div>
                 <div class="onboarding-fields">
-                  <label class="onboarding-full-width">Address or location <span class="optional-label">Optional</span><div class="google-address-wrap" data-google-address-wrap><input name="address" type="text" maxlength="300" autocomplete="off" placeholder="Start typing an address, city or area" data-google-address><input type="hidden" name="address_place_id"><div class="google-address-suggestions" data-google-suggestions hidden></div><small data-google-address-status>Address suggestions are provided by Google Maps.</small></div></label>
+                  <label>Country<select name="country" required><option value="">Loading countries…</option></select></label>
+                  <label>State / Region<select name="state" required disabled><option value="">Select a country first</option></select></label>
+                  <label>Local Government Area / District<select name="lga" disabled><option value="">Select a state first</option></select></label>
+                  <label class="onboarding-full-width">Street address <span class="optional-label">Optional</span><div class="google-address-wrap" data-google-address-wrap><input name="address" type="text" maxlength="300" autocomplete="off" placeholder="Start typing an address, city or area" data-google-address><input type="hidden" name="address_place_id"><div class="google-address-suggestions" data-google-suggestions hidden></div><small data-google-address-status>Start typing to find and verify a matching address.</small></div></label>
                   <label>Current city <span class="optional-label">Optional</span><input name="city" maxlength="100" placeholder="Your current city"></label>
                   <label>Hometown <span class="optional-label">Optional</span><input name="hometown" maxlength="100" placeholder="Where you're from"></label>
                 </div>
