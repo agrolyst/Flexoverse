@@ -448,6 +448,56 @@ function prepareReelComposer() {
   overlayInput?.addEventListener('input',()=>{if(!overlay)return;overlay.textContent=overlayInput.value;overlay.hidden=!overlayInput.value.trim()})
   audioFile?.addEventListener('change',()=>{const file=audioFile.files?.[0];if(!file||!audio)return;if(audioUrl)URL.revokeObjectURL(audioUrl);audioUrl=URL.createObjectURL(file);audio.src=audioUrl;audioControls.hidden=false;audio.volume=Number(audioVolume?.value??.5)})
   audioVolume?.addEventListener('input',()=>{if(audio)audio.volume=Number(audioVolume.value)})
+  let selectedYoutubeTrack=null
+  const ytSearchForm=document.querySelector('#reel-youtube-search')
+  const ytQuery=document.querySelector('#reel-youtube-query')
+  const ytResults=document.querySelector('#reel-youtube-results')
+  const ytStatus=document.querySelector('#reel-youtube-status')
+  const ytSearchButton=document.querySelector('#reel-youtube-search-button')
+  const ytSelected=document.querySelector('#reel-youtube-selected')
+  const ytPlayerWrap=document.querySelector('#reel-youtube-player-wrap')
+  const ytPlayer=document.querySelector('#reel-youtube-player')
+  const renderYoutubeResults=items=>{
+    if(!ytResults)return
+    ytResults.innerHTML=items.map(item=>`<article class="reel-youtube-result"><img src="${esc(item.thumbnail)}" alt="" loading="lazy"><span class="reel-youtube-result-copy"><strong>${esc(item.title)}</strong><small>${esc(item.channel)}</small></span><button type="button" data-youtube-track="${esc(item.videoId)}">Use track</button></article>`).join('')
+    ytResults.querySelectorAll('[data-youtube-track]').forEach(button=>button.addEventListener('click',()=>{
+      const track=items.find(item=>item.videoId===button.dataset.youtubeTrack)
+      if(!track)return
+      selectedYoutubeTrack=track
+      if(ytSelected){ytSelected.hidden=false;ytSelected.innerHTML=`<span class="reel-youtube-selected-mark">✓</span><span><strong>Selected music</strong><small>${esc(track.title)} · ${esc(track.channel)}</small></span><button type="button" id="reel-youtube-clear">Remove</button>`}
+      if(ytPlayer){ytPlayer.src=`https://www.youtube-nocookie.com/embed/${encodeURIComponent(track.videoId)}?rel=0&modestbranding=1`;ytPlayerWrap.hidden=false}
+      ytSelected?.querySelector('#reel-youtube-clear')?.addEventListener('click',()=>{selectedYoutubeTrack=null;ytSelected.hidden=true;if(ytPlayer)ytPlayer.src='';if(ytPlayerWrap)ytPlayerWrap.hidden=true})
+      try{localStorage.setItem(draftKey,JSON.stringify({caption:caption?.value||'',youtubeTrack:track,updatedAt:Date.now()}))}catch{}
+      toast('YouTube track selected. Preview it in the player.','success')
+    }))
+  }
+  ytSearchForm?.addEventListener('submit',async event=>{
+    event.preventDefault()
+    const query=String(ytQuery?.value||'').trim()
+    if(query.length<2){toast('Enter at least two characters to search music.','error');return}
+    ytSearchButton.disabled=true;ytSearchButton.textContent='Searching…'
+    if(ytStatus)ytStatus.textContent='Searching YouTube…'
+    if(ytResults)ytResults.innerHTML=''
+    try{
+      const {data:{session:authSession}}=await supabase.auth.getSession()
+      if(!authSession?.access_token)throw new Error('Sign in again to search YouTube music.')
+      const response=await fetch('https://gkgjfbusdyiohiztwuec.supabase.co/functions/v1/youtube-music-search',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${authSession.access_token}`,'apikey':'sb_publishable_Kmm1YLrnBwDKV_1xO2DjNw_e4SzSZly'},body:JSON.stringify({query})})
+      const payload=await response.json().catch(()=>({}))
+      if(!response.ok)throw new Error(payload.error||'YouTube music search failed.')
+      renderYoutubeResults(payload.items||[])
+      if(ytStatus)ytStatus.textContent=payload.items?.length?'Choose a result to add it to your Reel.':'No embeddable music videos found. Try another search.'
+    }catch(error){if(ytStatus)ytStatus.textContent=error.message||'Music search failed.';toast(error.message||'Music search failed.','error')}
+    finally{ytSearchButton.disabled=false;ytSearchButton.textContent='Search'}
+  })
+  try{
+    const savedDraft=JSON.parse(localStorage.getItem(draftKey)||'{}')
+    if(savedDraft.youtubeTrack){
+      selectedYoutubeTrack=savedDraft.youtubeTrack
+      if(ytSelected){ytSelected.hidden=false;ytSelected.innerHTML=`<span class="reel-youtube-selected-mark">✓</span><span><strong>Selected music</strong><small>${esc(selectedYoutubeTrack.title)} · ${esc(selectedYoutubeTrack.channel)}</small></span><button type="button" id="reel-youtube-clear">Remove</button>`}
+      if(ytPlayer){ytPlayer.src=`https://www.youtube-nocookie.com/embed/${encodeURIComponent(selectedYoutubeTrack.videoId)}?rel=0&modestbranding=1`;ytPlayerWrap.hidden=false}
+      ytSelected?.querySelector('#reel-youtube-clear')?.addEventListener('click',()=>{selectedYoutubeTrack=null;ytSelected.hidden=true;if(ytPlayer)ytPlayer.src='';if(ytPlayerWrap)ytPlayerWrap.hidden=true})
+    }
+  }catch{}
   caption?.addEventListener('input',()=>{updateCaptionCount();try{localStorage.setItem(draftKey,JSON.stringify({caption:caption.value,updatedAt:Date.now()}))}catch{}})
   updateCaptionCount()
   form.addEventListener('submit',async e=>{
@@ -474,7 +524,7 @@ function prepareReelComposer() {
       uploaded=true
       progressLabel.textContent='Saving your reel…'
       const captionValue=String(new FormData(form).get('caption')||'').trim()
-      const {error}=await supabase.from('reels').insert({user_id:session.user.id,caption:captionValue,video_path:path,is_public:true})
+      const {error}=await supabase.from('reels').insert({user_id:session.user.id,caption:captionValue,video_path:path,is_public:true,youtube_music_video_id:selectedYoutubeTrack?.videoId||null,youtube_music_title:selectedYoutubeTrack?.title||null,youtube_music_channel:selectedYoutubeTrack?.channel||null,youtube_music_url:selectedYoutubeTrack?`https://www.youtube.com/watch?v=${selectedYoutubeTrack.videoId}`:null})
       if(error){await supabase.storage.from('reels').remove([path]);uploaded=false;throw error}
       try{localStorage.removeItem(draftKey)}catch{}
       toast('Your reel was shared.','success')
