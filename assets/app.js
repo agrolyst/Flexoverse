@@ -1507,6 +1507,60 @@ function renderInfoPage(){
   }
 }
 
+
+function initInternationalPhone(input){
+  if(!input||input.dataset.phoneBound==='true'||!window.intlTelInput)return
+  input.dataset.phoneBound='true'
+  input._iti=window.intlTelInput(input,{initialCountry:'ng',separateDialCode:true,nationalMode:true,autoPlaceholder:'polite',formatOnDisplay:true,allowDropdown:true})
+}
+function readInternationalPhone(input){
+  if(!input||!input.value.trim())return ''
+  if(input._iti){
+    if(typeof input._iti.isValidNumber==='function'&&!input._iti.isValidNumber())return ''
+    return input._iti.getNumber()||''
+  }
+  return ''
+}
+async function loadLocationChoices(root,saved={}){
+  const country=root?.querySelector('[name="country"]'),state=root?.querySelector('[name="state"]'),lga=root?.querySelector('[name="lga"]')
+  if(!country||!state||!lga)return
+  const endpoint='https://countriesnow.space/api/v0.1'
+  const fill=(select,items,placeholder,selected='')=>{
+    select.innerHTML='<option value="">'+esc(placeholder)+'</option>'+items.map(item=>'<option value="'+esc(item)+'"'+(item===selected?' selected':'')+'>'+esc(item)+'</option>').join('')
+  }
+  country.disabled=true;country.innerHTML='<option value="">Loading countries…</option>'
+  try{
+    const response=await fetch(endpoint+'/countries/positions'),payload=await response.json()
+    if(!response.ok||payload.error)throw new Error('Country list unavailable')
+    const countries=(payload.data||[]).map(item=>item.name).filter(Boolean).sort((a,b)=>a.localeCompare(b))
+    fill(country,countries,'Select a country',saved.country||'');country.disabled=false
+  }catch(error){country.innerHTML='<option value="">Countries could not load — refresh to retry</option>';console.warn(error);return}
+  const loadAreas=async(countryName,stateName,selected='')=>{
+    lga.disabled=true;fill(lga,[],'Loading local areas…')
+    if(!stateName){fill(lga,[],'Select a state first');return}
+    try{
+      const response=await fetch(endpoint+'/countries/state/cities',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({country:countryName,state:stateName})}),payload=await response.json()
+      if(!response.ok||payload.error)throw new Error('Local area list unavailable')
+      const areas=(payload.data||[]).map(item=>typeof item==='string'?item:item.name).filter(Boolean).sort((a,b)=>a.localeCompare(b))
+      fill(lga,areas,countryName==='Nigeria'?'Select an LGA / area':'Select a local area / district',selected);lga.disabled=false
+    }catch(error){fill(lga,[],'Local areas could not load');console.warn(error)}
+  }
+  const loadStates=async(countryName,selectedState='',selectedLga='')=>{
+    state.disabled=true;lga.disabled=true;fill(state,[],'Loading states / regions…');fill(lga,[],'Select a state first')
+    if(!countryName){fill(state,[],'Select a country first');return}
+    try{
+      const response=await fetch(endpoint+'/countries/states',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({country:countryName})}),payload=await response.json()
+      if(!response.ok||payload.error)throw new Error('State list unavailable')
+      const states=(payload.data?.states||[]).map(item=>typeof item==='string'?item:item.name).filter(Boolean).sort((a,b)=>a.localeCompare(b))
+      fill(state,states,'Select a state / region',selectedState);state.disabled=false
+      if(selectedState&&states.includes(selectedState))await loadAreas(countryName,selectedState,selectedLga)
+    }catch(error){fill(state,[],'States could not load');console.warn(error)}
+  }
+  country.addEventListener('change',()=>loadStates(country.value))
+  state.addEventListener('change',()=>loadAreas(country.value,state.value))
+  if(country.value)await loadStates(country.value,saved.state||'',saved.lga||'')
+}
+
 function bindGoogleAddressAutocomplete(input){
   if(!input||input.dataset.googleBound==='true')return
   input.dataset.googleBound='true'
@@ -1516,28 +1570,28 @@ function bindGoogleAddressAutocomplete(input){
     if(placeField)placeField.value=''
     const query=input.value.trim(),sequence=++request
     if(timer)clearTimeout(timer)
-    if(query.length<3){if(list){list.hidden=true;list.innerHTML=''}if(status)status.textContent='Enter at least 3 characters to search Google Maps.';return}
-    if(status)status.textContent='Searching Google Maps…'
+    if(query.length<3){if(list){list.hidden=true;list.innerHTML=''}if(status)status.textContent='Enter at least 3 characters to search for an address.';return}
+    if(status)status.textContent='Checking address suggestions…'
     timer=setTimeout(async()=>{
       const {data,error}=await supabase.functions.invoke('google-places',{body:{action:'autocomplete',input:query}})
       if(sequence!==request)return
-      if(error||data?.error){if(status)status.textContent=data?.error||'Google address search is not available yet. Check the Edge Function API key.';if(list)list.hidden=true;return}
+      if(error||data?.error){if(status)status.textContent=data?.error||'Address search is not available right now. Please try again later.';if(list)list.hidden=true;return}
       const suggestions=data?.suggestions||[]
       if(list){list.innerHTML=suggestions.map(item=>`<button type="button" class="google-address-suggestion" data-place-id="${esc(item.placeId)}"><strong>${esc(item.mainText||item.description)}</strong><small>${esc(item.secondaryText||'')}</small></button>`).join('');list.hidden=!suggestions.length}
-      if(status)status.textContent=suggestions.length?'Choose an address from the Google suggestions.':'No matching addresses found.'
+      if(status)status.textContent=suggestions.length?'Choose a matching address suggestion.':'No matching addresses found.'
     },300)
   })
   list?.addEventListener('click',async event=>{
     const button=event.target.closest('[data-place-id]')
     if(!button)return
     const placeId=button.dataset.placeId
-    if(status)status.textContent='Loading selected address…'
+    if(status)status.textContent='Verifying selected address…'
     list.hidden=true
     const {data,error}=await supabase.functions.invoke('google-places',{body:{action:'details',placeId}})
-    if(error||data?.error){if(status)status.textContent=data?.error||'Could not load that Google address. Please try again.';return}
+    if(error||data?.error){if(status)status.textContent=data?.error||'Could not verify that address. Please try again.';return}
     input.value=data.place?.address||input.value
     if(placeField)placeField.value=data.place?.placeId||placeId
-    if(status)status.textContent='Google address selected.'
+    if(status)status.textContent='Address verified and selected.'
   })
   document.addEventListener('click',event=>{if(!wrap?.contains(event.target)&&list)list.hidden=true})
 }
@@ -1550,14 +1604,14 @@ async function loadProfileCompletion(){
   if(!session){if(content)content.hidden=true;if(guest)guest.hidden=false;return}
   const {data:row,error}=await supabase.from('profiles').select('id,username,full_name,bio').eq('id',session.user.id).maybeSingle()
   if(error){toast('Your profile could not load. Please refresh and try again.','error');return}
-  const {data:details,error:detailsError}=await supabase.from('private_profile_details').select('address,account_type,date_of_birth,gender,phone,city,hometown,business_name,business_category,business_description,business_phone,business_website,business_hours,address_place_id').eq('user_id',session.user.id).maybeSingle()
+  const {data:details,error:detailsError}=await supabase.from('private_profile_details').select('address,account_type,date_of_birth,gender,phone,city,hometown,country,state,lga,business_name,business_category,business_description,business_phone,business_website,business_hours,address_place_id').eq('user_id',session.user.id).maybeSingle()
   if(detailsError)console.warn('Could not load private profile details:',detailsError.message)
   const set=(name,value)=>{const field=form.querySelector(`[name="${name}"]`);if(field&&value!=null)field.value=value}
   set('full_name',row?.full_name||session.user.user_metadata?.full_name||'')
   set('email',session.user.email||'')
   set('username',row?.username||session.user.user_metadata?.username||'')
   set('bio',row?.bio||'')
-  ;['address','date_of_birth','gender','phone','city','hometown','business_name','business_category','business_description','business_phone','business_website','business_hours','address_place_id'].forEach(name=>set(name,details?.[name]||''))
+  ;['address','date_of_birth','gender','phone','city','hometown','country','state','lga','business_name','business_category','business_description','business_phone','business_website','business_hours','address_place_id'].forEach(name=>set(name,details?.[name]||''))
   const accountType=details?.account_type||''
   const radio=accountType?form.querySelector(`[name="account_type"][value="${accountType}"]`):null
   if(radio)radio.checked=true
@@ -1572,6 +1626,8 @@ async function loadProfileCompletion(){
   form.querySelectorAll('[name="account_type"]').forEach(input=>input.addEventListener('change',reveal))
   reveal()
   bindGoogleAddressAutocomplete(form.querySelector('[data-google-address]'))
+  initInternationalPhone(form.querySelector('[name="phone"]'))
+  await loadLocationChoices(form,details||{})
 }
 
 function bindProfileCompletionEvents(){
@@ -1583,19 +1639,21 @@ function bindProfileCompletionEvents(){
     if(!session){location.href='/login/?next=%2Fcomplete-profile%2F';return}
     const fields=new FormData(form)
     const value=name=>String(fields.get(name)||'').trim()
-    const fullName=value('full_name'),username=value('username').toLowerCase(),bio=value('bio'),address=value('address')
+    const fullName=value('full_name'),username=value('username').toLowerCase(),bio=value('bio'),address=value('address'),phone=readInternationalPhone(form.querySelector('[name="phone"]'))
     const accountType=value('account_type')
     if(!['personal','business'].includes(accountType))return toast('Choose a personal or business account to continue.','error')
     if(!/^[a-z0-9]{3,30}$/.test(username))return toast('Use 3–30 lowercase letters or numbers for your username.','error')
     if(!value('date_of_birth'))return toast('Please enter your date of birth.','error')
     if(!value('gender'))return toast('Please choose a gender option.','error')
+    if(!phone)return toast('Enter a valid phone number and choose its country code.','error')
+    if(!value('country')||!value('state'))return toast('Choose your country and state / region.','error')
     if(accountType==='business'&&(!value('business_name')||!value('business_category')))return toast('Enter your business name and category.','error')
     if(value('business_website')&&!/^https?:\/\//i.test(value('business_website')))return toast('Enter your business website starting with https://','error')
     const save=form.querySelector('[type="submit"]')
     save.disabled=true;save.textContent='Saving your details…'
     const privateDetails={
       user_id:session.user.id,address,account_type:accountType,date_of_birth:value('date_of_birth'),gender:value('gender'),
-      phone:value('phone')||null,city:value('city')||null,hometown:value('hometown')||null,
+      phone,city:value('city')||null,hometown:value('hometown')||null,country:value('country'),state:value('state'),lga:value('lga')||null,
       business_name:accountType==='business'?value('business_name'):null,
       business_category:accountType==='business'?value('business_category'):null,
       business_description:accountType==='business'?value('business_description'):null,
