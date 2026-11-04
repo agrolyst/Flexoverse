@@ -27,7 +27,8 @@
             <span class="reel-upload-prompt" id="reel-upload-prompt"><span class="reel-upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9 5 3-5 3zM12 2v4m-2-2h4"/></svg></span><strong>Choose a video</strong><small>MP4, WebM or MOV · up to 50 MB</small><em>Browse files</em></span>
             <input id="reel-video-file" name="video" type="file" accept="video/mp4,video/webm,video/quicktime" capture="environment" required aria-describedby="reel-video-help">
           </label>
-          <p class="reel-field-help" id="reel-video-help">Vertical 9:16 videos look best. Your original file is uploaded when you publish.</p>
+          <div class="reel-record-tools"><button type="button" class="button button-soft" id="reel-record-start"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>Record with camera</button><button type="button" class="button button-outline" id="reel-record-stop" disabled>Stop recording</button><span id="reel-record-status" role="status">Or record a new clip using your camera.</span></div>
+          <p class="reel-field-help" id="reel-video-help">Upload an MP4, WebM or MOV, or record a new clip with your camera. Vertical 9:16 videos look best.</p>
           <div class="reel-editor-tools">
             <div class="reel-studio-section-title compact"><span class="reel-step">02</span><div><h2>Preview tools</h2><p>Adjust how your clip looks in this preview</p></div></div>
             <div class="reel-tool-grid">
