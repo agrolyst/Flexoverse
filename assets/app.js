@@ -92,7 +92,7 @@ function mountShell() {
     settings:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.8-.7a8 8 0 0 1-1.7 1l-.3 1.9h-2.8l-.3-1.9a8 8 0 0 1-1.7-1l-1.8.7-1.4-2.4 1.4-1.1a7 7 0 0 1 0-2l-1.4-1.1 1.4-2.4 1.8.7a8 8 0 0 1 1.7-1l.3-1.9h2.8l.3 1.9a8 8 0 0 1 1.7 1l1.8-.7 1.4 2.4-1.4 1.1a7 7 0 0 1 0 2Z" transform="translate(-1 -1)"/></svg>'
   }
   const shellLinks = navItems.map(([key,label,url]) => `<a class="${activePage(key)?'active':''}" aria-current="${activePage(key)?'page':'false'}" href="${url}"><span class="side-glyph">${sidebarIcons[key]}</span><span class="side-link-label">${label}</span>${key==='friends'?'<span class="side-count" id="friend-count">0</span>':''}</a>`).join('')
-  document.querySelector('#site-header').innerHTML = `<header class="site-header"><a class="wordmark" href="/" aria-label="Flexoverse home"><span class="logo-mark">${brandIcon}</span><span>Flexoverse</span></a><label class="header-search"><span class="search-icon">${searchIcon}</span><input id="global-search" placeholder="Search people" aria-label="Search people"><kbd class="search-shortcut">/</kbd></label><nav class="top-navigation" aria-label="Main navigation">${navItems.slice(0,4).map(([key,label,url])=>`<a class="${activePage(key)?'active':''}" aria-current="${activePage(key)?'page':'false'}" aria-label="${label}" href="${url}"><span class="nav-glyph">${sidebarIcons[key]}</span><span class="nav-label">${label}</span></a>`).join('')}</nav><div class="header-actions"><a class="header-icon" id="notifications-link" href="/notifications/" aria-label="Notifications">${sidebarIcons.notifications}<span class="notification-count" id="header-notification-count" hidden>0</span></a>${session?`<a class="user-control" href="${esc(pageUrl())}">${avatar(initials(myName()),'blue',profile?.avatar_url)}<span>${esc(myName())}</span></a><button class="header-icon" id="signout" aria-label="Sign out">${signoutIcon}</button>`:'<a class="login-link" href="/login/">Sign in</a>'}</div></header>`
+  document.querySelector('#site-header').innerHTML = `<header class="site-header"><a class="wordmark" href="/" aria-label="Flexoverse home"><span class="logo-mark">${brandIcon}</span><span>Flexoverse</span></a><label class="header-search"><span class="search-icon">${searchIcon}</span><input id="global-search" placeholder="Search people" aria-label="Search people"><kbd class="search-shortcut">/</kbd></label><nav class="top-navigation" aria-label="Main navigation">${navItems.slice(0,4).map(([key,label,url])=>`<a class="${activePage(key)?'active':''}" aria-current="${activePage(key)?'page':'false'}" aria-label="${label}" href="${url}"><span class="nav-glyph">${sidebarIcons[key]}</span><span class="nav-label">${label}</span></a>`).join('')}</nav><div class="header-actions"><div class="header-notification-wrap"><a class="header-icon" id="notifications-link" href="/notifications/" aria-label="Notifications" aria-expanded="false">${sidebarIcons.notifications}<span class="notification-count" id="header-notification-count" hidden>0</span></a><div class="header-notification-dropdown" id="header-notification-dropdown" hidden></div></div>${session?`<a class="user-control" href="${esc(pageUrl())}">${avatar(initials(myName()),'blue',profile?.avatar_url)}<span>${esc(myName())}</span></a><button class="header-icon" id="signout" aria-label="Sign out">${signoutIcon}</button>`:'<a class="login-link" href="/login/">Sign in</a>'}</div></header>`
   const sidebarName=session?myName():'Your space'
   const sidebarHandle=session?'@'+myUsername():'Sign in to set up your profile'
   const sidebarAvatar=avatar(session?initials(myName()):'FX','blue',profile?.avatar_url)
@@ -840,10 +840,27 @@ async function loadNotificationCount() {
   badge.hidden=!total
 }
 
+async function loadHeaderNotificationDropdown(){
+ const host=document.querySelector('#header-notification-dropdown');if(!host||!session)return;
+ host.innerHTML='<div class="header-notification-loading">Loading notifications…</div>';
+ const {data,error}=await supabase.from('notifications').select('id,type,target_id,preview,created_at,actor:profiles!notifications_actor_id_fkey(full_name,username)').eq('recipient_id',session.user.id).order('created_at',{ascending:false}).limit(8);
+ if(error){host.innerHTML='<div class="header-notification-loading">Notifications could not load.</div>';return}
+ const items=data||[],messageIds=items.filter(x=>['chat_message','mention'].includes(x.type)).map(x=>x.target_id).filter(Boolean);
+ let conversations=new Map();
+ if(messageIds.length){const {data:messages}=await supabase.from('messages').select('id,conversation_id').in('id',messageIds);conversations=new Map((messages||[]).map(x=>[x.id,x.conversation_id]))}
+ if(!items.length){host.innerHTML='<div class="header-notification-loading">You are all caught up.</div><a class="header-notification-footer" href="/notifications/">See all notifications</a>';return}
+ host.innerHTML=items.map(item=>{const actor=Array.isArray(item.actor)?item.actor[0]:item.actor;const name=actor?.full_name||actor?.username||'A member';const chatId=conversations.get(item.target_id);const isMessage=['chat_message','mention'].includes(item.type);const isCall=item.type==='incoming_call';const label=isMessage?'Reply':isCall?'Open call':'View';const url=isMessage?(chatId?'/chats/?id='+encodeURIComponent(chatId):'/chats/'):isCall?'/':'/notifications/';const text=isCall?'is calling you':isMessage?(item.type==='mention'?'mentioned you':'sent you a message'):'shared an update';return '<div class="header-notification-row"><div><strong>'+esc(name)+'</strong><span>'+text+'</span>'+(item.preview?'<small>'+esc(item.preview)+'</small>':'')+'</div><a href="'+url+'">'+label+'</a></div>'}).join('')+'<a class="header-notification-footer" href="/notifications/">See all notifications</a>';
+}
+function bindHeaderNotificationDropdown(){
+ const link=document.querySelector('#notifications-link'),host=document.querySelector('#header-notification-dropdown');if(!link||!host)return;
+ link.addEventListener('click',e=>{e.preventDefault();host.hidden=!host.hidden;link.setAttribute('aria-expanded',String(!host.hidden));if(!host.hidden)loadHeaderNotificationDropdown()});
+ document.addEventListener('click',e=>{if(!e.target.closest('.header-notification-wrap')){host.hidden=true;link.setAttribute('aria-expanded','false')}});
+}
+
 function subscribeToNotificationUpdates() {
   if(!session)return
   if(notificationRealtimeChannel)supabase.removeChannel(notificationRealtimeChannel)
-  notificationRealtimeChannel=supabase.channel(`notification-count-${session.user.id}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:`recipient_id=eq.${session.user.id}`},payload=>{loadNotificationCount();if(page==='notifications')loadNotifications();if(payload.new?.type==='incoming_call')handleIncomingCallNotification(payload.new)}).subscribe()
+  notificationRealtimeChannel=supabase.channel(`notification-count-${session.user.id}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:`recipient_id=eq.${session.user.id}`},payload=>{loadNotificationCount();if(page==='notifications')loadNotifications();if(payload.new?.type==='incoming_call')handleIncomingCallNotification(payload.new);if(!document.querySelector('#header-notification-dropdown')?.hidden)loadHeaderNotificationDropdown()}).subscribe()
 }
 function renderHomepageIncomingCall(peer,mode='audio'){
  const root=document.querySelector('#homepage-call-alert');if(!root)return;
@@ -1562,6 +1579,7 @@ async function initialize() {
   const signupLink=document.querySelector('#switch-to-signup');if(signupLink)signupLink.href=authPageHref('signup')
   const loginLink=document.querySelector('#switch-to-login');if(loginLink)loginLink.href=authPageHref('login')
   mountShell()
+  bindHeaderNotificationDropdown()
   if(session){await loadNotificationPreferences();await loadNotificationCount();subscribeToNotificationUpdates()}
   const composerAvatar=document.querySelector('[data-user-avatar]');if(composerAvatar)composerAvatar.outerHTML=avatar(session?initials(myName()):'FX','blue',profile?.avatar_url)
   if(page==='home'){await Promise.all([loadHome(),loadHomeReels()])}
