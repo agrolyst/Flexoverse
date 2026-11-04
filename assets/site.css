@@ -1685,3 +1685,6 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
 .post-member-badge{display:inline-flex;align-items:center;margin-left:5px;padding:2px 6px;border-radius:999px;background:#f1efff;border:1px solid #e7e3ff;color:#6156b8;font-size:8px;font-weight:750;line-height:1;vertical-align:middle}
 .post-verified-badge{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;margin-left:5px;border-radius:50%;background:#1682df;color:#fff;vertical-align:middle}
 .post-verified-badge svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+
+.post-user-name{display:inline-flex;align-items:center;gap:5px;width:max-content;max-width:100%}
+.post-user-name .post-verified-badge{margin:0;flex:0 0 auto}
