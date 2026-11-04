@@ -1525,54 +1525,42 @@ function readInternationalPhone(input){
 function setupProfileInlineEditing(form){
   if(!form||form.dataset.inlineEditingReady==='true')return
   form.dataset.inlineEditingReady='true'
-  form.querySelectorAll('.form-label').forEach((label,index)=>{
+  const reveal=(name)=>{
+    const control=form.querySelector('[name="'+name+'"]')
+    const label=control?.closest('.form-label')
+    const row=label?.querySelector('.profile-field-value-row')
+    const wrap=control?.matches('[data-google-address]')?control.closest('.google-address-wrap'):(control?.closest('.iti')||control)
+    if(row)row.hidden=true
+    if(wrap)wrap.hidden=false
+    label?.classList.add('profile-field-editing')
+  }
+  form.querySelectorAll('.form-label').forEach(label=>{
     const control=label.querySelector('input:not([type="hidden"]),select,textarea')
     if(!control)return
     const wrap=control.matches('[data-google-address]')?control.closest('.google-address-wrap'):(control.closest('.iti')||control)
     if(!wrap)return
     const valueText=()=>{
       if(control.tagName==='SELECT')return control.selectedOptions?.[0]?.textContent?.trim()||'Not added yet'
-      if(control.type==='date'&&control.value){
-        const date=new Date(control.value+'T00:00:00')
-        return Number.isNaN(date.getTime())?control.value:new Intl.DateTimeFormat(undefined,{day:'numeric',month:'long',year:'numeric'}).format(date)
-      }
+      if(control.type==='date'&&control.value){const date=new Date(control.value+'T00:00:00');return Number.isNaN(date.getTime())?control.value:new Intl.DateTimeFormat(undefined,{day:'numeric',month:'long',year:'numeric'}).format(date)}
       if(control.matches('[name="phone"]')&&control._iti?.getNumber)return control._iti.getNumber()||'Not added yet'
       return control.value?.trim()||'Not added yet'
     }
-    const row=document.createElement('div')
-    row.className='profile-field-value-row'
-    const summary=document.createElement('span')
-    summary.className='profile-field-value'
-    summary.textContent=valueText()
-    const edit=document.createElement('button')
-    edit.type='button';edit.className='profile-field-edit';edit.textContent=(control.value?'Edit':'Add')
+    const row=document.createElement('div');row.className='profile-field-value-row'
+    const summary=document.createElement('span');summary.className='profile-field-value';summary.textContent=valueText()
+    const edit=document.createElement('button');edit.type='button';edit.className='profile-field-edit';edit.textContent=control.value?'Edit':'Add'
     edit.setAttribute('aria-label',(control.value?'Edit ':'Add ')+(label.childNodes[0]?.textContent?.trim()||'profile detail'))
-    row.append(summary,edit)
-    wrap.hidden=true
-    wrap.classList.add('profile-field-control')
-    wrap.insertAdjacentElement('afterend',row)
+    row.append(summary,edit);wrap.hidden=true;wrap.classList.add('profile-field-control');wrap.insertAdjacentElement('afterend',row)
     edit.addEventListener('click',()=>{
-      row.hidden=true
-      wrap.hidden=false
-      label.classList.add('profile-field-editing')
+      const name=control.name
+      if(name==='country'){reveal('country');reveal('state');reveal('lga')}
+      else if(name==='state'){reveal('state');reveal('lga')}
+      else reveal(name)
       control.focus?.()
     })
     control.addEventListener('change',()=>{summary.textContent=valueText();edit.textContent='Edit'})
     control.addEventListener('input',()=>{summary.textContent=valueText();edit.textContent='Edit'})
   })
-  const cancel=document.createElement('button')
-  cancel.type='button';cancel.className='button button-soft profile-edit-cancel';cancel.textContent='Cancel editing'
-  cancel.addEventListener('click',()=>{
-    form.querySelectorAll('.form-label').forEach(label=>{
-      const row=label.querySelector('.profile-field-value-row'),control=label.querySelector('input:not([type="hidden"]),select,textarea')
-      if(!row||!control)return
-      const wrap=control.matches('[data-google-address]')?control.closest('.google-address-wrap'):(control.closest('.iti')||control)
-      if(wrap){wrap.hidden=true;row.hidden=false;label.classList.remove('profile-field-editing')}
-    })
-  })
-  form.querySelector('.settings-form-actions')?.prepend(cancel)
 }
-
 async function loadLocationChoices(root,saved={}){
   const country=root?.querySelector('[name="country"]'),state=root?.querySelector('[name="state"]'),lga=root?.querySelector('[name="lga"]')
   if(!country||!state||!lga)return
@@ -1817,7 +1805,7 @@ function bindSettingsEvents(){
     const {error:detailError}=await supabase.from('private_profile_details').upsert(detail,{onConflict:'user_id'})
     button.disabled=false;button.textContent='Save changes'
     if(detailError)return toast(detailError.code==='23505'?'That phone number is already linked to another account. Use a different number.':`Profile saved, but private details could not be saved: ${detailError.message}`,'error')
-    profile=data;await supabase.auth.updateUser({data:{username,full_name:fullName,account_type:detail.account_type}});mountShell();toast('Profile details saved.','success')
+    profile=data;await supabase.auth.updateUser({data:{username,full_name:fullName,account_type:detail.account_type}});await renderSettingsSection();mountShell();toast('Profile details saved.','success')
   })
   document.querySelector('#business-profile-form')?.addEventListener('submit',async e=>{
     e.preventDefault()
