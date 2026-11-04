@@ -1506,6 +1506,41 @@ function renderInfoPage(){
   }
 }
 
+function bindGoogleAddressAutocomplete(input){
+  if(!input||input.dataset.googleBound==='true')return
+  input.dataset.googleBound='true'
+  const wrap=input.closest('[data-google-address-wrap]'),list=wrap?.querySelector('[data-google-suggestions]'),status=wrap?.querySelector('[data-google-address-status]'),placeField=wrap?.querySelector('[name="address_place_id"]')
+  let timer=null,request=0
+  input.addEventListener('input',()=>{
+    if(placeField)placeField.value=''
+    const query=input.value.trim(),sequence=++request
+    if(timer)clearTimeout(timer)
+    if(query.length<3){if(list){list.hidden=true;list.innerHTML=''}if(status)status.textContent='Enter at least 3 characters to search Google Maps.';return}
+    if(status)status.textContent='Searching Google Maps…'
+    timer=setTimeout(async()=>{
+      const {data,error}=await supabase.functions.invoke('google-places',{body:{action:'autocomplete',input:query}})
+      if(sequence!==request)return
+      if(error||data?.error){if(status)status.textContent=data?.error||'Google address search is not available yet. Check the Edge Function API key.';if(list)list.hidden=true;return}
+      const suggestions=data?.suggestions||[]
+      if(list){list.innerHTML=suggestions.map(item=>`<button type="button" class="google-address-suggestion" data-place-id="${esc(item.placeId)}"><strong>${esc(item.mainText||item.description)}</strong><small>${esc(item.secondaryText||'')}</small></button>`).join('');list.hidden=!suggestions.length}
+      if(status)status.textContent=suggestions.length?'Choose an address from the Google suggestions.':'No matching addresses found.'
+    },300)
+  })
+  list?.addEventListener('click',async event=>{
+    const button=event.target.closest('[data-place-id]')
+    if(!button)return
+    const placeId=button.dataset.placeId
+    if(status)status.textContent='Loading selected address…'
+    list.hidden=true
+    const {data,error}=await supabase.functions.invoke('google-places',{body:{action:'details',placeId}})
+    if(error||data?.error){if(status)status.textContent=data?.error||'Could not load that Google address. Please try again.';return}
+    input.value=data.place?.address||input.value
+    if(placeField)placeField.value=data.place?.placeId||placeId
+    if(status)status.textContent='Google address selected.'
+  })
+  document.addEventListener('click',event=>{if(!wrap?.contains(event.target)&&list)list.hidden=true})
+}
+
 async function loadProfileCompletion(){
   const form=document.querySelector('#complete-profile-form')
   const guest=document.querySelector('#profile-completion-guest')
@@ -1514,34 +1549,65 @@ async function loadProfileCompletion(){
   if(!session){if(content)content.hidden=true;if(guest)guest.hidden=false;return}
   const {data:row,error}=await supabase.from('profiles').select('id,username,full_name,bio').eq('id',session.user.id).maybeSingle()
   if(error){toast('Your profile could not load. Please refresh and try again.','error');return}
-  const {data:details,error:detailsError}=await supabase.from('private_profile_details').select('address').eq('user_id',session.user.id).maybeSingle()
+  const {data:details,error:detailsError}=await supabase.from('private_profile_details').select('address,account_type,date_of_birth,gender,phone,city,hometown,business_name,business_category,business_description,business_phone,business_website,business_hours,address_place_id').eq('user_id',session.user.id).maybeSingle()
   if(detailsError)console.warn('Could not load private profile details:',detailsError.message)
-  form.querySelector('[name="full_name"]').value=row?.full_name||session.user.user_metadata?.full_name||''
-  form.querySelector('[name="username"]').value=row?.username||session.user.user_metadata?.username||''
-  form.querySelector('[name="bio"]').value=row?.bio||''
-  form.querySelector('[name="address"]').value=details?.address||''
+  const set=(name,value)=>{const field=form.querySelector(`[name="${name}"]`);if(field&&value!=null)field.value=value}
+  set('full_name',row?.full_name||session.user.user_metadata?.full_name||'')
+  set('username',row?.username||session.user.user_metadata?.username||'')
+  set('bio',row?.bio||'')
+  ;['address','account_type','date_of_birth','gender','phone','city','hometown','business_name','business_category','business_description','business_phone','business_website','business_hours','address_place_id'].forEach(name=>set(name,details?.[name]||''))
+  const accountType=details?.account_type||'personal'
+  const radio=form.querySelector(`[name="account_type"][value="${accountType}"]`)
+  if(radio)radio.checked=true
+  const reveal=()=>{
+    const selected=form.querySelector('[name="account_type"]:checked')?.value
+    const detailsPanel=document.querySelector('#onboarding-details'),businessPanel=document.querySelector('#business-onboarding-section')
+    if(detailsPanel)detailsPanel.hidden=!selected
+    if(businessPanel)businessPanel.hidden=selected!=='business'
+    ;['business_name','business_category'].forEach(name=>{const field=form.querySelector(`[name="${name}"]`);if(field)field.required=selected==='business'})
+    form.querySelectorAll('.onboarding-account-option').forEach(option=>option.classList.toggle('selected',option.querySelector('input')?.checked))
+  }
+  form.querySelectorAll('[name="account_type"]').forEach(input=>input.addEventListener('change',reveal))
+  reveal()
+  bindGoogleAddressAutocomplete(form.querySelector('[data-google-address]'))
 }
 
 function bindProfileCompletionEvents(){
   const form=document.querySelector('#complete-profile-form')
-  form?.querySelector('[name="username"]')?.addEventListener('input',e=>{e.target.value=e.target.value.toLowerCase().replace(/[^a-z0-9]/g,'')})
-  form?.addEventListener('submit',async e=>{
+  if(!form)return
+  form.querySelector('[name="username"]')?.addEventListener('input',e=>{e.target.value=e.target.value.toLowerCase().replace(/[^a-z0-9]/g,'')})
+  form.addEventListener('submit',async e=>{
     e.preventDefault()
     if(!session){location.href='/login/?next=%2Fcomplete-profile%2F';return}
     const fields=new FormData(form)
-    const fullName=String(fields.get('full_name')||'').trim()
-    const username=String(fields.get('username')||'').trim().toLowerCase()
-    const bio=String(fields.get('bio')||'').trim()
-    const address=String(fields.get('address')||'').trim()
+    const value=name=>String(fields.get(name)||'').trim()
+    const fullName=value('full_name'),username=value('username').toLowerCase(),bio=value('bio'),address=value('address')
+    const accountType=value('account_type')
+    if(!['personal','business'].includes(accountType))return toast('Choose a personal or business account to continue.','error')
     if(!/^[a-z0-9]{3,30}$/.test(username))return toast('Use 3–30 lowercase letters or numbers for your username.','error')
+    if(!value('date_of_birth'))return toast('Please enter your date of birth.','error')
+    if(!value('gender'))return toast('Please choose a gender option.','error')
+    if(accountType==='business'&&(!value('business_name')||!value('business_category')))return toast('Enter your business name and category.','error')
+    if(value('business_website')&&!/^https?:\/\//i.test(value('business_website')))return toast('Enter your business website starting with https://','error')
     const save=form.querySelector('[type="submit"]'),skip=document.querySelector('#skip-profile-completion')
-    save.disabled=true;skip.disabled=true;save.textContent='Saving…'
-    const {error:addressError}=await supabase.from('private_profile_details').upsert({user_id:session.user.id,address,updated_at:new Date().toISOString()},{onConflict:'user_id'})
-    if(addressError){save.disabled=false;skip.disabled=false;save.textContent='Save and continue';toast(addressError.message,'error');return}
+    save.disabled=true;if(skip)skip.disabled=true;save.textContent='Saving your details…'
+    const privateDetails={
+      user_id:session.user.id,address,account_type:accountType,date_of_birth:value('date_of_birth'),gender:value('gender'),
+      phone:value('phone')||null,city:value('city')||null,hometown:value('hometown')||null,
+      business_name:accountType==='business'?value('business_name'):null,
+      business_category:accountType==='business'?value('business_category'):null,
+      business_description:accountType==='business'?value('business_description'):null,
+      business_phone:accountType==='business'?value('business_phone'):null,
+      business_website:accountType==='business'?value('business_website'):null,
+      business_hours:accountType==='business'?value('business_hours'):null,
+      address_place_id:value('address_place_id')||null,updated_at:new Date().toISOString()
+    }
+    const {error:addressError}=await supabase.from('private_profile_details').upsert(privateDetails,{onConflict:'user_id'})
+    if(addressError){save.disabled=false;if(skip)skip.disabled=false;save.textContent='Save and continue';toast(addressError.message,'error');return}
     const {data:updated,error}=await supabase.from('profiles').update({full_name:fullName,username,bio}).eq('id',session.user.id).select('id,username,full_name,bio,avatar_url,is_public').single()
-    if(error){save.disabled=false;skip.disabled=false;save.textContent='Save and continue';toast(error.code==='23505'?'That username is taken. Try another one.':error.message,'error');return}
-    const {error:authError}=await supabase.auth.updateUser({data:{full_name:fullName,username,profile_completed:true}})
-    if(authError){save.disabled=false;skip.disabled=false;save.textContent='Save and continue';toast('Your details were saved, but setup could not finish. Please try again.','error');return}
+    if(error){save.disabled=false;if(skip)skip.disabled=false;save.textContent='Save and continue';toast(error.code==='23505'?'That username is taken. Try another one.':error.message,'error');return}
+    const {error:authError}=await supabase.auth.updateUser({data:{full_name:fullName,username,profile_completed:true,account_type:accountType}})
+    if(authError){save.disabled=false;if(skip)skip.disabled=false;save.textContent='Save and continue';toast('Your details were saved, but setup could not finish. Please try again.','error');return}
     profile=updated;location.replace(authReturnPath())
   })
   document.querySelector('#skip-profile-completion')?.addEventListener('click',async e=>{
