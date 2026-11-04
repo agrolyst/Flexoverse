@@ -1557,7 +1557,7 @@ async function loadProfileCompletion(){
   set('email',session.user.email||'')
   set('username',row?.username||session.user.user_metadata?.username||'')
   set('bio',row?.bio||'')
-  ;['address','account_type','date_of_birth','gender','phone','city','hometown','business_name','business_category','business_description','business_phone','business_website','business_hours','address_place_id'].forEach(name=>set(name,details?.[name]||''))
+  ;['address','date_of_birth','gender','phone','city','hometown','business_name','business_category','business_description','business_phone','business_website','business_hours','address_place_id'].forEach(name=>set(name,details?.[name]||''))
   const accountType=details?.account_type||''
   const radio=accountType?form.querySelector(`[name="account_type"][value="${accountType}"]`):null
   if(radio)radio.checked=true
