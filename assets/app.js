@@ -1590,8 +1590,8 @@ function bindProfileCompletionEvents(){
     if(!value('gender'))return toast('Please choose a gender option.','error')
     if(accountType==='business'&&(!value('business_name')||!value('business_category')))return toast('Enter your business name and category.','error')
     if(value('business_website')&&!/^https?:\/\//i.test(value('business_website')))return toast('Enter your business website starting with https://','error')
-    const save=form.querySelector('[type="submit"]'),skip=document.querySelector('#skip-profile-completion')
-    save.disabled=true;if(skip)skip.disabled=true;save.textContent='Saving your details…'
+    const save=form.querySelector('[type="submit"]')
+    save.disabled=true;save.textContent='Saving your details…'
     const privateDetails={
       user_id:session.user.id,address,account_type:accountType,date_of_birth:value('date_of_birth'),gender:value('gender'),
       phone:value('phone')||null,city:value('city')||null,hometown:value('hometown')||null,
@@ -1604,21 +1604,14 @@ function bindProfileCompletionEvents(){
       address_place_id:value('address_place_id')||null,updated_at:new Date().toISOString()
     }
     const {error:addressError}=await supabase.from('private_profile_details').upsert(privateDetails,{onConflict:'user_id'})
-    if(addressError){save.disabled=false;if(skip)skip.disabled=false;save.textContent='Save and continue';toast(addressError.message,'error');return}
+    if(addressError){save.disabled=false;save.textContent='Save and continue';toast(addressError.message,'error');return}
     const {data:updated,error}=await supabase.from('profiles').update({full_name:fullName,username,bio,account_type:accountType}).eq('id',session.user.id).select('id,username,full_name,bio,avatar_url,is_public,account_type').single()
     if(error){save.disabled=false;if(skip)skip.disabled=false;save.textContent='Save and continue';toast(error.code==='23505'?'That username is taken. Try another one.':error.message,'error');return}
     const {error:authError}=await supabase.auth.updateUser({data:{full_name:fullName,username,profile_completed:true,account_type:accountType}})
     if(authError){save.disabled=false;if(skip)skip.disabled=false;save.textContent='Save and continue';toast('Your details were saved, but setup could not finish. Please try again.','error');return}
     profile=updated;location.replace(authReturnPath())
   })
-  document.querySelector('#skip-profile-completion')?.addEventListener('click',async e=>{
-    if(!session){location.href='/login/?next=%2Fcomplete-profile%2F';return}
-    const button=e.currentTarget,save=form.querySelector('[type="submit"]')
-    button.disabled=true;save.disabled=true;button.textContent='Skipping…'
-    const {error}=await supabase.auth.updateUser({data:{profile_completed:true}})
-    if(error){button.disabled=false;save.disabled=false;button.textContent='Skip for now';toast(error.message,'error');return}
-    location.replace(authReturnPath())
-  })
+
 }
 
 function ownAvatarStoragePath(url,userId){
