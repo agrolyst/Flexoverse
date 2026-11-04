@@ -1616,3 +1616,14 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
 .incoming-call-actions .incoming-decline span{background:#ed3654}
 .incoming-call-actions .incoming-answer span{background:#20b879}
 @media(max-width:760px){.chat-filter-tabs{padding-left:5px;padding-right:5px;gap:3px}.chat-filter-tab{font-size:8px;padding:8px 3px}.chat-plus-wrap{flex-basis:28px}.chat-plus-button{width:28px;height:28px}.incoming-call-actions{margin-top:58px;gap:58px}}
+
+.homepage-call-alert{position:sticky;top:0;z-index:1000;padding:0 18px}
+.home-incoming-call-card{max-width:920px;margin:12px auto;display:flex;align-items:center;gap:13px;padding:14px 18px;border:1px solid #d9e9e1;border-radius:16px;background:linear-gradient(110deg,#f1fbf5,#fff);box-shadow:0 12px 35px #172c2315}
+.home-incoming-call-card .avatar{width:48px;height:48px;flex:0 0 48px}
+.home-incoming-call-copy{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.home-incoming-call-copy strong{font-size:14px;color:#1d2b25}
+.home-incoming-call-copy span{font-size:11px;color:#63736b}
+.home-incoming-call-card button{border:0;border-radius:22px;padding:10px 16px;font-size:11px;font-weight:750}
+.home-incoming-call-card [data-home-call-decline]{background:#fce9ec;color:#c72e4d}
+.home-incoming-call-card [data-home-call-answer]{background:#18a86e;color:#fff}
+@media(max-width:560px){.homepage-call-alert{padding:0 8px}.home-incoming-call-card{gap:8px;padding:11px;border-radius:12px}.home-incoming-call-card button{padding:9px 11px;font-size:10px}}
