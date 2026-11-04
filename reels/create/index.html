@@ -7,7 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=brand-favicon-20261104">
   <meta name="description" content="Create and share a short video with your Flexoverse community.">
   <title>Reels Studio · Flexoverse</title>
-  <link rel="stylesheet" href="../../assets/site.css?v=reels-studio-wide-editor-20261104">
+  <link rel="stylesheet" href="../../assets/site.css?v=reels-tiktok-editor-20261104">
 </head>
 <body data-page="reel-create">
   <div id="site-header"></div>
@@ -79,6 +79,24 @@
             <p class="reel-create-note">Only share videos you have permission to publish.</p>
           </section>
         </aside>
+        <div class="reel-mobile-topbar">
+          <a href="/reels/" class="reel-mobile-back" aria-label="Back to reels"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></a>
+          <button type="button" class="reel-mobile-sounds" id="reel-mobile-sounds"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Sounds</button>
+          <button type="button" class="reel-mobile-tool" data-mobile-tool="text"><strong>Aa</strong><span>Text</span></button>
+        </div>
+        <nav class="reel-mobile-rail" aria-label="Reel editing tools">
+          <button type="button" data-mobile-tool="stickers"><svg viewBox="0 0 24 24"><path d="M4 4h11l5 5v11H4z"/><path d="M15 4v5h5M8 13h.01M15 13h.01M9 17q3 2 6 0"/></svg><span>Stickers</span></button>
+          <button type="button" data-mobile-tool="filters"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg><span>Filters</span></button>
+          <button type="button" data-mobile-tool="clips"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 9v6m10-6v6M3 12h4m10 0h4"/></svg><span>Adjust clips</span></button>
+          <button type="button" data-mobile-tool="voiceover"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3m-4 0h8"/></svg><span>Voiceover</span></button>
+          <button type="button" data-mobile-tool="privacy"><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="m9 12 2 2 4-4"/></svg><span>Privacy settings</span></button>
+          <button type="button" data-mobile-tool="effects"><svg viewBox="0 0 24 24"><path d="m12 2 1.8 7.2L21 12l-7.2 1.8L12 21l-1.8-7.2L3 12l7.2-2.8z"/></svg><span>Effects</span></button>
+        </nav>
+        <div class="reel-mobile-tool-sheet" id="reel-mobile-tool-sheet" hidden><button type="button" class="reel-mobile-sheet-close" id="reel-mobile-sheet-close" aria-label="Close tools">×</button><div id="reel-mobile-tool-content"></div></div>
+        <div class="reel-mobile-bottom">
+          <button type="button" class="reel-mobile-story" id="reel-mobile-story">Your Story</button>
+          <button type="button" class="reel-mobile-next" id="reel-mobile-next">Next</button>
+        </div>
       </form>
     </main>
     <aside id="right-sidebar"></aside>
