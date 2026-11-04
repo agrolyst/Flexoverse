@@ -1409,10 +1409,12 @@ async function renderSettingsSection(){
   document.title=`${meta.title} · Settings · Flexoverse`
   if(!session){root.innerHTML=`<section class="settings-panel card"><p class="overline">SIGN IN REQUIRED</p><h1>${meta.title}</h1><p class="muted">Sign in to view and update your account settings.</p><a class="button button-primary" href="/login/?next=${encodeURIComponent(location.pathname)}">Sign in</a></section>`;return}
   let content=''
+  let privateDetails=null
   if(key==='profile'){
-    const {data:privateDetails,error:detailsError}=await supabase.from('private_profile_details').select('address,account_type,date_of_birth,gender,phone,city,hometown,country,state,lga,address_place_id').eq('user_id',session.user.id).maybeSingle()
+    const {data:loadedPrivateDetails,error:detailsError}=await supabase.from('private_profile_details').select('address,account_type,date_of_birth,gender,phone,city,hometown,country,state,lga,address_place_id').eq('user_id',session.user.id).maybeSingle()
     if(detailsError)throw new Error('Your private profile details could not be loaded: '+detailsError.message)
-    const details=privateDetails||{}
+    privateDetails=loadedPrivateDetails||{}
+    const details=privateDetails
     const photo=profile?.avatar_url||''
     const displayName=profile?.full_name||myName()
     const username=profile?.username||myUsername()
