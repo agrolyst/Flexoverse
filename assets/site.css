@@ -1687,4 +1687,4 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
 .post-verified-badge svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 
 .post-user-name{display:inline-flex;align-items:center;gap:5px;width:max-content;max-width:100%}
-.post-user-name .post-verified-badge{margin:0;flex:0 0 auto;order:-1}
+.post-user-name .post-verified-badge{margin:0;flex:0 0 auto}
