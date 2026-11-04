@@ -1005,9 +1005,9 @@ async function updateCallHistory(status) {
 }
 async function startCall(mode) {
   if(!session||!activeConversationId)return openAuth()
-  if(!openCallPopup())return toast('Please allow pop-ups for Flexoverse to open the call window.','error')
   if(!navigator.mediaDevices?.getUserMedia||!window.RTCPeerConnection)return toast('Calls need a supported browser and a secure HTTPS connection.','error')
   if(!navigator.onLine)return toast('You appear to be offline.','error')
+  if(!openCallPopup())return toast('Please allow pop-ups for Flexoverse to open the call window.','error')
   try {
     await ensureCallChannel(activeConversationId)
     const receiverId=chatItems.find(x=>x.conversation_id===activeConversationId)?.peer_id
@@ -1068,9 +1068,9 @@ async function joinLiveKitGroupCall(invite){
  const st=document.querySelector('[data-group-call-status]');if(st)st.textContent='Connected · '+liveKitRoom.numParticipants+' people';
 }
 async function startGroupCall(mode){
- if(!openCallPopup())return toast('Please allow pop-ups for Flexoverse to open the call window.','error')
  const item=chatItems.find(x=>x.conversation_id===activeConversationId);
  if(!session||!item?.is_group)return openAuth();
+ if(!openCallPopup())return toast('Please allow pop-ups for Flexoverse to open the call window.','error');
  if(currentCall)return toast('You are already in a call.','info');
  if(!navigator.mediaDevices?.getUserMedia)return toast('Calls need microphone permission and a supported HTTPS browser.','error');
  try{
@@ -1085,7 +1085,7 @@ async function endGroupCall(notify=true){
  stopIncomingRingtone();
  if(notify&&currentCall?.group&&callSignalChannel)callSignal('signal',{kind:'group-end',callId:currentCall.id,conversationId:activeConversationId}).catch(()=>{});
  if(liveKitRoom){try{await liveKitRoom.disconnect()}catch{}liveKitRoom=null}
- currentCall=null;pendingGroupInvite=null;callUi();
+ currentCall=null;pendingGroupInvite=null;callUi();closeCallPopup();
 }
 
 async function handleCallSignal(payload) {
