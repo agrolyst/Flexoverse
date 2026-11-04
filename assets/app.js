@@ -542,7 +542,7 @@ async function loadProfilePage() {
     else if(relation?.status==='pending'){action.textContent='Accept request';action.onclick=async()=>{action.disabled=true;const {error}=await supabase.from('friend_requests').update({status:'accepted'}).eq('id',relation.id);if(error){action.disabled=false;toast(error.message,'error')}else{action.textContent='Message';action.classList.remove('button-primary','button-request-sent');action.onclick=()=>location.href='/chats/';toast('You’re friends now.','success')}}}
     else action.onclick=async()=>{action.disabled=true;const sent=await sendFriendRequest(data.id);if(sent){action.textContent='Request sent';action.classList.remove('button-primary');action.classList.add('button-request-sent')}else action.disabled=false}
   }
-  const {data:posts,error:postsError}=await supabase.from('posts').select('id,user_id,content,image_path,created_at,profiles(full_name,username,avatar_url,membership_plan,membership_status,is_verified),likes(count),comments(count)').eq('user_id',data.id).order('created_at',{ascending:false}).limit(20)
+  const {data:posts,error:postsError}=await supabase.from('posts').select('id,user_id,content,image_path,created_at,profiles!posts_user_id_fkey(full_name,username,avatar_url,membership_plan,membership_status,is_verified),likes(count),comments(count)').eq('user_id',data.id).order('created_at',{ascending:false}).limit(20)
   if(postsError)toast(postsError.message,'error')
   const profilePosts=posts||[]
   if(session&&profilePosts.length){const {data:mineLikes}=await supabase.from('likes').select('post_id').eq('user_id',session.user.id).in('post_id',profilePosts.map(post=>post.id));liked=new Set((mineLikes||[]).map(row=>row.post_id))}else liked=new Set()
