@@ -223,3 +223,80 @@ begin
   end if;
 end;
 $$;
+
+-- Keep the existing "remove chat from my inbox" action working after admin
+-- removal permissions are introduced.
+drop policy if exists "Users remove their own conversation memberships" on public.conversation_members;
+create policy "Users remove their own conversation memberships"
+on public.conversation_members for delete to authenticated
+using (user_id=(select auth.uid()));
+
+-- Mark group conversations as groups in the inbox RPC. The client uses a null
+-- peer_id to distinguish group chats from direct conversations.
+create or replace function public.list_my_conversations()
+returns table (
+  conversation_id uuid,
+  created_at timestamptz,
+  last_read_at timestamptz,
+  peer_id uuid,
+  peer_username text,
+  peer_name text,
+  peer_avatar_url text,
+  last_message_id uuid,
+  last_sender_id uuid,
+  last_message text,
+  last_message_at timestamptz,
+  unread_count bigint
+)
+language plpgsql
+stable
+security invoker
+set search_path = ''
+as $$
+begin
+  if (select auth.uid()) is null then
+    return;
+  end if;
+
+  return query
+  select
+    c.id,
+    c.created_at,
+    own.last_read_at,
+    case when coalesce(c.is_group,false) then null::uuid else peer.id end,
+    case when coalesce(c.is_group,false) then null::text else peer.username end,
+    case when coalesce(c.is_group,false) then coalesce(c.group_name,'Group') else coalesce(peer.full_name,peer.username) end,
+    case when coalesce(c.is_group,false) then null::text else peer.avatar_url end,
+    latest.id,
+    latest.sender_id,
+    latest.content,
+    latest.created_at,
+    (select count(*)
+      from public.messages unread
+      where unread.conversation_id=c.id
+        and unread.sender_id<>own.user_id
+        and unread.created_at>own.last_read_at)::bigint
+  from public.conversation_members own
+  join public.conversations c on c.id=own.conversation_id
+  join lateral (
+    select p.id,p.username,p.full_name,p.avatar_url
+    from public.conversation_members other_member
+    join public.profiles p on p.id=other_member.user_id
+    where other_member.conversation_id=c.id
+      and other_member.user_id<>own.user_id
+    order by other_member.joined_at
+    limit 1
+  ) peer on true
+  left join lateral (
+    select m.id,m.sender_id,m.content,m.created_at
+    from public.messages m
+    where m.conversation_id=c.id
+    order by m.created_at desc
+    limit 1
+  ) latest on true
+  where own.user_id=(select auth.uid())
+  order by coalesce(latest.created_at,c.created_at) desc;
+end;
+$$;
+revoke all on function public.list_my_conversations() from public,anon;
+grant execute on function public.list_my_conversations() to authenticated;
