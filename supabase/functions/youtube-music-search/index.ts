@@ -11,7 +11,8 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   try {
-    const token = (req.headers.get("Authorization") || "").replace(/^Bearer\\s+/i, "");
+    const authorization = (req.headers.get("Authorization") || "").trim();
+    const token = authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : authorization;
     if (!token) return new Response(JSON.stringify({ error: "Sign in to search music." }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const publishableKeys = JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") || "{}");
     const publishableKey = publishableKeys.default || Deno.env.get("SUPABASE_ANON_KEY");
