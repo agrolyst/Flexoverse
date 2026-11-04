@@ -481,56 +481,112 @@ function prepareReelComposer() {
   audioFile?.addEventListener('change',()=>{const file=audioFile.files?.[0];if(!file||!audio)return;if(audioUrl)URL.revokeObjectURL(audioUrl);audioUrl=URL.createObjectURL(file);audio.src=audioUrl;audioControls.hidden=false;audio.volume=Number(audioVolume?.value??.5)})
   audioVolume?.addEventListener('input',()=>{if(audio)audio.volume=Number(audioVolume.value)})
   let selectedYoutubeTrack=null
-  const ytSearchForm=document.querySelector('#reel-youtube-search')
-  const ytQuery=document.querySelector('#reel-youtube-query')
-  const ytResults=document.querySelector('#reel-youtube-results')
-  const ytStatus=document.querySelector('#reel-youtube-status')
-  const ytSearchButton=document.querySelector('#reel-youtube-search-button')
-  const ytSelected=document.querySelector('#reel-youtube-selected')
-  const ytPlayerWrap=document.querySelector('#reel-youtube-player-wrap')
-  const ytPlayer=document.querySelector('#reel-youtube-player')
-  const renderYoutubeResults=items=>{
-    if(!ytResults)return
-    ytResults.innerHTML=items.map(item=>`<article class="reel-youtube-result"><img src="${esc(item.thumbnail)}" alt="" loading="lazy"><span class="reel-youtube-result-copy"><strong>${esc(item.title)}</strong><small>${esc(item.channel)}</small></span><button type="button" data-youtube-track="${esc(item.videoId)}">Use track</button></article>`).join('')
-    ytResults.querySelectorAll('[data-youtube-track]').forEach(button=>button.addEventListener('click',()=>{
-      const track=items.find(item=>item.videoId===button.dataset.youtubeTrack)
-      if(!track)return
-      selectedYoutubeTrack=track
-      if(ytSelected){ytSelected.hidden=false;ytSelected.innerHTML=`<span class="reel-youtube-selected-mark">✓</span><span><strong>Selected music</strong><small>${esc(track.title)} · ${esc(track.channel)}</small></span><button type="button" id="reel-youtube-clear">Remove</button>`}
-      if(ytPlayer){ytPlayer.src=`https://www.youtube-nocookie.com/embed/${encodeURIComponent(track.videoId)}?rel=0&modestbranding=1`;ytPlayerWrap.hidden=false}
-      ytSelected?.querySelector('#reel-youtube-clear')?.addEventListener('click',()=>{selectedYoutubeTrack=null;ytSelected.hidden=true;if(ytPlayer)ytPlayer.src='';if(ytPlayerWrap)ytPlayerWrap.hidden=true})
-      try{localStorage.setItem(draftKey,JSON.stringify({caption:caption?.value||'',youtubeTrack:track,updatedAt:Date.now()}))}catch{}
-      toast('YouTube track selected. Preview it in the player.','success')
+  const musicModal=document.querySelector('#reel-music-modal')
+  const musicSearchOpen=document.querySelector('#reel-music-search-open')
+  const musicTrendingOpen=document.querySelector('#reel-music-trending-open')
+  const musicQuery=document.querySelector('#reel-music-query')
+  const musicSearchButton=document.querySelector('#reel-music-search-button')
+  const musicStatus=document.querySelector('#reel-music-status')
+  const musicResults=document.querySelector('#reel-music-results')
+  const musicCurrentTitle=document.querySelector('#reel-music-current-title')
+  const musicCurrentSubtitle=document.querySelector('#reel-music-current-subtitle')
+  const musicRemove=document.querySelector('#reel-music-remove')
+  const musicPlayer=document.querySelector('#reel-music-player')
+  const musicPreview=document.querySelector('#reel-music-preview')
+  const musicDone=document.querySelector('#reel-music-done')
+  let pendingMusicTrack=null
+  let musicRequestId=0
+  const openMusicModal=async(mode='search')=>{
+    if(!musicModal)return
+    musicModal.hidden=false;document.body.classList.add('reel-music-open')
+    if(mode==='search'){musicQuery?.focus();if(musicStatus)musicStatus.textContent='Search for a song, artist or sound.';if(musicResults)musicResults.innerHTML=''}
+    else{if(musicQuery)musicQuery.value='';await searchMusic('trending music 2026',true)}
+  }
+  const closeMusicModal=()=>{if(!musicModal)return;musicModal.hidden=true;document.body.classList.remove('reel-music-open')}
+  musicSearchOpen?.addEventListener('click',()=>openMusicModal('search'))
+  musicTrendingOpen?.addEventListener('click',()=>openMusicModal('trending'))
+  musicModal?.querySelectorAll('[data-music-close]').forEach(button=>button.addEventListener('click',closeMusicModal))
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&musicModal&&!musicModal.hidden)closeMusicModal()})
+  const saveMusicDraft=()=>{try{localStorage.setItem(draftKey,JSON.stringify({caption:caption?.value||'',youtubeTrack:selectedYoutubeTrack,updatedAt:Date.now()}))}catch{}}
+  const setPendingTrack=track=>{
+    pendingMusicTrack=track
+    if(musicDone)musicDone.disabled=!track
+    if(musicDone)musicDone.textContent=track?'Use sound':'Use sound'
+    if(musicResults)musicResults.querySelectorAll('.reel-music-track').forEach(row=>row.classList.toggle('selected',row.dataset.trackId===track?.videoId))
+    if(track&&musicStatus)musicStatus.textContent='Preview selected. Tap “Use sound” to add it to your reel.'
+  }
+  const renderMusicResults=items=>{
+    if(!musicResults)return
+    musicResults.innerHTML=items.map((item,index)=>`<article class="reel-music-track ${pendingMusicTrack?.videoId===item.videoId?'selected':''}" data-track-id="${esc(item.videoId)}">
+      <button type="button" class="reel-music-track-play" data-music-preview="${esc(item.videoId)}" aria-label="Preview ${esc(item.title)}"><img src="${esc(item.thumbnail)}" alt="" loading="lazy"><span class="reel-music-play-glyph">▶</span></button>
+      <span class="reel-music-track-copy"><strong>${esc(item.title)}</strong><small>${esc(item.channel)}</small></span>
+      <button type="button" class="reel-music-add" data-music-select="${esc(item.videoId)}">Add</button>
+    </article>`).join('')
+    musicResults.querySelectorAll('[data-music-preview]').forEach(button=>button.addEventListener('click',()=>{
+      const track=items.find(item=>item.videoId===button.dataset.musicPreview)
+      if(!track||!musicPlayer||!musicPreview)return
+      musicPlayer.src=`https://www.youtube-nocookie.com/embed/${encodeURIComponent(track.videoId)}?autoplay=1&rel=0`
+      musicPreview.hidden=false
+      setPendingTrack(track)
+    }))
+    musicResults.querySelectorAll('[data-music-select]').forEach(button=>button.addEventListener('click',()=>{
+      const track=items.find(item=>item.videoId===button.dataset.musicSelect)
+      if(track){setPendingTrack(track);if(musicPlayer&&musicPreview){musicPlayer.src=`https://www.youtube-nocookie.com/embed/${encodeURIComponent(track.videoId)}?autoplay=1&rel=0`;musicPreview.hidden=false}}
     }))
   }
-  ytSearchForm?.addEventListener('submit',async event=>{
-    event.preventDefault()
-    const query=String(ytQuery?.value||'').trim()
-    if(query.length<2){toast('Enter at least two characters to search music.','error');return}
-    ytSearchButton.disabled=true;ytSearchButton.textContent='Searching…'
-    if(ytStatus)ytStatus.textContent='Searching YouTube…'
-    if(ytResults)ytResults.innerHTML=''
+  const searchMusic=async(query,discover=false)=>{
+    const clean=String(query||'').trim()
+    if(!discover&&clean.length<2){if(musicStatus)musicStatus.textContent='Type at least two characters to search.';return}
+    const requestId=++musicRequestId
+    if(musicSearchButton){musicSearchButton.disabled=true;musicSearchButton.textContent='Searching…'}
+    if(musicStatus)musicStatus.textContent=discover?'Finding popular sounds…':'Searching sounds…'
+    if(musicResults)musicResults.innerHTML=''
+    if(musicDone)musicDone.disabled=true
     try{
       const {data:{session:authSession}}=await supabase.auth.getSession()
-      if(!authSession?.access_token)throw new Error('Sign in again to search YouTube music.')
-      const response=await fetch('https://gkgjfbusdyiohiztwuec.supabase.co/functions/v1/youtube-music-search',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${authSession.access_token}`,'apikey':'sb_publishable_Kmm1YLrnBwDKV_1xO2DjNw_e4SzSZly'},body:JSON.stringify({query})})
+      if(!authSession?.access_token)throw new Error('Please sign in again to browse music.')
+      const response=await fetch('https://gkgjfbusdyiohiztwuec.supabase.co/functions/v1/youtube-music-search',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${authSession.access_token}`,'apikey':'sb_publishable_Kmm1YLrnBwDKV_1xO2DjNw_e4SzSZly'},body:JSON.stringify({query:clean})})
       const payload=await response.json().catch(()=>({}))
-      if(!response.ok)throw new Error(payload.error||'YouTube music search failed.')
-      renderYoutubeResults(payload.items||[])
-      if(ytStatus)ytStatus.textContent=payload.items?.length?'Choose a result to add it to your Reel.':'No embeddable music videos found. Try another search.'
-    }catch(error){if(ytStatus)ytStatus.textContent=error.message||'Music search failed.';toast(error.message||'Music search failed.','error')}
-    finally{ytSearchButton.disabled=false;ytSearchButton.textContent='Search'}
+      if(!response.ok)throw new Error(payload.error||'Could not load sounds.')
+      if(requestId!==musicRequestId)return
+      const items=payload.items||[]
+      renderMusicResults(items)
+      if(musicStatus)musicStatus.textContent=items.length?(discover?'Trending sounds':'Search results'):'No sounds found. Try another search.'
+    }catch(error){if(requestId===musicRequestId&&musicStatus)musicStatus.textContent=error.message||'Could not load sounds.'}
+    finally{if(requestId===musicRequestId&&musicSearchButton){musicSearchButton.disabled=false;musicSearchButton.textContent='Search'}}
+  }
+  musicSearchButton?.addEventListener('click',()=>searchMusic(musicQuery?.value))
+  musicQuery?.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();searchMusic(musicQuery.value)}})
+  document.querySelector('#reel-music-trending-tab')?.addEventListener('click',()=>{if(musicQuery)musicQuery.value='';searchMusic('trending music 2026',true)})
+  musicDone?.addEventListener('click',()=>{
+    if(!pendingMusicTrack)return
+    selectedYoutubeTrack=pendingMusicTrack
+    if(musicCurrentTitle)musicCurrentTitle.textContent=selectedYoutubeTrack.title
+    if(musicCurrentSubtitle)musicCurrentSubtitle.textContent=selectedYoutubeTrack.channel
+    if(musicRemove)musicRemove.hidden=false
+    if(musicPlayer){musicPlayer.src=`https://www.youtube-nocookie.com/embed/${encodeURIComponent(selectedYoutubeTrack.videoId)}?rel=0`;musicPreview.hidden=false}
+    saveMusicDraft();closeMusicModal();toast('Sound added to your reel.','success')
+  })
+  musicRemove?.addEventListener('click',()=>{
+    selectedYoutubeTrack=null;pendingMusicTrack=null
+    if(musicCurrentTitle)musicCurrentTitle.textContent='Add music to your reel'
+    if(musicCurrentSubtitle)musicCurrentSubtitle.textContent='Find a sound that fits your video'
+    musicRemove.hidden=true
+    if(musicPlayer)musicPlayer.src=''
+    if(musicPreview)musicPreview.hidden=true
+    saveMusicDraft()
   })
   try{
     const savedDraft=JSON.parse(localStorage.getItem(draftKey)||'{}')
     if(savedDraft.youtubeTrack){
       selectedYoutubeTrack=savedDraft.youtubeTrack
-      if(ytSelected){ytSelected.hidden=false;ytSelected.innerHTML=`<span class="reel-youtube-selected-mark">✓</span><span><strong>Selected music</strong><small>${esc(selectedYoutubeTrack.title)} · ${esc(selectedYoutubeTrack.channel)}</small></span><button type="button" id="reel-youtube-clear">Remove</button>`}
-      if(ytPlayer){ytPlayer.src=`https://www.youtube-nocookie.com/embed/${encodeURIComponent(selectedYoutubeTrack.videoId)}?rel=0&modestbranding=1`;ytPlayerWrap.hidden=false}
-      ytSelected?.querySelector('#reel-youtube-clear')?.addEventListener('click',()=>{selectedYoutubeTrack=null;ytSelected.hidden=true;if(ytPlayer)ytPlayer.src='';if(ytPlayerWrap)ytPlayerWrap.hidden=true})
+      if(musicCurrentTitle)musicCurrentTitle.textContent=selectedYoutubeTrack.title
+      if(musicCurrentSubtitle)musicCurrentSubtitle.textContent=selectedYoutubeTrack.channel
+      if(musicRemove)musicRemove.hidden=false
+      if(musicPlayer){musicPlayer.src=`https://www.youtube-nocookie.com/embed/${encodeURIComponent(selectedYoutubeTrack.videoId)}?rel=0`;musicPreview.hidden=false}
     }
   }catch{}
-  caption?.addEventListener('input',()=>{updateCaptionCount();try{localStorage.setItem(draftKey,JSON.stringify({caption:caption.value,updatedAt:Date.now()}))}catch{}})
+  caption?.addEventListener('input',()=>{updateCaptionCount();try{localStorage.setItem(draftKey,JSON.stringify({caption:caption.value,youtubeTrack:selectedYoutubeTrack,updatedAt:Date.now()}))}catch{}})
   updateCaptionCount()
   form.addEventListener('submit',async e=>{
     e.preventDefault()
