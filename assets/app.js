@@ -400,16 +400,56 @@ function prepareReelComposer() {
   const prompt=document.querySelector('#reel-upload-prompt')
   const caption=document.querySelector('#reel-caption')
   const submit=document.querySelector('#reel-submit')
-  let previewUrl=''
+  const stage=document.querySelector('#reel-preview-stage')
+  const startRange=document.querySelector('#reel-trim-start')
+  const endRange=document.querySelector('#reel-trim-end')
+  const startValue=document.querySelector('#reel-start-value')
+  const endValue=document.querySelector('#reel-end-value')
+  const speed=document.querySelector('#reel-speed')
+  const overlayInput=document.querySelector('#reel-overlay-text')
+  const overlay=document.querySelector('#reel-preview-overlay')
+  const aspect=document.querySelector('#reel-aspect')
+  const audioFile=document.querySelector('#reel-audio-file')
+  const audio=document.querySelector('#reel-audio-preview')
+  const audioControls=document.querySelector('#reel-audio-controls')
+  const audioVolume=document.querySelector('#reel-audio-volume')
+  let previewUrl='',audioUrl='',trimStart=0,trimEnd=0
+  const draftKey='flexoverse-reel-draft:'+session.user.id
+  try{const draft=JSON.parse(localStorage.getItem(draftKey)||'{}');if(draft.caption&&caption)caption.value=draft.caption}catch{}
+  const updateCaptionCount=()=>{const count=document.querySelector('#reel-caption-count');if(count&&caption)count.textContent=`${caption.value.length} / 500`}
+  const updateTrimLabels=()=>{if(startValue)startValue.textContent=`${trimStart.toFixed(1)}s`;if(endValue)endValue.textContent=preview?.duration? `${trimEnd.toFixed(1)}s`:'—'}
+  const enableTools=enabled=>{[startRange,endRange,speed,overlayInput,audioFile].forEach(el=>{if(el)el.disabled=!enabled})}
+  if(preview&&stage){preview.controls=true;preview.classList.add('reel-stage-video');stage.prepend(preview)}
   fileInput?.addEventListener('change',()=>{
     const file=fileInput.files?.[0]
-    if(!file){submit.disabled=true;preview.hidden=true;prompt.hidden=false;return}
-    if(!['video/mp4','video/webm','video/quicktime'].includes(file.type)){toast('Choose an MP4, WebM or MOV video.','error');fileInput.value='';preview.hidden=true;prompt.hidden=false;submit.disabled=true;return}
-    if(file.size>50*1024*1024){toast('This video is larger than 50 MB.','error');fileInput.value='';preview.hidden=true;prompt.hidden=false;submit.disabled=true;return}
+    if(!file){submit.disabled=true;preview.hidden=true;prompt.hidden=false;enableTools(false);return}
+    if(!['video/mp4','video/webm','video/quicktime'].includes(file.type)){toast('Choose an MP4, WebM or MOV video.','error');fileInput.value='';preview.hidden=true;prompt.hidden=false;submit.disabled=true;enableTools(false);return}
+    if(file.size>50*1024*1024){toast('This video is larger than 50 MB.','error');fileInput.value='';preview.hidden=true;prompt.hidden=false;submit.disabled=true;enableTools(false);return}
     if(previewUrl)URL.revokeObjectURL(previewUrl)
-    previewUrl=URL.createObjectURL(file);preview.src=previewUrl;preview.hidden=false;prompt.hidden=true;submit.disabled=false
+    previewUrl=URL.createObjectURL(file);preview.src=previewUrl;preview.hidden=false;prompt.hidden=true;submit.disabled=false;enableTools(true);preview.load()
   })
-  caption?.addEventListener('input',()=>{const count=document.querySelector('#reel-caption-count');if(count)count.textContent=`${caption.value.length} / 500`})
+  preview?.addEventListener('loadedmetadata',()=>{
+    const duration=Number.isFinite(preview.duration)?preview.duration:0
+    trimStart=0;trimEnd=duration
+    ;[startRange,endRange].forEach(el=>{if(el){el.max=String(duration);el.value=String(duration);el.disabled=!duration}})
+    if(startRange)startRange.value='0'
+    if(speed)speed.disabled=false
+    if(overlayInput)overlayInput.disabled=false
+    if(audioFile)audioFile.disabled=false
+    updateTrimLabels()
+    if(stage)stage.classList.add('has-video')
+  })
+  startRange?.addEventListener('input',()=>{trimStart=Math.min(Number(startRange.value),Math.max(0,trimEnd-.1));startRange.value=String(trimStart);if(preview&&preview.currentTime<trimStart)preview.currentTime=trimStart;updateTrimLabels()})
+  endRange?.addEventListener('input',()=>{trimEnd=Math.max(Number(endRange.value),trimStart+.1);endRange.value=String(trimEnd);if(preview&&preview.currentTime>trimEnd)preview.currentTime=trimStart;updateTrimLabels()})
+  preview?.addEventListener('timeupdate',()=>{if(trimEnd>trimStart&&preview.currentTime>=trimEnd){preview.pause();preview.currentTime=trimStart}})
+  preview?.addEventListener('play',()=>{if(preview.currentTime<trimStart||preview.currentTime>=trimEnd)preview.currentTime=trimStart})
+  speed?.addEventListener('change',()=>{if(preview)preview.playbackRate=Number(speed.value)||1})
+  aspect?.addEventListener('change',()=>{if(stage)stage.style.aspectRatio=aspect.value})
+  overlayInput?.addEventListener('input',()=>{if(!overlay)return;overlay.textContent=overlayInput.value;overlay.hidden=!overlayInput.value.trim()})
+  audioFile?.addEventListener('change',()=>{const file=audioFile.files?.[0];if(!file||!audio)return;if(audioUrl)URL.revokeObjectURL(audioUrl);audioUrl=URL.createObjectURL(file);audio.src=audioUrl;audioControls.hidden=false;audio.volume=Number(audioVolume?.value??.5)})
+  audioVolume?.addEventListener('input',()=>{if(audio)audio.volume=Number(audioVolume.value)})
+  caption?.addEventListener('input',()=>{updateCaptionCount();try{localStorage.setItem(draftKey,JSON.stringify({caption:caption.value,updatedAt:Date.now()}))}catch{}})
+  updateCaptionCount()
   form.addEventListener('submit',async e=>{
     e.preventDefault()
     const file=fileInput?.files?.[0]
@@ -420,7 +460,7 @@ function prepareReelComposer() {
     const progressLabel=document.querySelector('#reel-progress-label')
     uploadProgress.hidden=false
     submit.querySelector('span').textContent='Uploading…'
-    const extension=({ 'video/mp4':'mp4','video/webm':'webm','video/quicktime':'mov' })[file.type]
+    const extension=({'video/mp4':'mp4','video/webm':'webm','video/quicktime':'mov'})[file.type]
     const path=`${session.user.id}/${crypto.randomUUID()}.${extension}`
     let uploaded=false
     try{
@@ -436,12 +476,12 @@ function prepareReelComposer() {
       const captionValue=String(new FormData(form).get('caption')||'').trim()
       const {error}=await supabase.from('reels').insert({user_id:session.user.id,caption:captionValue,video_path:path,is_public:true})
       if(error){await supabase.storage.from('reels').remove([path]);uploaded=false;throw error}
+      try{localStorage.removeItem(draftKey)}catch{}
       toast('Your reel was shared.','success')
       location.replace('/reels/')
     }catch(error){console.error(error);if(uploaded)await supabase.storage.from('reels').remove([path]);toast(error.message||'The video could not be uploaded. Try again.','error');submit.disabled=false;submit.querySelector('span').textContent='Share reel'}
   })
 }
-
 
 function prepareUnifiedComposer(){
   const format=document.querySelector('#post-format')
