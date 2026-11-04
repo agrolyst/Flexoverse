@@ -114,8 +114,9 @@ function postCard(p) {
   const image = p.image || p.image_path || ''
   const id = String(p.id), safeId = esc(id)
   const likeCount = relationCount(p.likes), commentCount = relationCount(p.comments)
+  const badges = `${user.membership_status==='active'?'<span class="post-member-badge">Member</span>':''}${user.is_verified?'<span class="post-verified-badge" title="Verified by Flexoverse" aria-label="Verified account"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>':''}`
   const isLiked = liked.has(id), timestamp = timeAgo(p.created_at)
-  return `<article class="post card" id="post-${safeId}" data-post="${safeId}"><div class="post-top">${avatar(p.initials||initials(name),p.color||'blue',p.avatar_url||user.avatar_url)}<div class="post-user"><a href="/${encodeURIComponent(handle)}"><strong>${esc(name)}</strong></a><small>@${esc(handle)} · ${esc(timestamp)}</small></div><div class="post-menu-wrap"><button class="more-button" type="button" data-post-menu-toggle="${safeId}" aria-label="Post options" aria-expanded="false">···</button><div class="post-options-menu" data-post-menu="${safeId}" hidden><button type="button" data-save-post="${safeId}">Save post</button><button type="button" data-copy-post="${safeId}">Copy link</button><button type="button" data-report-post="${safeId}" class="post-option-report">Report post</button>${session&&session.user.id===p.user_id?`<button type="button" data-delete-post="${safeId}" class="post-option-danger">Delete post</button>`:''}</div></div></div><p class="post-text">${esc(p.content)}</p>${image?`<img class="post-photo" src="${esc(image)}" alt="Post image">`:''}<div class="post-meta"><span data-like-count="${safeId}" data-count="${likeCount}">${heartSvg(false)} <span>${likeCount} ${likeCount===1?'person':'people'}</span></span><button class="post-comment-total" type="button" data-comment="${safeId}" data-comment-count="${safeId}">${commentCount} ${commentCount===1?'comment':'comments'}</button></div><div class="post-actions"><button data-like="${safeId}" class="${isLiked?'liked':''}" aria-pressed="${isLiked}">${heartSvg(isLiked)} <span>${isLiked?'Liked':'Like'}</span></button><button data-comment="${safeId}" aria-expanded="false">${commentSvg()} <span>Comment</span></button><button data-share><svg class="action-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Share</span></button></div></article>`
+  return `<article class="post card" id="post-${safeId}" data-post="${safeId}"><div class="post-top">${avatar(p.initials||initials(name),p.color||'blue',p.avatar_url||user.avatar_url)}<div class="post-user"><a href="/${encodeURIComponent(handle)}"><strong>${esc(name)}</strong></a>${badges}<small>@${esc(handle)} · ${esc(timestamp)}</small></div><div class="post-menu-wrap"><button class="more-button" type="button" data-post-menu-toggle="${safeId}" aria-label="Post options" aria-expanded="false">···</button><div class="post-options-menu" data-post-menu="${safeId}" hidden><button type="button" data-save-post="${safeId}">Save post</button><button type="button" data-copy-post="${safeId}">Copy link</button><button type="button" data-report-post="${safeId}" class="post-option-report">Report post</button>${session&&session.user.id===p.user_id?`<button type="button" data-delete-post="${safeId}" class="post-option-danger">Delete post</button>`:''}</div></div></div><p class="post-text">${esc(p.content)}</p>${image?`<img class="post-photo" src="${esc(image)}" alt="Post image">`:''}<div class="post-meta"><span data-like-count="${safeId}" data-count="${likeCount}">${heartSvg(false)} <span>${likeCount} ${likeCount===1?'person':'people'}</span></span><button class="post-comment-total" type="button" data-comment="${safeId}" data-comment-count="${safeId}">${commentCount} ${commentCount===1?'comment':'comments'}</button></div><div class="post-actions"><button data-like="${safeId}" class="${isLiked?'liked':''}" aria-pressed="${isLiked}">${heartSvg(isLiked)} <span>${isLiked?'Liked':'Like'}</span></button><button data-comment="${safeId}" aria-expanded="false">${commentSvg()} <span>Comment</span></button><button data-share><svg class="action-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Share</span></button></div></article>`
 }
 function timeAgo(value) {
   if (!value) return 'just now'
@@ -149,7 +150,7 @@ async function loadHome() {
   const feed = document.querySelector('#feed-list')
   if (!feed) return
   feed.innerHTML = '<div class="feed-state card">Loading posts from the community…</div>'
-  const {data,error}=await supabase.from('posts').select('id,user_id,content,image_path,created_at,profiles!posts_user_id_fkey(full_name,username,avatar_url),likes(count),comments(count)').order('created_at',{ascending:false}).limit(30)
+  const {data,error}=await supabase.from('posts').select('id,user_id,content,image_path,created_at,profiles!posts_user_id_fkey(full_name,username,avatar_url,membership_plan,membership_status,is_verified),likes(count),comments(count)').order('created_at',{ascending:false}).limit(30)
   if (error) {
     console.error('Could not load public posts:', error)
     feed.innerHTML = '<div class="feed-state card"><strong>Posts could not load</strong><span>Check your connection and try again.</span><button class="button button-outline" data-retry-feed>Try again</button></div>'
@@ -419,7 +420,7 @@ async function loadMyContent(){
   postsList.innerHTML='<div class="feed-state card">Loading your posts…</div>'
   videosList.innerHTML='<div class="feed-state card">Loading your videos…</div>'
   const [postResult,reelResult]=await Promise.all([
-    supabase.from('posts').select('id,user_id,content,image_path,created_at,profiles!posts_user_id_fkey(full_name,username,avatar_url),likes(count),comments(count)').eq('user_id',session.user.id).order('created_at',{ascending:false}).limit(100),
+    supabase.from('posts').select('id,user_id,content,image_path,created_at,profiles!posts_user_id_fkey(full_name,username,avatar_url,membership_plan,membership_status,is_verified),likes(count),comments(count)').eq('user_id',session.user.id).order('created_at',{ascending:false}).limit(100),
     supabase.from('reels').select('id,user_id,caption,video_path,created_at').eq('user_id',session.user.id).order('created_at',{ascending:false}).limit(100)
   ])
   if(postResult.error){console.error('Could not load your posts:',postResult.error);postsList.innerHTML='<div class="feed-state card"><strong>Your posts could not load</strong><span>Please refresh and try again.</span></div>'}
@@ -454,7 +455,7 @@ async function loadProfilePage() {
   const state=document.querySelector('#profile-state')
   const showState=(title,message,action='')=>{content.hidden=true;state.hidden=false;state.innerHTML=`<span class="friends-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg></span><strong>${esc(title)}</strong><p>${esc(message)}</p>${action}`}
   if(!handle){showState('Your profile is ready when you are','Sign in to create and share your Flexoverse profile.','<a class="button button-primary" href="/login/">Sign in</a>');return}
-  const {data,error}=await supabase.from('profiles').select('id,username,full_name,bio,avatar_url,is_public,search_index_enabled,created_at').eq('username',handle).maybeSingle()
+  const {data,error}=await supabase.from('profiles').select('id,username,full_name,bio,avatar_url,is_public,search_index_enabled,created_at,membership_plan,membership_status,is_verified,verified_at').eq('username',handle).maybeSingle()
   if(error||!data){showState('This profile is unavailable','It may be private or the username may have changed.','<a class="button button-outline" href="/">Back to home</a>');return}
   profileRecord=data
   const name=data.full_name||data.username
@@ -463,6 +464,12 @@ async function loadProfilePage() {
   let canonical=document.querySelector('link[rel="canonical"]');if(!canonical){canonical=document.createElement('link');canonical.rel='canonical';document.head.append(canonical)}canonical.href=new URL(`/${encodeURIComponent(data.username)}`,location.origin).href
   document.querySelector('#profile-name').textContent=name
   document.querySelector('#profile-username').textContent=`@${data.username}`
+  const badgeRoot=document.querySelector('#profile-badges')
+  if(badgeRoot){
+    const activeMembership=data.membership_status==='active'
+    const memberLabel=activeMembership&&data.membership_plan==='plus'?'Flexoverse Plus':'Member'
+    badgeRoot.innerHTML=`${activeMembership?`<span class="profile-member-badge" title="Active Flexoverse membership"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 14.4 5l2.9-.1.8 2.8 2.3 1.8-1.1 2.7.5 2.9-2.6 1.3-1.3 2.6-2.9-.5-2.7 1.1-1.8-2.3-2.8-.8.1-2.9-1.5-2.4 1.5-2.4-.1-2.9 2.8-.8 1.8-2.3 2.7 1.1 2.9-.5 1.3 2.6 2.6 1.3-.5 2.9 1.1 2.7-2.3 1.8-.8 2.8-2.9-.1Z"/><path d="m9 12 2 2 4-4"/></svg>${memberLabel}</span>`:''}${data.is_verified?`<span class="profile-verified-badge" title="Identity reviewed by Flexoverse"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8 14.8 4l3-.2.9 2.9 2.3 1.9-1.1 2.8.5 3-2.7 1.3-1.4 2.7-3-.5-2.8 1.1-1.9-2.3-2.9-.9.2-3L3 12l1.1-2.8-.5-3 2.7-1.3 1.4-2.7 3 .5L12 2.8Z"/><path d="m8.5 12.2 2.2 2.2 4.8-5"/></svg>Verified</span>`:''}`
+  }
   document.querySelector('#profile-bio').textContent=data.bio||''
   const profileAvatar=document.querySelector('#profile-avatar');if(profileAvatar)profileAvatar.outerHTML=avatar(initials(name),'blue',data.avatar_url).replace('class="avatar','class="avatar avatar-large')
   const joined=data.created_at?new Intl.DateTimeFormat(undefined,{month:'long',year:'numeric'}).format(new Date(data.created_at)):'A Flexoverse member'
@@ -480,7 +487,7 @@ async function loadProfilePage() {
     else if(relation?.status==='pending'){action.textContent='Accept request';action.onclick=async()=>{action.disabled=true;const {error}=await supabase.from('friend_requests').update({status:'accepted'}).eq('id',relation.id);if(error){action.disabled=false;toast(error.message,'error')}else{action.textContent='Message';action.classList.remove('button-primary','button-request-sent');action.onclick=()=>location.href='/chats/';toast('You’re friends now.','success')}}}
     else action.onclick=async()=>{action.disabled=true;const sent=await sendFriendRequest(data.id);if(sent){action.textContent='Request sent';action.classList.remove('button-primary');action.classList.add('button-request-sent')}else action.disabled=false}
   }
-  const {data:posts,error:postsError}=await supabase.from('posts').select('id,user_id,content,image_path,created_at,profiles(full_name,username,avatar_url),likes(count),comments(count)').eq('user_id',data.id).order('created_at',{ascending:false}).limit(20)
+  const {data:posts,error:postsError}=await supabase.from('posts').select('id,user_id,content,image_path,created_at,profiles(full_name,username,avatar_url,membership_plan,membership_status,is_verified),likes(count),comments(count)').eq('user_id',data.id).order('created_at',{ascending:false}).limit(20)
   if(postsError)toast(postsError.message,'error')
   const profilePosts=posts||[]
   if(session&&profilePosts.length){const {data:mineLikes}=await supabase.from('likes').select('post_id').eq('user_id',session.user.id).in('post_id',profilePosts.map(post=>post.id));liked=new Set((mineLikes||[]).map(row=>row.post_id))}else liked=new Set()
@@ -1356,10 +1363,15 @@ async function renderSettingsSection(){
     content=settingPanel('Sharing on Flexoverse','Posts and reels are shared from their own pages.',`<div class="settings-feature-row"><span class="settings-feature-icon">${sidebarContentIcon('post')}</span><span><strong>Write a post</strong><small>Share an update or photo with the community.</small></span><a class="button button-soft" href="/create/">Create post</a></div><div class="settings-feature-row"><span class="settings-feature-icon">${sidebarContentIcon('reel')}</span><span><strong>Publish a reel</strong><small>Upload a short video to the public reels feed.</small></span><a class="button button-soft" href="/reels/create/">Create reel</a></div><div class="settings-note"><strong>Who can see your content?</strong><p>Public posts and reels can be viewed by anyone. Your profile visibility controls profile discovery. Audience controls for individual posts are not available yet.</p><a class="text-link" href="/settings/privacy/">Review profile privacy ${settingsIcon}</a></div>`)
   }else if(key==='notifications'){
     const {data:preferences,error}=await supabase.from('notification_preferences').select('in_app_enabled,friend_requests,post_likes,post_comments').eq('user_id',session.user.id).maybeSingle()
-    if(error){console.error('Could not load notification preferences:',error);content=settingPanel('In-app activity','Manage the notification types Flexoverse records.',`<div class="settings-empty"><strong>Notification preferences are unavailable</strong><p>Apply the settings migration in <code>supabase/settings_preferences.sql</code> and refresh this page.</p></div>`)}
+    const browserSupported='Notification' in window
+    const browserPermission=browserSupported?Notification.permission:'unsupported'
+    const browserLabel=browserPermission==='granted'?'Allowed':browserPermission==='denied'?'Blocked in browser settings':browserPermission==='default'?'Not enabled':'Not supported by this browser'
+    const browserButton=browserPermission==='default'?'<button class="button button-outline" id="enable-browser-notifications" type="button">Enable browser notifications</button>':browserPermission==='denied'?'<p class="settings-footnote">Change this site’s notification permission in your browser settings, then refresh this page.</p>':''
+    const browserPanel=`<div class="settings-note browser-notification-settings"><div class="browser-notification-heading"><strong>Browser notifications</strong><span class="status-pill ${browserPermission==='granted'?'status-good':''}">${browserLabel}</span></div><p>Allow Flexoverse to request browser notification permission on this device. You can change this choice in your browser at any time.</p>${browserButton}<p class="settings-footnote">Permission is only one step. Background push delivery also requires a registered service worker and a valid push subscription.</p></div>`
+    if(error){console.error('Could not load notification preferences:',error);content=settingPanel('Notifications','Manage browser permission and the activity recorded in your inbox.',browserPanel+`<div class="settings-empty"><strong>In-app preferences are unavailable</strong><p>Please refresh and try again.</p></div>`)}
     else{
       const p=preferences||{in_app_enabled:true,friend_requests:true,post_likes:true,post_comments:true}
-      content=settingPanel('In-app activity','Choose which activity appears in your notification inbox.',`${settingSwitch('notify-enabled','Show in-app notifications','Hide all activity from your inbox on Flexoverse.',p.in_app_enabled)}<div class="settings-divider"></div>${settingSwitch('notify-friends','Friend requests','Show sent and accepted friend request activity.',p.friend_requests)}${settingSwitch('notify-likes','Post likes','Show when someone likes one of your posts.',p.post_likes)}${settingSwitch('notify-comments','Post comments','Show when someone comments on one of your posts.',p.post_comments)}<p class="settings-footnote">These controls filter what appears in your inbox. Activity records generated by the current app may still be stored in Supabase.</p>`)
+      content=settingPanel('Notifications','Choose how Flexoverse can reach you.',browserPanel+`<div class="settings-divider"></div><h3 class="notification-settings-subheading">In-app activity</h3>${settingSwitch('notify-enabled','Show in-app notifications','Hide all activity from your inbox on Flexoverse.',p.in_app_enabled)}<div class="settings-divider"></div>${settingSwitch('notify-friends','Friend requests','Show sent and accepted friend request activity.',p.friend_requests)}${settingSwitch('notify-likes','Post likes','Show when someone likes one of your posts.',p.post_likes)}${settingSwitch('notify-comments','Post comments','Show when someone comments on one of your posts.',p.post_comments)}<p class="settings-footnote">These controls filter what appears in your inbox. Activity records generated by the current app may still be stored in Supabase.</p>`)
     }
   }else if(key==='blocked'){
     content=settingPanel('People you have blocked','You can unblock someone here. They may be able to interact with you again afterward.','<div id="blocked-account-list" class="blocked-account-list"><div class="feed-state">Loading blocked accounts…</div></div>')
@@ -1367,9 +1379,24 @@ async function renderSettingsSection(){
     const verified=session.user.email_confirmed_at
     content=settingPanel('Sign-in details','Your account uses the email address below to sign in.',`<div class="settings-detail-row"><span><small>Email address</small><strong>${esc(session.user.email||'Not available')}</strong></span><span class="${verified?'status-pill status-good':'status-pill'}">${verified?'Verified':'Not verified'}</span></div><div class="settings-note"><strong>Password recovery</strong><p>Send a password reset link to your sign-in email.</p><button id="send-password-reset" class="button button-outline" type="button" ${session.user.email?'':'disabled'}>Send reset link</button></div><p class="settings-footnote">For your safety, use a unique password and do not share sign-in links.</p>`)
   }else if(key==='membership'){
-    content=settingPanel('Membership status','Paid plans and storage upgrades are not active in this version.',`<div class="coming-soon-card"><span class="plan-tag">FLEXOVERSE MEMBERSHIP</span><h3>Membership is on the way</h3><p>When plans launch, available benefits and prices will be shown here before you subscribe.</p></div><ul class="settings-benefit-list"><li>Expanded media storage with clear limits</li><li>Subscription status and billing controls</li><li>Business discovery benefits where eligible</li><li>Verification applications reviewed by Flexoverse</li></ul><span class="pending-pill">Not available yet</span>`)
+    const plan=profile?.membership_plan==='plus'?'Flexoverse Plus':'Standard member'
+    const active=profile?.membership_status==='active'
+    const joined=profile?.created_at?new Intl.DateTimeFormat(undefined,{month:'long',year:'numeric'}).format(new Date(profile.created_at)):'Your account creation date'
+    content=settingPanel('Your membership','Your current Flexoverse membership and account benefits.',`<div class="membership-status-card"><div class="membership-status-top"><span class="membership-plan-label">FLEXOVERSE MEMBERSHIP</span><span class="membership-state-pill ${active?'is-active':''}">${active?'Active':'Paused'}</span></div><h3>${plan}</h3><p>${active?'Your membership is active on this account.':'Your membership is currently paused.'}</p><div class="membership-status-meta"><span>Member since</span><strong>${esc(joined)}</strong></div></div><div class="settings-note"><strong>Flexoverse Plus</strong><p>Paid upgrades, billing and extra storage are not open yet. Your current membership remains available without a payment.</p><span class="pending-pill">Upgrades coming later</span></div><p class="settings-footnote">Membership status is managed by Flexoverse. Payment or subscription status is never inferred from a profile badge.</p>`)
   }else if(key==='verification'){
-    content=settingPanel('Profile verification','Verification is not available yet.',`<div class="settings-note"><strong>How verification will work</strong><p>Eligible people will be able to submit an application for review. A badge will only appear after Flexoverse confirms an account’s identity and authenticity.</p></div><div class="settings-note settings-note-soft"><strong>No badge is active from this page</strong><p>Flexoverse will publish eligibility and review details before applications open.</p><span class="pending-pill">Applications not open</span></div>`)
+    const {data:requestRows,error:requestError}=await supabase.rpc('get_my_verification_request')
+    const latestRequest=Array.isArray(requestRows)?requestRows[0]||null:null
+    if(profile?.is_verified){
+      content=settingPanel('Verified profile','Your identity has been reviewed by Flexoverse.',`<div class="verification-status-card verification-approved"><span class="profile-verified-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8 14.8 4l3-.2.9 2.9 2.3 1.9-1.1 2.8.5 3-2.7 1.3-1.4 2.7-3-.5-2.8 1.1-1.9-2.3-2.9-.9.2-3L3 12l1.1-2.8-.5-3 2.7-1.3 1.4-2.7 3 .5L12 2.8Z"/><path d="m8.5 12.2 2.2 2.2 4.8-5"/></svg>Verified</span><h3>Your profile is verified</h3><p>The verified badge appears on your public Flexoverse profile.</p></div>`)
+    }else if(requestError){
+      console.error('Could not load verification status:',requestError)
+      content=settingPanel('Profile verification','Verification applications are reviewed by the Flexoverse team.',`<div class="settings-note settings-note-warning"><strong>Verification status could not load</strong><p>Please refresh the page and try again. No badge is granted until your identity is reviewed.</p></div>`)
+    }else if(latestRequest?.status==='pending'){
+      content=settingPanel('Verification request received','Your request is waiting for a review by Flexoverse.',`<div class="verification-status-card verification-pending"><span class="pending-pill">Under review</span><h3>We have received your request</h3><p>We will review the information you submitted. The verified badge will only appear after approval.</p><div class="membership-status-meta"><span>Submitted</span><strong>${esc(new Intl.DateTimeFormat(undefined,{dateStyle:'medium'}).format(new Date(latestRequest.requested_at)))}</strong></div></div>`)
+    }else{
+      const rejected=latestRequest?.status==='rejected'
+      content=settingPanel('Request a verified badge','Apply for a blue verified badge. Flexoverse reviews requests manually, and submitting a request does not guarantee approval.',`${rejected?'<div class="settings-note settings-note-warning"><strong>Your previous request was not approved</strong><p>You may submit a new request with updated information.</p></div>':''}<form id="verification-request-form" class="settings-form verification-form"><label class="form-label">Full legal or public name<input name="full_name" maxlength="100" required autocomplete="name" value="${esc(latestRequest?.full_name||profile?.full_name||'')}" placeholder="Name people know you by"></label><label class="form-label">Public links (optional)<textarea name="public_links" rows="3" maxlength="1000" placeholder="Website, public social profiles, news or work links">${esc(latestRequest?.public_links||'')}</textarea><small>Share links that help us confirm your identity.</small></label><label class="form-label">Why should this account be verified?<textarea name="reason" rows="4" minlength="20" maxlength="800" required placeholder="Tell us about your public identity or work (20–800 characters)"></textarea></label><div class="settings-form-actions"><button class="button button-primary" type="submit">Submit for review</button></div></form><p class="settings-footnote">Do not submit passwords, one-time codes or bank details. Verification is free to request at this stage.</p>`)
+    }
   }else if(key==='business'){
     content=settingPanel('Business profiles','Business subscriptions and public business listings are not available yet.',`<div class="settings-note"><strong>Planned for businesses</strong><p>Business profiles are intended to help organizations present their services and connect with the community. Subscription terms, discovery options, and any Google indexing eligibility will be displayed before launch.</p></div><a class="button button-soft" href="/help/">Read the Help Center</a>`)
   }else if(key==='appearance'){
@@ -1524,6 +1551,33 @@ async function saveProfilePhoto(file){
 }
 
 function bindSettingsEvents(){
+  document.querySelector('#verification-request-form')?.addEventListener('submit',async e=>{
+    e.preventDefault()
+    if(!session)return openAuth()
+    const form=e.currentTarget,fields=new FormData(form),button=form.querySelector('[type="submit"]')
+    const fullName=String(fields.get('full_name')||'').trim()
+    const publicLinks=String(fields.get('public_links')||'').trim()
+    const reason=String(fields.get('reason')||'').trim()
+    if(fullName.length<2||fullName.length>100)return toast('Enter a name between 2 and 100 characters.','error')
+    if(reason.length<20||reason.length>800)return toast('Please explain your request in 20–800 characters.','error')
+    button.disabled=true;button.textContent='Submitting…'
+    const {error}=await supabase.rpc('submit_verification_request',{p_full_name:fullName,p_public_links:publicLinks,p_reason:reason})
+    if(error){button.disabled=false;button.textContent='Submit for review';return toast(error.message.includes('already have a verification request')?'Your request is already under review.':error.message,'error')}
+    toast('Your verification request has been submitted.','success')
+    await renderSettingsSection()
+  })
+  document.querySelector('#enable-browser-notifications')?.addEventListener('click',async e=>{
+    const button=e.currentTarget
+    if(!('Notification' in window)){toast('This browser does not support notifications.','error');return}
+    button.disabled=true;button.textContent='Requesting permission…'
+    try{
+      const permission=await Notification.requestPermission()
+      if(permission==='granted')toast('Browser notification permission is now allowed on this device.','success')
+      else if(permission==='denied')toast('Notifications are blocked. Change the site permission in your browser settings.','error')
+      else toast('Notification permission was not changed.')
+      await renderSettingsSection()
+    }catch(error){button.disabled=false;button.textContent='Enable browser notifications';toast(error.message||'Could not request notification permission.','error')}
+  })
   document.querySelector('#profile-form')?.addEventListener('submit',async e=>{
     e.preventDefault()
     if(!session)return openAuth()
@@ -1570,18 +1624,40 @@ function bindSettingsEvents(){
   document.querySelector('#settings-signout')?.addEventListener('click',async e=>{e.currentTarget.disabled=true;const {error}=await supabase.auth.signOut();if(error){e.currentTarget.disabled=false;toast(error.message,'error')}})
 }
 
+function showNotificationPermissionPrompt(userId){
+  if(!userId||!('Notification' in window)||Notification.permission!=='default')return
+  const key=`flexoverse-notification-prompt-dismissed:${userId}`
+  try{if(localStorage.getItem(key)==='1')return}catch{}
+  const root=document.querySelector('#modal-root')
+  if(!root||document.querySelector('#notification-permission-prompt'))return
+  root.insertAdjacentHTML('beforeend',`<div class="notification-permission-backdrop" id="notification-permission-prompt"><section class="notification-permission-card" role="dialog" aria-modal="true" aria-labelledby="notification-permission-title"><span class="notification-permission-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span><p class="overline">STAY IN THE LOOP</p><h2 id="notification-permission-title">Turn on notifications?</h2><p>Get browser alerts for new activity from Flexoverse. You can change this permission any time in your browser settings.</p><button class="button button-primary" id="notification-permission-allow" type="button">Enable notifications</button><button class="notification-permission-later" id="notification-permission-later" type="button">Not now</button></section></div>`)
+  const dismiss=()=>{try{localStorage.setItem(key,'1')}catch{};document.querySelector('#notification-permission-prompt')?.remove()}
+  document.querySelector('#notification-permission-later')?.addEventListener('click',dismiss)
+  document.querySelector('#notification-permission-allow')?.addEventListener('click',async e=>{
+    const button=e.currentTarget
+    button.disabled=true;button.textContent='Requesting permission…'
+    try{
+      const permission=await Notification.requestPermission()
+      if(permission==='granted')toast('Browser notification permission is allowed on this device.','success')
+      else if(permission==='denied')toast('Notifications are blocked. You can change this in browser settings.','error')
+      else toast('Notification permission was not changed.')
+      dismiss()
+    }catch(error){button.disabled=false;button.textContent='Enable notifications';toast(error.message||'Could not request notification permission.','error')}
+  })
+}
+
 async function initialize() {
   applySavedPreferences()
   mountShell()
   const {data}=await supabase.auth.getSession();session=data.session
-  if(session){const {data:row}=await supabase.from('profiles').select('id,username,full_name,bio,avatar_url,is_public').eq('id',session.user.id).maybeSingle();profile=row}
+  if(session){const {data:row}=await supabase.from('profiles').select('id,username,full_name,bio,avatar_url,is_public,created_at,membership_plan,membership_status,is_verified,verified_at').eq('id',session.user.id).maybeSingle();profile=row}
   if(session&&(page==='login'||page==='signup')){const destination=authReturnPath();location.replace(session.user.user_metadata?.profile_completed===false?`/complete-profile/?next=${encodeURIComponent(destination)}`:destination);return}
   if(session&&session.user.user_metadata?.profile_completed===false&&page!=='complete-profile'){const destination=`${location.pathname}${location.search}`;location.replace(`/complete-profile/?next=${encodeURIComponent(destination)}`);return}
   const signupLink=document.querySelector('#switch-to-signup');if(signupLink)signupLink.href=authPageHref('signup')
   const loginLink=document.querySelector('#switch-to-login');if(loginLink)loginLink.href=authPageHref('login')
   mountShell()
   bindHeaderNotificationDropdown()
-  if(session){await loadNotificationPreferences();await loadNotificationCount();subscribeToNotificationUpdates()}
+  if(session){await loadNotificationPreferences();await loadNotificationCount();subscribeToNotificationUpdates();showNotificationPermissionPrompt(session.user.id)}
   const composerAvatar=document.querySelector('[data-user-avatar]');if(composerAvatar)composerAvatar.outerHTML=avatar(session?initials(myName()):'FX','blue',profile?.avatar_url)
   if(page==='home'){await Promise.all([loadHome(),loadHomeReels()])}
   if(page==='friends')await loadFriends()

@@ -1644,3 +1644,44 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
 .header-quick-reply input:focus{border-color:#8b83ee;box-shadow:0 0 0 2px #6b62e91a}
 .header-quick-reply button{border:0;border-radius:8px;padding:0 10px;background:#655ce8;color:#fff;font-size:10px;font-weight:750}
 .header-quick-reply button:disabled{opacity:.55}
+
+/* Membership and verification */
+.profile-name-and-badges{display:flex;align-items:center;flex-wrap:wrap;gap:7px;min-width:0}
+.profile-name-and-badges h1{min-width:0}
+.profile-badges{display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px}
+.profile-member-badge,.profile-verified-badge{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:4px 8px;font-size:9px;font-weight:750;line-height:1;white-space:nowrap}
+.profile-member-badge{background:#f1efff;color:#6156b8;border:1px solid #e7e3ff}
+.profile-verified-badge{background:#e9f4ff;color:#1476d4;border:1px solid #d5eaff}
+.profile-member-badge svg,.profile-verified-badge svg{width:12px;height:12px;fill:currentColor;stroke:currentColor;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
+.profile-member-badge svg path:last-child,.profile-verified-badge svg path:last-child{fill:none;stroke:#fff;stroke-width:2}
+.membership-status-card,.verification-status-card{margin:12px 0 16px;padding:20px;border:1px solid #e7e9f0;border-radius:14px;background:linear-gradient(125deg,#f7f8ff,#fff)}
+.membership-status-top,.browser-notification-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.membership-plan-label{font-size:9px;font-weight:800;letter-spacing:.1em;color:#777e91}
+.membership-state-pill{padding:5px 9px;border-radius:999px;background:#f0f1f4;color:#747d8c;font-size:10px;font-weight:700}
+.membership-state-pill.is-active{background:#e8f7ef;color:#218451}
+.membership-status-card h3,.verification-status-card h3{margin:12px 0 5px;color:#2e3848;font:750 20px Manrope,sans-serif}
+.membership-status-card p,.verification-status-card p{margin:0;color:#737f90;font-size:12px;line-height:1.6}
+.membership-status-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:17px;padding-top:13px;border-top:1px solid #e8eaf0;color:#7f8998;font-size:11px}
+.membership-status-meta strong{color:#4d586a;font-size:11px}
+.verification-approved{background:linear-gradient(125deg,#edf7ff,#fff)}
+.verification-pending{background:linear-gradient(125deg,#fbf8ee,#fff)}
+.verification-form{padding-top:5px}
+.verification-form textarea{resize:vertical}
+.browser-notification-settings .button{margin-top:12px}
+.browser-notification-heading{justify-content:flex-start}
+.browser-notification-heading .status-pill{margin-left:auto}
+.notification-settings-subheading{margin:15px 0 8px;font-size:13px;color:var(--ink)}
+.notification-permission-backdrop{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:20px;background:rgba(19,27,42,.46);backdrop-filter:blur(5px)}
+.notification-permission-card{width:min(100%,420px);padding:29px;border:1px solid #e9eaf1;border-radius:20px;background:var(--paper,#fff);box-shadow:0 24px 80px rgba(20,28,45,.22);text-align:center}
+.notification-permission-icon{display:grid;place-items:center;width:54px;height:54px;margin:0 auto 16px;border-radius:17px;background:#efedff;color:#655bd2}
+.notification-permission-icon svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.notification-permission-card .overline{margin:0 0 7px}
+.notification-permission-card h2{margin:0;color:var(--ink);font:750 23px Manrope,sans-serif}
+.notification-permission-card>p:not(.overline){margin:10px auto 18px;max-width:330px;color:var(--muted);font-size:13px;line-height:1.65}
+.notification-permission-card .button{width:100%;justify-content:center}
+.notification-permission-later{margin-top:13px;padding:8px 15px;border:0;background:transparent;color:var(--muted);font:600 12px inherit;cursor:pointer}
+@media(max-width:600px){.membership-status-card,.verification-status-card{padding:16px}.notification-permission-card{padding:24px 20px}.profile-name-and-badges{gap:6px}}
+
+.post-member-badge{display:inline-flex;align-items:center;margin-left:5px;padding:2px 6px;border-radius:999px;background:#f1efff;border:1px solid #e7e3ff;color:#6156b8;font-size:8px;font-weight:750;line-height:1;vertical-align:middle}
+.post-verified-badge{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;margin-left:5px;border-radius:50%;background:#1682df;color:#fff;vertical-align:middle}
+.post-verified-badge svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
