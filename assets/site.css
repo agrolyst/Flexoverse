@@ -1697,3 +1697,35 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
 .badge-roadmap-copy{min-width:0}.badge-roadmap-copy b{display:block;margin:1px 0 4px;color:#30394b;font-size:12px}.badge-roadmap-copy p{margin:0;color:#788294;font-size:10px;line-height:1.55}
 .badge-verified .badge-roadmap-icon{width:30px;height:30px;flex-basis:30px;border-radius:50%;background:#1682df;color:#fff}.badge-verified .badge-roadmap-icon svg{width:16px;height:16px;stroke-width:2.6}.badge-plus .badge-roadmap-icon{background:#f1edff;color:#7259c9}.badge-admin .badge-roadmap-icon{background:#fff4df;color:#b47a20}.badge-moderator .badge-roadmap-icon{background:#e8f7f1;color:#218b68}.badge-founder .badge-roadmap-icon{background:#fff0e8;color:#bd7043}.badge-og .badge-roadmap-icon{background:#f3efff;color:#805fc8}.badge-creator .badge-roadmap-icon{background:#ffedf3;color:#c35c86}.badge-top .badge-roadmap-icon{background:#fff5dc;color:#b68a25}
 @media(max-width:520px){.badge-roadmap-grid{grid-template-columns:1fr}.badge-roadmap-item{padding:11px}}
+
+
+/* Refreshed standalone sign-in and sign-up experience */
+body.standalone-auth-page{min-height:100vh;background:radial-gradient(ellipse at 12% 4%,#eeecff 0,transparent 38%),linear-gradient(145deg,#f7f8fc 0%,#f1f2fa 100%)}
+body.standalone-auth-page .page-layout{max-width:1120px;padding:34px 24px 64px}
+body.standalone-auth-page .main-column.auth-page{max-width:100%;margin:0 auto}
+.auth-page-card{position:relative;overflow:hidden;padding:clamp(24px,5vw,48px);border:1px solid #e6e8f2;border-radius:24px;background:rgba(255,255,255,.96);box-shadow:0 24px 70px rgba(38,43,83,.09)}
+.auth-page-card:before{content:"";position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#655ce8,#9b91ff,#6e9ff4)}
+.auth-brand-lockup{display:flex;align-items:center;gap:10px;margin-bottom:28px;color:#252b40;font-size:15px;font-weight:850;letter-spacing:-.3px}
+.auth-brand-lockup .logo-mark{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#655ce8;color:#fff;box-shadow:0 7px 18px #655ce833}
+.auth-brand-lockup .logo-mark svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.auth-layout-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.78fr);align-items:center;gap:clamp(24px,5vw,64px)}
+.auth-copy-panel{padding:8px 0}
+.auth-copy-panel .overline{color:#655ce8;font-size:10px;font-weight:850;letter-spacing:1.6px}
+.auth-copy-panel h1{max-width:520px;margin:12px 0;color:#242a3c;font:800 clamp(30px,4vw,45px)/1.08 Manrope,sans-serif;letter-spacing:-1.5px}
+.auth-copy-panel>p:not(.overline){max-width:470px;color:#727b8e;font-size:14px;line-height:1.75}
+.auth-benefit-list{display:grid;gap:12px;margin:26px 0 0;padding:0;list-style:none}
+.auth-benefit-list li{display:flex;align-items:center;gap:10px;color:#4d566b;font-size:12px;font-weight:650}
+.auth-benefit-list li span{display:grid;place-items:center;width:25px;height:25px;border-radius:8px;background:#efedff;color:#655ce8;font-size:13px}
+.auth-form-panel{padding:clamp(20px,3vw,30px);border:1px solid #e9eaf2;border-radius:18px;background:#fff;box-shadow:0 12px 35px #2027470a}
+.auth-form-panel h2{margin:0 0 6px;color:#293044;font:750 20px Manrope,sans-serif}
+.auth-form-panel>.muted{margin:0;color:#8991a1;font-size:12px;line-height:1.6}
+.auth-form-panel .auth-page-form{margin-top:20px;gap:13px}
+.auth-form-panel .auth-page-form>label{gap:7px;color:#505a6e;font-size:11px}
+.auth-form-panel .auth-page-form>label>input,.auth-form-panel .input-with-prefix{min-height:44px;padding:11px 12px;border:1px solid #e4e7ef;border-radius:10px;background:#fbfcff;font-size:13px}
+.auth-form-panel .auth-page-form>label>input:focus,.auth-form-panel .input-with-prefix:focus-within{border-color:#8b83ee;box-shadow:0 0 0 3px #655ce81c;outline:none}
+.auth-form-panel .auth-page-form>.button{min-height:46px;border-radius:11px;font-weight:750}
+.auth-form-panel .auth-page-switch{margin-top:17px;font-size:11px}
+.auth-form-panel .auth-page-form>label>small{font-size:10px;line-height:1.5}
+.auth-success{color:#20835a;font-size:11px;line-height:1.5}
+@media(max-width:760px){body.standalone-auth-page .page-layout{padding:18px 14px 38px}.auth-layout-grid{grid-template-columns:1fr;gap:20px}.auth-copy-panel{padding:0}.auth-copy-panel h1{font-size:32px}.auth-benefit-list{grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}.auth-benefit-list li{font-size:10px}.auth-brand-lockup{margin-bottom:20px}}
+@media(max-width:440px){body.standalone-auth-page .page-layout{padding:12px 9px 26px}.auth-page-card{padding:22px 16px;border-radius:18px}.auth-benefit-list{grid-template-columns:1fr}.auth-form-panel{padding:18px 14px}.auth-copy-panel h1{font-size:29px}}
