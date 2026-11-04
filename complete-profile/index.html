@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#655ce8">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=brand-favicon-20261104">
   <link rel="shortcut icon" href="/favicon.svg?v=brand-favicon-20261104">
-  <meta name="description" content="Finish setting up your Flexoverse profile. Add an optional private address or skip for now.">
+  <meta name="description" content="Set up your Flexoverse personal or business account, step by step.">
   <title>Complete your profile · Flexoverse</title>
-  <link rel="stylesheet" href="../assets/site.css?v=membership-verification-notification-onboarding-20261104">
+  <link rel="stylesheet" href="../assets/site.css?v=profile-onboarding-sections-20261104">
 </head>
 <body class="standalone-auth-page" data-page="complete-profile">
   <div id="site-header"></div>
@@ -17,35 +17,70 @@
     <main class="main-column auth-page">
       <section class="auth-page-card card profile-completion-card">
         <div id="profile-completion-guest" hidden>
-          <p class="overline">PROFILE SETUP</p>
-          <h1>Sign in to continue</h1>
-          <p class="muted">Sign in to finish your profile, or return to the homepage.</p>
+          <p class="overline">PROFILE SETUP</p><h1>Sign in to continue</h1>
+          <p class="muted">Sign in to finish setting up your Flexoverse account.</p>
           <a class="button button-primary" href="/login/?next=%2Fcomplete-profile%2F">Sign in</a>
         </div>
         <div id="profile-completion-content">
-          <p class="overline">ONE LAST STEP</p>
-          <h1>Complete your profile</h1>
-          <p class="muted">Add a few details so friends can recognize you. You can skip this and finish later.</p>
-          <form id="complete-profile-form" class="auth-page-form">
-            <label>Your name<input id="completion-name" name="full_name" type="text" required autocomplete="name" maxlength="80" placeholder="Your name"></label>
-            <label>Username<div class="input-with-prefix"><span>@</span><input id="completion-username" name="username" type="text" required minlength="3" maxlength="30" pattern="[a-z0-9]+" autocomplete="username" placeholder="yourname"></div><small>3–30 lowercase letters or numbers. Numbers are optional.</small></label>
-            <label>About you <span class="optional-label">Optional</span><textarea name="bio" maxlength="300" rows="3" placeholder="A short introduction"></textarea></label>
-            <label>Address or general location <span class="optional-label">Optional</span><input id="completion-address" name="address" type="text" maxlength="300" autocomplete="street-address" placeholder="City, region, or mailing address"><small>This is private and visible only to your signed-in account.</small></label>
-            <p class="auth-success" id="completion-message" role="status"></p>
-            <div class="profile-completion-actions">
-              <button class="button button-outline" type="button" id="skip-profile-completion">Skip for now</button>
-              <button class="button button-primary" type="submit">Save and continue</button>
+          <p class="overline">WELCOME TO FLEXOVERSE</p>
+          <h1>Let's set up your account</h1>
+          <p class="muted">Choose your account type first. We'll then guide you through the details for your account. You can edit these details later in Settings.</p>
+          <form id="complete-profile-form" class="auth-page-form profile-onboarding-form">
+            <section class="onboarding-section onboarding-account-type">
+              <div class="onboarding-section-heading"><span class="onboarding-step">01</span><div><h2>What type of account are you creating?</h2><p>Choose the option that best describes how you'll use Flexoverse.</p></div></div>
+              <div class="onboarding-account-options">
+                <label class="onboarding-account-option"><input type="radio" name="account_type" value="personal" required><span class="onboarding-option-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span><span><strong>Personal account</strong><small>Connect with friends, share moments and join conversations.</small></span></label>
+                <label class="onboarding-account-option"><input type="radio" name="account_type" value="business" required><span class="onboarding-option-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V4h8v3M3 12h18M10 12v2h4v-2"/></svg></span><span><strong>Business account</strong><small>Represent a company, shop, brand or organization.</small></span></label>
+              </div>
+            </section>
+            <div id="onboarding-details" hidden>
+              <section class="onboarding-section">
+                <div class="onboarding-section-heading"><span class="onboarding-step">02</span><div><h2>Basic information</h2><p>These details help people recognize and find your account.</p></div></div>
+                <div class="onboarding-fields">
+                  <label>Your full name<input name="full_name" type="text" required autocomplete="name" maxlength="80" placeholder="First and last name"></label>
+                  <label>Username<div class="input-with-prefix"><span>@</span><input name="username" type="text" required minlength="3" maxlength="30" pattern="[a-z0-9]+" autocomplete="username" placeholder="yourname"></div><small>3–30 lowercase letters or numbers.</small></label>
+                  <label class="onboarding-full-width">About you <span class="optional-label">Optional</span><textarea name="bio" maxlength="300" rows="3" placeholder="Write a short introduction"></textarea></label>
+                </div>
+              </section>
+              <section class="onboarding-section">
+                <div class="onboarding-section-heading"><span class="onboarding-step">03</span><div><h2>Personal details</h2><p>Your birthday and gender help complete your account. These details are private by default.</p></div></div>
+                <div class="onboarding-fields">
+                  <label>Date of birth<input name="date_of_birth" type="date" required autocomplete="bday" max="2026-11-04"><small>Enter your real date of birth. It won't be displayed publicly.</small></label>
+                  <label>Gender<select name="gender" required><option value="">Select gender</option><option value="female">Female</option><option value="male">Male</option><option value="non_binary">Non-binary</option><option value="self_described">Prefer to self-describe</option><option value="prefer_not_to_say">Prefer not to say</option></select></label>
+                  <label>Phone number <span class="optional-label">Optional</span><input name="phone" type="tel" autocomplete="tel" maxlength="30" placeholder="+234…"></label>
+                </div>
+              </section>
+              <section class="onboarding-section">
+                <div class="onboarding-section-heading"><span class="onboarding-step">04</span><div><h2>Where are you based?</h2><p>Google will suggest matching addresses as you type. Your exact address is private.</p></div></div>
+                <div class="onboarding-fields">
+                  <label class="onboarding-full-width">Address or location <span class="optional-label">Optional</span><div class="google-address-wrap" data-google-address-wrap><input name="address" type="text" maxlength="300" autocomplete="off" placeholder="Start typing an address, city or area" data-google-address><input type="hidden" name="address_place_id"><div class="google-address-suggestions" data-google-suggestions hidden></div><small data-google-address-status>Address suggestions are provided by Google Maps.</small></div></label>
+                  <label>Current city <span class="optional-label">Optional</span><input name="city" maxlength="100" placeholder="Your current city"></label>
+                  <label>Hometown <span class="optional-label">Optional</span><input name="hometown" maxlength="100" placeholder="Where you're from"></label>
+                </div>
+              </section>
+              <section class="onboarding-section" id="business-onboarding-section" hidden>
+                <div class="onboarding-section-heading"><span class="onboarding-step">05</span><div><h2>Business information</h2><p>Tell the community what your business does and how customers can reach you.</p></div></div>
+                <div class="onboarding-fields">
+                  <label>Business or organization name<input name="business_name" maxlength="120" placeholder="Business name"></label>
+                  <label>Business category<select name="business_category"><option value="">Choose a category</option><option>Retail & Shopping</option><option>Food & Restaurant</option><option>Beauty & Wellness</option><option>Education</option><option>Technology</option><option>Professional Services</option><option>Health</option><option>Arts & Entertainment</option><option>Travel & Hospitality</option><option>Agriculture</option><option>Non-profit & Community</option><option>Other</option></select></label>
+                  <label class="onboarding-full-width">Business description<textarea name="business_description" maxlength="600" rows="3" placeholder="Describe your products, services or organization"></textarea></label>
+                  <label>Business phone <span class="optional-label">Optional</span><input name="business_phone" type="tel" maxlength="30" placeholder="Business contact number"></label>
+                  <label>Website <span class="optional-label">Optional</span><input name="business_website" type="url" maxlength="200" placeholder="https://example.com"></label>
+                  <label class="onboarding-full-width">Opening hours <span class="optional-label">Optional</span><textarea name="business_hours" maxlength="500" rows="2" placeholder="e.g. Mon–Fri, 9:00 AM–5:00 PM"></textarea></label>
+                </div>
+              </section>
+              <div class="onboarding-privacy-note"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span><strong>Your information matters.</strong> Your date of birth, gender, phone number and exact address are stored as private account details, not shown on your public profile.</span></div>
+              <p class="auth-success" id="completion-message" role="status"></p>
+              <div class="profile-completion-actions"><button class="button button-outline" type="button" id="skip-profile-completion">Skip for now</button><button class="button button-primary" type="submit">Save and continue</button></div>
             </div>
           </form>
-          <p class="auth-page-switch">You can change your profile details later in <a href="/settings/profile/">Settings</a>.</p>
+          <p class="auth-page-switch">You can edit your information at any time in <a href="/settings/profile/">Settings</a>.</p>
         </div>
       </section>
     </main>
     <aside id="right-sidebar"></aside>
   </div>
-  <nav id="mobile-nav"></nav>
-  <div id="modal-root"></div>
-  <div id="toast" role="status"></div>
-  <script type="module" src="../assets/app.js?v=brand-favicon-profile-route-20261104"></script>
+  <nav id="mobile-nav"></nav><div id="modal-root"></div><div id="toast" role="status"></div>
+  <script type="module" src="../assets/app.js?v=profile-onboarding-sections-20261104"></script>
 </body>
 </html>
