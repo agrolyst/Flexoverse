@@ -30,6 +30,10 @@ let callRemoteStream = null
 let currentCall = null
 let callLogView = false
 let chatSelectionMode = false
+let chatListFilter = 'all'
+let chatFavoriteIds = new Set()
+let messageSelectionMode = false
+let selectedMessageIds = new Set()
 let pendingReplyTo = null
 let activeMessageReactions = []
 let selectedChatIds = new Set()
@@ -524,8 +528,15 @@ function renderChatList() {
   const list=document.querySelector('#conversation-list')
   if(!list)return
   const search=document.querySelector('#conversation-search')?.value.trim().toLowerCase()||''
-  const visible=chatItems.filter(item=>`${item.peer_name} ${item.peer_username}`.toLowerCase().includes(search))
+  const filtered=chatItems.filter(item=>{
+    if(chatListFilter==='unread'&&!item.unread_count)return false
+    if(chatListFilter==='groups'&&!item.is_group)return false
+    if(chatListFilter==='favourites'&&!chatFavoriteIds.has(item.conversation_id))return false
+    return true
+  })
+  const visible=filtered.filter(item=>`${item.peer_name} ${item.peer_username}`.toLowerCase().includes(search))
   const total=document.querySelector('#chat-total');if(total)total.textContent=String(chatItems.length)
+  document.querySelectorAll('[data-chat-filter]').forEach(tab=>{const active=tab.dataset.chatFilter===chatListFilter;tab.classList.toggle('active',active);tab.setAttribute('aria-pressed',String(active))})
   renderChatSelectionControls()
   if(!visible.length){
     list.innerHTML=chatItems.length?'<div class="conversation-empty"><strong>No chats found</strong><p>Try searching with another name.</p></div>':'<div class="conversation-empty"><strong>Your inbox is quiet</strong><p>Start a private conversation with one of your friends.</p><button class="button button-soft" type="button" data-chat-new>Start a chat</button></div>'
@@ -584,6 +595,7 @@ function renderChatRoom(item,messages=activeChatMessages) {
  const room=document.querySelector('#chat-room');if(!room||!item)return;
  document.querySelector('#chat-layout')?.classList.add('has-active-conversation');
  const groups=[];let priorDay='';
+ const selectionBar=messageSelectionMode?`<div class="message-selection-bar"><strong>${selectedMessageIds.size} selected</strong><button type="button" data-copy-selected-messages ${selectedMessageIds.size?'':'disabled'}>Copy</button><button type="button" data-cancel-message-selection>Cancel</button></div>`:'';
  for(let messageIndex=0;messageIndex<messages.length;messageIndex++){
   const message=messages[messageIndex],previous=messages[messageIndex-1],next=messages[messageIndex+1];
   const day=chatDay(message.created_at);if(day!==priorDay){groups.push(`<p class="chat-day-divider">${esc(day)}</p>`);priorDay=day}
@@ -600,7 +612,7 @@ function renderChatRoom(item,messages=activeChatMessages) {
   groups.push(`<div class="message-wrap ${own?'own-message':'other-message'} ${groupClass}" data-message-wrap="${esc(message.id)}"><div class="message ${own?'sent':'received'}" data-message-id="${esc(message.id)}"}>${senderLabel}${quote}${messageBody}<small>${esc(new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'}).format(new Date(message.created_at)))}${message.edited_at?' · edited':''}</small>${reactionBar}</div>${own?`<button type="button" class="message-more" data-message-menu="${esc(message.id)}" aria-label="Message options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>`:''}</div>`)
  }
  const replyBar=pendingReplyTo?`<div class="reply-composer-bar"><span><strong>Replying to ${pendingReplyTo.sender_id===session?.user?.id?'yourself':esc(item.peer_name)}</strong><small>${esc(pendingReplyTo.content.slice(0,120))}</small></span><button type="button" data-cancel-reply aria-label="Cancel reply">×</button></div>`:'';
- room.innerHTML=`<header class="chat-room-head"><button class="chat-room-back" type="button" data-chat-back aria-label="Back to conversations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12"/></svg></button>${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<div class="chat-room-person"><strong>${esc(item.peer_name)}</strong><small><span class="status-dot"></span> Your friend</small></div><div class="chat-header-menu-wrap"><button class="chat-header-menu-toggle" type="button" data-chat-menu-toggle aria-label="More chat options" aria-expanded="false" title="More options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button><div class="chat-header-menu" data-chat-menu hidden>
+ room.innerHTML=`${selectionBar}<header class="chat-room-head"><button class="chat-room-back" type="button" data-chat-back aria-label="Back to conversations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12"/></svg></button>${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<div class="chat-room-person"><strong>${esc(item.peer_name)}</strong><small><span class="status-dot"></span> Your friend</small></div><div class="chat-header-menu-wrap"><button class="chat-header-menu-toggle" type="button" data-chat-menu-toggle aria-label="More chat options" aria-expanded="false" title="More options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button><div class="chat-header-menu" data-chat-menu hidden>
 <button type="button" data-chat-menu-action="contact">Contact info</button><button type="button" data-chat-menu-action="search">Search messages</button><button type="button" data-chat-menu-action="select">Select messages</button><button type="button" data-chat-menu-action="mute">Mute notifications</button><button type="button" data-chat-menu-action="theme">Chat theme</button><div class="chat-menu-divider"></div>${item.is_group?'<button type="button" data-start-group-call="audio">Group voice call</button><button type="button" data-start-group-call="video">Group video call</button>':'<button type="button" data-start-call="audio">Voice call</button><button type="button" data-start-call="video">Video call</button>'}<button type="button" data-chat-menu-action="favorite">Add to Favorites</button><button type="button" data-chat-menu-action="export">Export chat</button><div class="chat-menu-divider"></div><button type="button" data-chat-menu-action="close">Close chat</button></div></div>${item.is_group?'':'<a class="chat-room-profile" href="/'+encodeURIComponent(item.peer_username||'')+'" aria-label="View profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a>'}</header><div class="chat-history" id="chat-history" role="log" aria-live="polite" aria-label="Conversation with ${esc(item.peer_name)}">${groups.join('')||'<p class="chat-history-empty">Say hello and start the conversation.</p>'}</div><div class="chat-typing-indicator" id="chat-typing-indicator" hidden aria-live="polite"></div><form class="message-composer" id="message-form">${replyBar}<input name="message" maxlength="4000" required autocomplete="off" placeholder="Write a message…" aria-label="Write a message"><button class="voice-record-button" type="button" data-voice-record aria-label="Record voice message">${voiceMicSvg()}</button><button class="send-button" aria-label="Send message" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button></form>`;
  const history=document.querySelector('#chat-history');if(history)history.scrollTop=history.scrollHeight;
  renderTypingPresence();
@@ -707,6 +719,7 @@ async function loadChats(preferredConversation='') {
   if(!list)return
   if(!session){list.innerHTML='<div class="conversation-empty"><strong>Sign in to see your chats</strong><p>Your conversations will be waiting for you here.</p><a class="button button-primary" href="/login/">Sign in</a></div>';renderChatWelcome('Sign in to catch up with friends and continue your conversations.');return}
   list.innerHTML='<div class="chat-loading"><span class="friends-loading-dot"></span>Loading conversations</div>'
+  try{chatFavoriteIds=new Set(JSON.parse(localStorage.getItem('flexoverse-chat-favorites:'+session.user.id)||'[]'))}catch{chatFavoriteIds=new Set()}
   const {data,error}=await supabase.rpc('list_my_conversations')
   if(error){console.error('Could not load conversations:',error);list.innerHTML='<div class="conversation-empty"><strong>Your chats could not load</strong><p>Check your connection and try again.</p><button class="button button-outline" type="button" data-retry-chats>Try again</button></div>';return}
   chatItems=(data||[]).map(row=>({...row,peer_name:row.peer_name||row.peer_username||'Flexoverse friend',peer_username:row.peer_username||'member',is_group:!row.peer_id,unread_count:Number(row.unread_count||0)}))
@@ -877,6 +890,10 @@ async function ensureCallChannel(conversationId) {
   await new Promise((resolve,reject)=>{channel.subscribe(status=>{if(status==='SUBSCRIBED'){callSignalChannel=channel;resolve()}else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){reject(new Error('Could not connect call service. Check Realtime permissions.'))}})})
   return channel
 }
+function renderIncomingCallScreen(peer,mode='audio',group=false){
+ const name=peer?.peer_name||'Flexoverse friend',isVideo=mode==='video';
+ callUi(`<div class="call-backdrop call-screen-backdrop incoming-call-backdrop"><section class="call-window call-screen incoming-call-screen" role="dialog" aria-modal="true" aria-label="Incoming ${isVideo?'video':'voice'} call"><div class="incoming-call-content"><span class="incoming-call-label">${group?'GROUP CALL':'INCOMING CALL'}</span><div class="incoming-call-avatar-wrap"><span class="call-avatar-pulse"></span>${avatar(initials(name),'blue',peer?.peer_avatar_url||'')}</div><h2>${esc(name)}</h2><p>${group?'Started a group '+(isVideo?'video':'voice')+' call':(isVideo?'Video':'Voice')+' call'}</p><div class="incoming-call-actions"><button class="incoming-decline" type="button" ${group?'data-reject-group-call':'data-reject-call'} aria-label="Decline call"><span>✕</span><small>Decline</small></button><button class="incoming-answer" type="button" ${group?'data-accept-group-call':'data-accept-call'} aria-label="${group?'Join':'Answer'} call"><span>✓</span><small>${group?'Join':'Answer'}</small></button></div></div></section></div>`);
+}
 function renderCallScreen(status='Calling…',video=false) {
  const peer=chatItems.find(x=>x.conversation_id===activeConversationId);
  callUi(`<div class="call-backdrop call-screen-backdrop"><section class="call-window call-screen" role="dialog" aria-modal="true" aria-label="Call">
@@ -1023,7 +1040,7 @@ async function handleCallSignal(payload) {
     currentCall={id:payload.callId,mode:payload.mode,group:true,initiator:false,from:payload.from,answeredAt:null};
     playIncomingRingtone();
     const caller=chatItems.find(x=>x.conversation_id===payload.conversationId)?.peer_name||'A group member';
-    callUi(`<div class="call-backdrop"><section class="call-window call-incoming" role="dialog" aria-modal="true"><h2>Incoming group ${payload.mode==='video'?'video':'voice'} call</h2><p>${esc(caller)} started a group call.</p><div class="call-controls"><button class="call-end-button" type="button" data-reject-group-call>Decline</button><button class="call-accept-button" type="button" data-accept-group-call>Join call</button></div></section></div>`);
+    renderIncomingCallScreen({peer_name:caller},payload.mode,true);
     return;
   }
   if(payload.kind==='group-end'&&currentCall?.group&&payload.callId===currentCall.id){await endGroupCall(false);return}
@@ -1036,7 +1053,7 @@ async function handleCallSignal(payload) {
     callHistoryId=payload.callLogId||null
     playIncomingRingtone()
     const peer=chatItems.find(x=>x.conversation_id===activeConversationId)
-    callUi(`<div class="call-backdrop"><section class="call-window call-incoming" role="dialog" aria-modal="true"><h2>Incoming ${payload.mode==='video'?'video':'voice'} call</h2><p>${esc(peer?.peer_name||'Your friend')} is calling you.</p><div class="call-controls"><button class="call-end-button" type="button" data-reject-call>Decline</button><button class="call-accept-button" type="button" data-accept-call>Answer</button></div></section></div>`)
+    renderIncomingCallScreen(peer,payload.mode);
     window.__pendingCallOffer=payload
     return
   }
@@ -1082,13 +1099,14 @@ function openWhatsAppMessageMenu(messageId,wrap){
  const message=activeChatMessages.find(m=>m.id===messageId);if(!message)return;
  const own=message.sender_id===session?.user?.id,canEdit=messageCanEdit(message),root=document.querySelector('#modal-root');
  const iconSvg={reply:'<path d="m9 14-5-5 5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-2"/>',copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',react:'<circle cx="12" cy="12" r="9"/><path d="M8 14s1.3 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>',edit:'<path d="m15 5 4 4M4 20l4-.8L19 8a2.1 2.1 0 0 0-3-3L5 16z"/>',delete:'<path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m4 4v6m6-6v6"/>',report:'<path d="M5 21V4m0 1c6-4 8 4 14 0v10c-6 4-8-4-14 0"/>',forward:'<path d="m14 5 7 7-7 7M21 12H9a5 5 0 0 0-5 5"/>',pin:'<path d="m16 3 5 5-4 1-4 4 1 4-2 2-4-6-6-4 2-2 4 1 4-4zM12 17l-7 7"/>',star:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/>'};
- const items=[['reply','Reply'],['copy','Copy'],['react','React']];if(canEdit)items.push(['edit','Edit']);items.push(['delete','Delete']);
+ const items=[['reply','Reply'],['copy','Copy'],['select','Select'],['react','React']];if(canEdit)items.push(['edit','Edit']);items.push(['delete','Delete']);
  root.innerHTML='<div class="wa-message-menu-backdrop" data-wa-menu-close><div class="wa-message-menu" role="menu" aria-label="Message options">'+items.map(([action,label])=>'<button type="button" role="menuitem" data-message-action="'+action+'" data-message-id="'+esc(messageId)+'"><svg class="wa-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+iconSvg[action]+'</svg>'+label+'</button>').join('')+'</div></div>';
  const menu=root.querySelector('.wa-message-menu'),bubble=wrap?.querySelector('.message'),rect=bubble?.getBoundingClientRect()||wrap?.getBoundingClientRect();
  if(menu&&rect){const width=Math.min(210,window.innerWidth-24);let left=own?rect.right-width:rect.left;left=Math.max(12,Math.min(left,window.innerWidth-width-12));let top=rect.top-8;if(top+menu.offsetHeight>window.innerHeight-12)top=window.innerHeight-menu.offsetHeight-12;if(top<12)top=12;menu.style.left=left+'px';menu.style.top=top+'px';}
 }
 async function handleWhatsAppMessageAction(action,id){
  const message=activeChatMessages.find(m=>m.id===id);if(!message)return;
+ if(action==='select'){messageSelectionMode=true;selectedMessageIds.add(id);closeWhatsAppMessageMenu();renderChatRoom(chatItems.find(x=>x.conversation_id===activeConversationId));return}
  if(action==='edit'){if(!messageCanEdit(message)){closeWhatsAppMessageMenu();return toast('Messages can only be edited within 5 minutes.','info')}closeWhatsAppMessageMenu();openMessageEdit(id);const form=document.querySelector('[data-edit-message-form]');if(form)form.dataset.messageId=id;return}
  if(action==='delete'){closeWhatsAppMessageMenu();const root=document.querySelector('#modal-root');root.innerHTML='<div class="modal-backdrop" data-confirm-message-delete><section class="chat-edit-modal" role="dialog" aria-modal="true"><h2>Delete message?</h2><p>This removes the message for everyone in this conversation.</p><div class="chat-edit-actions"><button type="button" data-cancel-message-delete>Cancel</button><button type="button" class="danger" data-confirm-message-delete-id="'+esc(id)+'">Delete</button></div></section></div>';return}
  if(action==='copy'){try{await navigator.clipboard.writeText(message.content);toast('Message copied.','success')}catch{toast('Could not copy this message.','error')}closeWhatsAppMessageMenu();return}
@@ -1113,6 +1131,9 @@ async function updateChatMessage(messageId,content){
 }
 function bindChatPageEvents() {
   document.querySelector('#chat-new-button')?.addEventListener('click',openNewChatDialog)
+  document.querySelectorAll('[data-chat-filter]').forEach(tab=>tab.addEventListener('click',()=>{chatListFilter=tab.dataset.chatFilter||'all';renderChatList()}))
+  document.querySelector('#chat-plus-button')?.addEventListener('click',()=>{const menu=document.querySelector('#chat-plus-menu');if(menu)menu.hidden=!menu.hidden})
+  document.querySelector('#chat-plus-menu')?.addEventListener('click',e=>{if(e.target.closest('[data-chat-plus-new]')){document.querySelector('#chat-plus-menu').hidden=true;openNewChatDialog()}if(e.target.closest('[data-chat-plus-group]')){document.querySelector('#chat-plus-menu').hidden=true;openNewGroupDialog()}})
   document.querySelector('#conversation-search')?.addEventListener('input',()=>callLogView?loadCallHistory():renderChatList())
   document.querySelector('#call-log-toggle')?.addEventListener('click',()=>showCallHistory(true))
   document.querySelector('#chat-inbox-toggle')?.addEventListener('click',()=>showCallHistory(false))
@@ -1136,15 +1157,21 @@ function bindChatPageEvents() {
     if(action==='select'){chatSelectionMode=true;renderChatList();toast('Select one or more chats, then choose Delete.');return}
     if(action==='mute'){const b=e.target.closest('[data-chat-menu-action]');b.textContent=b.textContent.includes('Mute')?'✓ Notifications muted':'♩ Mute notifications';toast('Notification preference is shown for this chat.');return}
     if(action==='theme'){document.querySelector('#chat-room')?.classList.toggle('chat-room-soft-theme');return}
-    if(action==='favorite'){toast('Favorites are coming soon.');return}
+    if(action==='favorite'){const id=activeConversationId;if(!id)return;chatFavoriteIds.has(id)?chatFavoriteIds.delete(id):chatFavoriteIds.add(id);try{localStorage.setItem('flexoverse-chat-favorites:'+session.user.id,JSON.stringify([...chatFavoriteIds]))}catch{}const button=e.target.closest('[data-chat-menu-action="favorite"]');if(button)button.textContent=chatFavoriteIds.has(id)?'Remove from Favorites':'Add to Favorites';renderChatList();toast(chatFavoriteIds.has(id)?'Added to Favorites.':'Removed from Favorites.','success');return}
     if(action==='export'){const item=chatItems.find(x=>x.conversation_id===activeConversationId);const lines=activeChatMessages.map(m=>{const who=m.sender_id===session?.user?.id?'You':(item?.peer_name||'Friend');return '['+new Date(m.created_at).toLocaleString()+'] '+who+': '+m.content});const blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='flexoverse-chat.txt';a.click();URL.revokeObjectURL(url);return}
   })
   document.querySelector('#call-root')?.addEventListener('click',e=>{if(e.target.closest('[data-accept-group-call]')){const invite=pendingGroupInvite;if(invite)joinLiveKitGroupCall(invite).catch(error=>{console.error(error);toast(error.message||'Could not join group call.','error');endGroupCall(false)});return}if(e.target.closest('[data-reject-group-call]')){stopIncomingRingtone();pendingGroupInvite=null;currentCall=null;callUi();return}if(e.target.closest('[data-end-group-call]')){endGroupCall(true);return}if(e.target.closest('[data-group-speaker]')&&liveKitRoom){liveKitRoom.startAudio().then(()=>{const b=e.target.closest('[data-group-speaker]');b.classList.toggle('is-muted',false);b.setAttribute('aria-label','Audio output enabled')}).catch(()=>toast('Tap again to enable call audio.','info'));return}if(e.target.closest('[data-group-mute]')&&liveKitRoom){const b=e.target.closest('[data-group-mute]'),p=liveKitRoom.localParticipant,next=!p.isMicrophoneEnabled;p.setMicrophoneEnabled(next).then(()=>{b.classList.toggle('is-muted',!next);b.setAttribute('aria-label',next?'Mute microphone':'Unmute microphone')}).catch(error=>toast(error.message,'error'));return}if(e.target.closest('[data-group-camera]')&&liveKitRoom){const b=e.target.closest('[data-group-camera]'),p=liveKitRoom.localParticipant,next=!p.isCameraEnabled;p.setCameraEnabled(next).then(()=>{b.classList.toggle('is-muted',!next);b.setAttribute('aria-label',next?'Turn camera off':'Turn camera on')}).catch(error=>toast(error.message,'error'));return}if(e.target.closest('[data-end-call]'))endCall(true);if(e.target.closest('[data-call-speaker]')){const audio=document.querySelector('[data-remote-video]');if(audio){audio.muted=!audio.muted;e.target.closest('[data-call-speaker]').classList.toggle('is-muted',audio.muted)}return}if(e.target.closest('[data-call-flip]')&&callLocalStream){const track=callLocalStream.getVideoTracks()[0];if(track&&track.applyConstraints)track.applyConstraints({facingMode:track.getSettings().facingMode==='user'?'environment':'user'}).catch(()=>{});return}if(e.target.closest('[data-reject-call]')){const p=window.__pendingCallOffer;if(p)callSignal('signal',{kind:'reject',callId:p.callId,to:p.from}).catch(()=>{});endCall(false)}if(e.target.closest('[data-accept-call]'))acceptCall();if(e.target.closest('[data-call-mute]')&&callLocalStream){const track=callLocalStream.getAudioTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-mute]').classList.toggle('is-muted',!track.enabled)}}if(e.target.closest('[data-call-camera]')&&callLocalStream){const track=callLocalStream.getVideoTracks()[0];if(track){track.enabled=!track.enabled;e.target.closest('[data-call-camera]').classList.toggle('is-muted',!track.enabled)}}})
-  document.querySelector('#chat-room')?.addEventListener('touchstart',e=>{const bubble=e.target.closest('.message');if(!bubble)return;const wrap=bubble.closest('[data-message-wrap]');const id=bubble.dataset.messageId;if(!id)return;messageLongPressTimer=setTimeout(()=>{messageLongPressTimer=null;openWhatsAppMessageMenu(id,wrap)},520)},{passive:true})
+  document.querySelector('#chat-room')?.addEventListener('touchstart',e=>{if(messageSelectionMode)return;const bubble=e.target.closest('.message');if(!bubble)return;const wrap=bubble.closest('[data-message-wrap]');const id=bubble.dataset.messageId;if(!id)return;messageLongPressTimer=setTimeout(()=>{messageLongPressTimer=null;openWhatsAppMessageMenu(id,wrap)},520)},{passive:true})
   document.querySelector('#chat-room')?.addEventListener('touchend',()=>{if(messageLongPressTimer){clearTimeout(messageLongPressTimer);messageLongPressTimer=null}},{passive:true})
   document.querySelector('#chat-room')?.addEventListener('touchmove',()=>{if(messageLongPressTimer){clearTimeout(messageLongPressTimer);messageLongPressTimer=null}},{passive:true})
   document.querySelector('#chat-room')?.addEventListener('contextmenu',e=>{const bubble=e.target.closest('.message');if(!bubble)return;e.preventDefault();openWhatsAppMessageMenu(bubble.dataset.messageId,bubble.closest('[data-message-wrap]'))})
   document.querySelector('#chat-room')?.addEventListener('click',e=>{
+    if(messageSelectionMode){
+      const bubble=e.target.closest('.message');
+      if(bubble){const id=bubble.dataset.messageId;if(id){selectedMessageIds.has(id)?selectedMessageIds.delete(id):selectedMessageIds.add(id);renderChatRoom(chatItems.find(x=>x.conversation_id===activeConversationId))}return}
+      if(e.target.closest('[data-cancel-message-selection]')){messageSelectionMode=false;selectedMessageIds.clear();renderChatRoom(chatItems.find(x=>x.conversation_id===activeConversationId));return}
+      if(e.target.closest('[data-copy-selected-messages]')){const text=activeChatMessages.filter(m=>selectedMessageIds.has(m.id)).map(m=>m.content).join('\n');navigator.clipboard.writeText(text).then(()=>toast('Selected messages copied.','success')).catch(()=>toast('Could not copy messages.','error'));messageSelectionMode=false;selectedMessageIds.clear();renderChatRoom(chatItems.find(x=>x.conversation_id===activeConversationId));return}
+    }
     const msgMenu=e.target.closest('[data-message-menu]');
     if(msgMenu){openWhatsAppMessageMenu(msgMenu.dataset.messageMenu,msgMenu.closest('[data-message-wrap]'));return}
     const menuAction=e.target.closest('[data-message-action]');
