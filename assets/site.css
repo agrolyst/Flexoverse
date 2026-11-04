@@ -1700,3 +1700,5 @@ body[data-page="reels"] .tiktok-reel-card{position:relative;flex:0 0 min(100%,85
  .call-screen-controls{gap:7px!important;padding-inline:8px!important}
  .call-screen-controls button{width:52px!important;height:52px!important;flex-basis:52px!important}
 }
+
+.call-screen-controls button.call-end-button svg,.flexoverse-group-call .call-screen-controls button.call-end-button svg{transform:rotate(135deg)}
