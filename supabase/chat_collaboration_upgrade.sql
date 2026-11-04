@@ -41,19 +41,43 @@ with check (
     where c.id=conversation_id
       and c.created_by=(select auth.uid())
   )
-  and (
-    (user_id=(select auth.uid()) and role='admin')
-    or (
-      user_id<>(select auth.uid()) and role='member'
-      and exists (
-        select 1 from public.friend_requests f
-        where f.status='accepted'
+  and exists (
+    select 1 from public.conversations c
+    where c.id=conversation_id
+      and (
+        (
+          coalesce(c.is_group,false)=true
           and (
-            (f.from_user_id=(select auth.uid()) and f.to_user_id=user_id)
-            or (f.to_user_id=(select auth.uid()) and f.from_user_id=user_id)
+            (user_id=(select auth.uid()) and role='admin')
+            or (
+              user_id<>(select auth.uid()) and role='member'
+              and exists (
+                select 1 from public.friend_requests f
+                where f.status='accepted'
+                  and (
+                    (f.from_user_id=(select auth.uid()) and f.to_user_id=user_id)
+                    or (f.to_user_id=(select auth.uid()) and f.from_user_id=user_id)
+                  )
+              )
+            )
           )
+        )
+        or (
+          coalesce(c.is_group,false)=false
+          and role='member'
+          and (
+            user_id=(select auth.uid())
+            or exists (
+              select 1 from public.friend_requests f
+              where f.status='accepted'
+                and (
+                  (f.from_user_id=(select auth.uid()) and f.to_user_id=user_id)
+                  or (f.to_user_id=(select auth.uid()) and f.from_user_id=user_id)
+                )
+            )
+          )
+        )
       )
-    )
   )
 );
 
@@ -117,7 +141,7 @@ declare
   mentioned_ids uuid[];
   message_preview text;
 begin
-  if new.message_type='audio' then
+  if coalesce(to_jsonb(new)->>'message_type','text')='audio' then
     message_preview := 'Sent you a voice message';
   else
     message_preview := left(new.content,240);
@@ -144,7 +168,7 @@ begin
       member_row.user_id,
       new.sender_id,
       case when member_row.user_id=any(mentioned_ids) then 'mention' else 'chat_message' end,
-      new.id,
+      new.conversation_id,
       message_preview
     );
   end loop;
