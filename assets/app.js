@@ -420,7 +420,7 @@ async function loadMyContent(){
   postsList.innerHTML='<div class="feed-state card">Loading your posts…</div>'
   videosList.innerHTML='<div class="feed-state card">Loading your videos…</div>'
   const [postResult,reelResult]=await Promise.all([
-    supabase.from('posts').select('id,user_id,content,image_path,created_at,profiles!posts_user_id_fkey(full_name,username,avatar_url),likes(count),comments(count)').eq('user_id',session.user.id).order('created_at',{ascending:false}).limit(100),
+    supabase.from('posts').select('id,user_id,content,image_path,created_at,profiles!posts_user_id_fkey(full_name,username,avatar_url,membership_plan,membership_status,is_verified),likes(count),comments(count)').eq('user_id',session.user.id).order('created_at',{ascending:false}).limit(100),
     supabase.from('reels').select('id,user_id,caption,video_path,created_at').eq('user_id',session.user.id).order('created_at',{ascending:false}).limit(100)
   ])
   if(postResult.error){console.error('Could not load your posts:',postResult.error);postsList.innerHTML='<div class="feed-state card"><strong>Your posts could not load</strong><span>Please refresh and try again.</span></div>'}
