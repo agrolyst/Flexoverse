@@ -7,33 +7,39 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=brand-favicon-20261104">
   <link rel="shortcut icon" href="/favicon.svg?v=brand-favicon-20261104">
   <title>Create an account · Flexoverse</title>
-  <link rel="stylesheet" href="../assets/site.css?v=membership-verification-notification-onboarding-20261104">
+  <link rel="stylesheet" href="/assets/site.css?v=auth-refresh-20261104">
 </head>
 <body class="standalone-auth-page" data-page="signup">
   <div id="site-header"></div>
   <div class="page-layout">
-    <aside id="left-sidebar"></aside>
     <main class="main-column auth-page">
       <section class="auth-page-card card">
-        <p class="overline">JOIN YOUR CIRCLE</p>
-        <h1>Create your account</h1>
-        <p class="muted">Make a home for the people and moments that matter. After you create your account, you can add profile details and an optional private address, or skip for now.</p>
-        <form id="signup-form" class="auth-page-form">
-          <label>Your name<input name="name" type="text" required autocomplete="name" maxlength="80" placeholder="Your name"></label>
-          <label>Username<div class="input-with-prefix"><span>@</span><input name="username" id="signup-username" type="text" required minlength="3" maxlength="30" pattern="[A-Za-z0-9]+" autocomplete="username" placeholder="yourname"></div><small id="username-hint">Use 3–30 letters or numbers. Numbers are optional.</small></label>
-          <label>Email address<input name="email" type="email" required autocomplete="email" placeholder="you@example.com"></label>
-          <label>Password<input name="password" type="password" required minlength="6" autocomplete="new-password" placeholder="At least 6 characters"></label>
-          <p class="auth-success" id="signup-message" role="status"></p>
-          <button class="button button-primary" type="submit">Create account and continue</button>
-        </form>
-        <p class="auth-page-switch">Already have an account? <a id="switch-to-login" href="/login/">Sign in</a></p>
+        <a class="auth-brand-lockup" href="/"><span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.8 19a5.2 5.2 0 0 1 10.4 0v1H2.8zM14 15.3a4.4 4.4 0 0 1 7.2 3.4v1h-7.2"/></svg></span><span>Flexoverse</span></a>
+        <div class="auth-layout-grid">
+          <div class="auth-copy-panel">
+            <p class="overline">MAKE YOURSELF AT HOME</p>
+            <h1>Good connections start here.</h1>
+            <p>Create your Flexoverse account and bring your friends, conversations, and favourite moments together.</p>
+            <ul class="auth-benefit-list"><li><span>✓</span> Create your own profile</li><li><span>✓</span> Find and connect with people</li><li><span>✓</span> Share posts and short videos</li></ul>
+          </div>
+          <div class="auth-form-panel">
+            <h2>Create your account</h2>
+            <p class="muted">A few details and you’re ready to get started.</p>
+            <form id="signup-form" class="auth-page-form">
+              <label>Your name<input name="name" type="text" required autocomplete="name" maxlength="80" placeholder="Your name"></label>
+              <label>Username<div class="input-with-prefix"><span>@</span><input name="username" id="signup-username" type="text" required minlength="3" maxlength="30" pattern="[A-Za-z0-9]+" autocomplete="username" placeholder="yourname"></div><small id="username-hint">Use 3–30 letters or numbers. Numbers are optional.</small></label>
+              <label>Email address<input name="email" type="email" required autocomplete="email" placeholder="you@example.com"></label>
+              <label>Password<input name="password" type="password" required minlength="6" autocomplete="new-password" placeholder="At least 6 characters"></label>
+              <p class="auth-success" id="signup-message" role="status"></p>
+              <button class="button button-primary" type="submit">Create account and continue</button>
+            </form>
+            <p class="auth-page-switch">Already have an account? <a id="switch-to-login" href="/login/">Sign in</a></p>
+          </div>
+        </div>
       </section>
     </main>
-    <aside id="right-sidebar"></aside>
   </div>
-  <nav id="mobile-nav"></nav>
-  <div id="modal-root"></div>
-  <div id="toast" role="status"></div>
-  <script type="module" src="../assets/app.js?v=brand-favicon-profile-route-20261104"></script>
+  <div id="modal-root"></div><div id="toast" role="status"></div>
+  <script type="module" src="/assets/app.js?v=auth-refresh-20261104"></script>
 </body>
 </html>
