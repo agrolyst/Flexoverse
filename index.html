@@ -8,7 +8,7 @@
   <link rel="shortcut icon" href="/favicon.svg?v=brand-favicon-20261104">
   <meta name="description" content="Flexoverse is a social community to connect with friends, share posts, photos and videos, and keep conversations together."><meta name="robots" content="index,follow"><link rel="canonical" href="https://flexoverse.online/"><link rel="manifest" href="/site.webmanifest"><meta property="og:type" content="website"><meta property="og:site_name" content="Flexoverse"><meta property="og:title" content="Flexoverse — Connect with your people"><meta property="og:description" content="Share updates, photos and videos, connect with friends, and keep conversations together."><meta property="og:url" content="https://flexoverse.online/"><meta name="twitter:card" content="summary">
   <title>Flexoverse | Connect with your people</title>
-  <link rel="stylesheet" href="./assets/site.css?v=earned-badges-icons-20261105">
+  <link rel="stylesheet" href="./assets/site.css?v=homepage-refresh-20261105">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -51,25 +51,39 @@
   <div class="page-layout">
     <aside id="left-sidebar"></aside>
     <main class="main-column">
-      <section class="welcome-row">
-        <div>
-          <p class="overline">YOUR COMMUNITY</p>
-          <h1>Good to see you<span class="title-period">.</span></h1>
-          <p class="muted">Catch up with the people who matter.</p>
+      <section class="home-hero">
+        <div class="home-hero-copy">
+          <span class="home-hero-kicker"><span class="home-live-dot"></span> YOUR COMMUNITY, YOUR SPACE</span>
+          <h1>Your world.<br><span> your people.</span></h1>
+          <p>See what your circle is sharing and join the conversation.</p>
         </div>
-        <a class="button button-soft" href="/create/"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg><span>Create post</span></a>
+        <div class="home-hero-actions">
+          <a class="button home-primary-action" href="/create/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Create a post</a>
+          <a class="button home-secondary-action" href="/reels/create/"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m10 8 6 4-6 4z"/></svg>Create a reel</a>
+        </div>
+        <span class="home-hero-orbit home-hero-orbit-one" aria-hidden="true"></span>
+        <span class="home-hero-orbit home-hero-orbit-two" aria-hidden="true"></span>
       </section>
-      <section class="composer card">
-        <div class="composer-start">
+      <section class="composer home-composer card">
+        <div class="home-composer-top">
           <span class="avatar avatar-blue" data-user-avatar>FX</span>
-          <a class="composer-input" href="/create/">Share a moment with your circle…</a>
+          <a class="composer-input" href="/create/">What’s happening in your world?</a>
+          <a class="home-composer-submit" href="/create/" aria-label="Write a post"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg></a>
         </div>
-        <div class="composer-tools">
-          <span class="composer-hint">Share an update with your community</span>
-          <a class="button button-primary" href="/create/"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg><span>Write a post</span></a>
+        <div class="home-composer-bottom">
+          <span>Share something with your community</span>
+          <div class="home-composer-links">
+            <a href="/create/"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Photo / post</a>
+            <a href="/reels/create/"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m10 8 6 4-6 4z"/></svg>Reel</a>
+          </div>
         </div>
       </section>
-      <section class="feed-head">
+      <nav class="home-shortcuts" aria-label="Explore Flexoverse">
+        <a class="home-shortcut home-shortcut-friends" href="/friends/"><span class="home-shortcut-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span><strong>Find friends</strong><small>Grow your circle</small></span><svg class="home-shortcut-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
+        <a class="home-shortcut home-shortcut-reels" href="/reels/"><span class="home-shortcut-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m10 8 6 4-6 4z"/></svg></span><span><strong>Explore reels</strong><small>Watch what’s new</small></span><svg class="home-shortcut-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
+        <a class="home-shortcut home-shortcut-chats" href="/chats/"><span class="home-shortcut-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.7 8.7 0 0 1-4-.95L3 21l1.95-5.5A8.5 8.5 0 1 1 21 11.5Z"/></svg></span><span><strong>Open chats</strong><small>Keep in touch</small></span><svg class="home-shortcut-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
+      </nav>
+      <section class="feed-head home-feed-head">
         <div>
           <h2>Community feed</h2>
           <p class="muted">Latest public posts from Flexoverse members</p>
@@ -90,6 +104,6 @@
   <footer class="public-legal-links" style="max-width:1120px;margin:24px auto 36px;padding:16px 24px;text-align:center;color:#777;font-size:14px"><a href="/privacy/">Privacy Policy</a> &nbsp;·&nbsp; <a href="/terms/">Terms &amp; Policies</a> &nbsp;·&nbsp; <a href="/how-it-works/">How Flexoverse works</a></footer>
   <div id="modal-root"></div>
   <div id="toast" role="status"></div>
-  <script type="module" src="./assets/app.js?v=earned-badges-icons-20261105"></script>
+  <script type="module" src="./assets/app.js?v=homepage-refresh-20261105"></script>
 </body>
 </html>
