@@ -2034,3 +2034,7 @@ body[data-page="reels"] .reel-desktop-left button svg,body[data-page="reels"] .r
 .post-plus-badge{font-size:0!important;gap:0!important;padding:3px!important;width:18px;height:18px;box-sizing:border-box;justify-content:center}
 .post-plus-badge::before,.post-plus-badge::after{content:none!important;display:none!important}
 .post-plus-badge svg{width:12px!important;height:12px!important;display:block}
+
+/* Icon-only earned badges */
+.post-subscriber-badge,.post-contributor-badge{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;margin-left:3px;padding:0;border:0;border-radius:50%;background:transparent;color:#b8872d;line-height:1;vertical-align:middle;flex:0 0 auto}
+.post-subscriber-badge svg,.post-contributor-badge svg{width:14px;height:14px;fill:currentColor;stroke:currentColor;stroke-width:1.35;stroke-linecap:round;stroke-linejoin:round}
