@@ -2001,7 +2001,7 @@ async function loadProfileCompletion(){
   set('email',session.user.email||'')
   set('username',row?.username||session.user.user_metadata?.username||'')
   set('bio',row?.bio||'')
-  ;['address','date_of_birth','gender','phone','city','hometown','country','state','lga','business_name','business_category','business_description','business_phone','business_website','business_hours','address_place_id'].forEach(name=>set(name,details?.[name]||''))
+  ;['address','date_of_birth','gender','phone','city','hometown','business_name','business_category','business_description','business_phone','business_website','business_hours','address_place_id'].forEach(name=>set(name,details?.[name]||''))
   const accountType=details?.account_type||''
   const radio=accountType?form.querySelector(`[name="account_type"][value="${accountType}"]`):null
   if(radio)radio.checked=true
@@ -2017,7 +2017,7 @@ async function loadProfileCompletion(){
   reveal()
   bindGoogleAddressAutocomplete(form.querySelector('[data-google-address]'))
   initInternationalPhone(form.querySelector('[name="phone"]'))
-  // Country, state and local area are free-text fields here, so onboarding does not depend on an external location-list service.
+  await loadLocationChoices(form,details||{})
 }
 
 function bindProfileCompletionEvents(){
