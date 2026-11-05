@@ -130,13 +130,22 @@ function commentSvg(){return '<svg class="action-svg" viewBox="0 0 24 24" aria-h
 const BADGE_TYPES = {
   verified: { className: 'post-verified-badge', title: 'Verified by Flexoverse', label: 'Verified account', icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>' },
   member: { className: 'post-member-badge', title: 'Flexoverse member', label: 'Member', text: 'Member' },
-  plus: { className: 'post-plus-badge', title: 'Flexoverse Plus member', label: 'Plus Member', icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 2.2 5.1 5.5.5-4.2 3.6 1.3 5.4-4.8-2.9-4.8 2.9 1.3-5.4L4.3 7.6l5.5-.5L12 2Z"/><path d="M7 19h10"/></svg>' }
+  plus: { className: 'post-plus-badge', title: 'Flexoverse Plus member', label: 'Plus Member', icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 2.2 5.1 5.5.5-4.2 3.6 1.3 5.4-4.8-2.9-4.8 2.9 1.3-5.4L4.3 7.6l5.5-.5L12 2Z"/><path d="M7 19h10"/></svg>' },
+  subscriber: { className: 'post-subscriber-badge', title: 'Flexoverse Subscriber', label: 'Subscriber', icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 14.8 8.7 21 9.6l-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></svg>' },
+  top_contributor: { className: 'post-contributor-badge', title: 'Top Contributor', label: 'Top Contributor', icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v4a4 4 0 0 1-8 0V4Z"/><path d="M8 6H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4M12 12v5m-4 3h8m-6-3h4"/></svg>' }
 }
 function renderBadge(type) {
   const badge = BADGE_TYPES[type]
   if (!badge) return ''
-  if (type === 'verified' || type === 'plus') return `<span class="${badge.className}" title="${badge.title}" aria-label="${badge.label}">${badge.icon}</span>`
+  if (badge.icon) return `<span class="${badge.className}" title="${badge.title}" aria-label="${badge.label}">${badge.icon}</span>`
   return `<span class="${badge.className}" title="${badge.title}">${badge.text}</span>`
+}
+
+function renderUserBadges(user = {}) {
+  const membership = user.membership_status === 'active' ? [user.membership_plan === 'plus' ? 'plus' : 'member'] : []
+  const earned = Array.isArray(user.earned_badges) ? user.earned_badges : []
+  const types = [...(user.is_verified === true ? ['verified'] : []), ...membership, ...earned]
+  return [...new Set(types)].map(renderBadge).join('')
 }
 
 function postCard(p) {
@@ -146,10 +155,9 @@ function postCard(p) {
   const image = p.image || p.image_path || ''
   const id = String(p.id), safeId = esc(id)
   const likeCount = relationCount(p.likes), commentCount = relationCount(p.comments)
-  const verifiedBadge = user.is_verified === true ? renderBadge('verified') : ''
-  const badges = user.membership_status === 'active' ? renderBadge(user.membership_plan === 'plus' ? 'plus' : 'member') : ''
+  const badges = renderUserBadges(user)
   const isLiked = liked.has(id), timestamp = timeAgo(p.created_at)
-  return `<article class="post card" id="post-${safeId}" data-post="${safeId}"><div class="post-top">${avatar(p.initials||initials(name),p.color||'blue',p.avatar_url||user.avatar_url)}<div class="post-user"><a class="post-user-name" href="${profileUrl(handle)}"><strong>${esc(name)}</strong>${verifiedBadge}${badges}</a><small>@${esc(handle)} · ${esc(timestamp)}</small></div><div class="post-menu-wrap"><button class="more-button" type="button" data-post-menu-toggle="${safeId}" aria-label="Post options" aria-expanded="false">···</button><div class="post-options-menu" data-post-menu="${safeId}" hidden><button type="button" data-save-post="${safeId}">Save post</button><button type="button" data-copy-post="${safeId}">Copy link</button><button type="button" data-report-post="${safeId}" class="post-option-report">Report post</button>${session&&session.user.id===p.user_id?`<button type="button" data-delete-post="${safeId}" class="post-option-danger">Delete post</button>`:''}</div></div></div><p class="post-text">${esc(p.content)}</p>${image?`<img class="post-photo" src="${esc(image)}" alt="Post image">`:''}<div class="post-meta"><span data-like-count="${safeId}" data-count="${likeCount}">${heartSvg(false)} <span>${likeCount} ${likeCount===1?'person':'people'}</span></span><button class="post-comment-total" type="button" data-comment="${safeId}" data-comment-count="${safeId}">${commentCount} ${commentCount===1?'comment':'comments'}</button></div><div class="post-actions"><button data-like="${safeId}" class="${isLiked?'liked':''}" aria-pressed="${isLiked}">${heartSvg(isLiked)} <span>${isLiked?'Liked':'Like'}</span></button><button data-comment="${safeId}" aria-expanded="false">${commentSvg()} <span>Comment</span></button><button data-share><svg class="action-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Share</span></button></div></article>`
+  return `<article class="post card" id="post-${safeId}" data-post="${safeId}"><div class="post-top">${avatar(p.initials||initials(name),p.color||'blue',p.avatar_url||user.avatar_url)}<div class="post-user"><a class="post-user-name" href="${profileUrl(handle)}"><strong>${esc(name)}</strong>${badges}</a><small>@${esc(handle)} · ${esc(timestamp)}</small></div><div class="post-menu-wrap"><button class="more-button" type="button" data-post-menu-toggle="${safeId}" aria-label="Post options" aria-expanded="false">···</button><div class="post-options-menu" data-post-menu="${safeId}" hidden><button type="button" data-save-post="${safeId}">Save post</button><button type="button" data-copy-post="${safeId}">Copy link</button><button type="button" data-report-post="${safeId}" class="post-option-report">Report post</button>${session&&session.user.id===p.user_id?`<button type="button" data-delete-post="${safeId}" class="post-option-danger">Delete post</button>`:''}</div></div></div><p class="post-text">${esc(p.content)}</p>${image?`<img class="post-photo" src="${esc(image)}" alt="Post image">`:''}<div class="post-meta"><span data-like-count="${safeId}" data-count="${likeCount}">${heartSvg(false)} <span>${likeCount} ${likeCount===1?'person':'people'}</span></span><button class="post-comment-total" type="button" data-comment="${safeId}" data-comment-count="${safeId}">${commentCount} ${commentCount===1?'comment':'comments'}</button></div><div class="post-actions"><button data-like="${safeId}" class="${isLiked?'liked':''}" aria-pressed="${isLiked}">${heartSvg(isLiked)} <span>${isLiked?'Liked':'Like'}</span></button><button data-comment="${safeId}" aria-expanded="false">${commentSvg()} <span>Comment</span></button><button data-share><svg class="action-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Share</span></button></div></article>`
 }
 function timeAgo(value) {
   if (!value) return 'just now'
@@ -816,9 +824,7 @@ async function loadProfilePage() {
   document.querySelector('#profile-username').textContent=`@${data.username}`
   const badgeRoot=document.querySelector('#profile-badges')
   if(badgeRoot){
-    const activeMembership=data.membership_status==='active'
-    const memberBadge=activeMembership?renderBadge(data.membership_plan==='plus'?'plus':'member'):''
-    badgeRoot.innerHTML=`${data.is_verified?renderBadge('verified'):''}${memberBadge}`
+    badgeRoot.innerHTML=renderUserBadges(data)
   }
   document.querySelector('#profile-bio').textContent=data.bio||''
   const profileAvatar=document.querySelector('#profile-avatar');if(profileAvatar)profileAvatar.outerHTML=avatar(initials(name),'blue',data.avatar_url).replace('class="avatar','class="avatar avatar-large')
