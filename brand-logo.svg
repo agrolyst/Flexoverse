@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Flexoverse</title>
+  <rect width="512" height="512" rx="144" fill="#655ce8"/>
+  <g fill="none" stroke="#fff" stroke-width="30" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="184" cy="184" r="64"/>
+    <circle cx="344" cy="200" r="52"/>
+    <path d="M72 408v-16a112 112 0 0 1 224 0v16H72Zm248-88a96 96 0 0 1 120 88v0H320"/>
+  </g>
+</svg>
