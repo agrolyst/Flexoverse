@@ -1957,9 +1957,12 @@ function bindGoogleAddressAutocomplete(input){
     if(query.length<3){if(list){list.hidden=true;list.innerHTML=''}if(status)status.textContent='Enter at least 3 characters to search for an address.';return}
     if(status)status.textContent='Checking address suggestions…'
     timer=setTimeout(async()=>{
-      const {data,error}=await supabase.functions.invoke('google-places',{body:{action:'autocomplete',input:query}})
+      let result
+      try{result=await supabase.functions.invoke('google-places',{body:{action:'autocomplete',input:query}})}
+      catch(error){if(sequence===request&&status)status.textContent='Address suggestions are temporarily unavailable. You can still enter your address manually.';if(list)list.hidden=true;return}
+      const {data,error}=result
       if(sequence!==request)return
-      if(error||data?.error){if(status)status.textContent=data?.error||'Address search is not available right now. Please try again later.';if(list)list.hidden=true;return}
+      if(error||data?.error){if(status)status.textContent='Address suggestions are temporarily unavailable. You can still enter your address manually.';if(list)list.hidden=true;return}
       const suggestions=data?.suggestions||[]
       if(list){list.innerHTML=suggestions.map(item=>`<button type="button" class="google-address-suggestion" data-place-id="${esc(item.placeId)}"><strong>${esc(item.mainText||item.description)}</strong><small>${esc(item.secondaryText||'')}</small></button>`).join('');list.hidden=!suggestions.length}
       if(status)status.textContent=suggestions.length?'Choose a matching address suggestion.':'No matching addresses found.'
@@ -1971,8 +1974,11 @@ function bindGoogleAddressAutocomplete(input){
     const placeId=button.dataset.placeId
     if(status)status.textContent='Verifying selected address…'
     list.hidden=true
-    const {data,error}=await supabase.functions.invoke('google-places',{body:{action:'details',placeId}})
-    if(error||data?.error){if(status)status.textContent=data?.error||'Could not verify that address. Please try again.';return}
+    let result
+    try{result=await supabase.functions.invoke('google-places',{body:{action:'details',placeId}})}
+    catch(error){if(status)status.textContent='Address verification is temporarily unavailable. You can still enter your address manually.';return}
+    const {data,error}=result
+    if(error||data?.error){if(status)status.textContent='Address verification is temporarily unavailable. You can still enter your address manually.';return}
     input.value=data.place?.address||input.value
     if(placeField)placeField.value=data.place?.placeId||placeId
     if(status)status.textContent='Address verified and selected.'
@@ -2011,12 +2017,26 @@ async function loadProfileCompletion(){
   reveal()
   bindGoogleAddressAutocomplete(form.querySelector('[data-google-address]'))
   initInternationalPhone(form.querySelector('[name="phone"]'))
-  await loadLocationChoices(form,details||{})
+  // Country, state and local area are free-text fields here, so onboarding does not depend on an external location-list service.
 }
 
 function bindProfileCompletionEvents(){
   const form=document.querySelector('#complete-profile-form')
   if(!form)return
+  const skip=form.querySelector('#skip-profile-setup')
+  skip?.addEventListener('click',async()=>{
+    if(!session){location.href='/login/';return}
+    skip.disabled=true
+    skip.textContent='Skipping…'
+    const {error}=await supabase.auth.updateUser({data:{profile_completed:true,profile_setup_skipped:true}})
+    if(error){
+      skip.disabled=false
+      skip.textContent='Skip for now'
+      toast(error.message||'Could not skip profile setup. Please try again.','error')
+      return
+    }
+    location.replace(authReturnPath())
+  })
   form.querySelector('[name="username"]')?.addEventListener('input',e=>{e.target.value=e.target.value.toLowerCase().replace(/[^a-z0-9]/g,'')})
   form.addEventListener('submit',async e=>{
     e.preventDefault()
