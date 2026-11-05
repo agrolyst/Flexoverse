@@ -1862,7 +1862,7 @@ function readInternationalPhone(input){
     if(typeof input._iti.isValidNumber==='function'&&!input._iti.isValidNumber())return ''
     return input._iti.getNumber()||''
   }
-  return ''
+  return input.value.trim()
 }
 
 function setupProfileInlineEditing(form){
@@ -2028,14 +2028,15 @@ function bindProfileCompletionEvents(){
     if(!session){location.href='/login/';return}
     skip.disabled=true
     skip.textContent='Skipping…'
-    const {error}=await supabase.auth.updateUser({data:{profile_completed:true,profile_setup_skipped:true}})
-    if(error){
+    try{
+      const {error}=await supabase.auth.updateUser({data:{profile_completed:true,profile_setup_skipped:true}})
+      if(error)throw error
+      location.replace(authReturnPath())
+    }catch(error){
       skip.disabled=false
       skip.textContent='Skip for now'
-      toast(error.message||'Could not skip profile setup. Please try again.','error')
-      return
+      toast(error?.message||'Could not skip profile setup. Please try again.','error')
     }
-    location.replace(authReturnPath())
   })
   form.querySelector('[name="username"]')?.addEventListener('input',e=>{e.target.value=e.target.value.toLowerCase().replace(/[^a-z0-9]/g,'')})
   form.addEventListener('submit',async e=>{
@@ -2066,6 +2067,7 @@ function bindProfileCompletionEvents(){
       business_hours:accountType==='business'?value('business_hours'):null,
       address_place_id:value('address_place_id')||null,updated_at:new Date().toISOString()
     }
+    try{
     const {error:addressError}=await supabase.from('private_profile_details').upsert(privateDetails,{onConflict:'user_id'})
     if(addressError){save.disabled=false;save.textContent='Save and continue';toast(addressError.message,'error');return}
     const {data:updated,error}=await supabase.from('profiles').update({full_name:fullName,username,bio,account_type:accountType}).eq('id',session.user.id).select('id,username,full_name,bio,avatar_url,is_public,account_type').single()
@@ -2073,6 +2075,10 @@ function bindProfileCompletionEvents(){
     const {error:authError}=await supabase.auth.updateUser({data:{full_name:fullName,username,profile_completed:true,account_type:accountType}})
     if(authError){save.disabled=false;save.textContent='Save and continue';toast('Your details were saved, but setup could not finish. Please try again.','error');return}
     profile=updated;location.replace(authReturnPath())
+    }catch(error){
+      save.disabled=false;save.textContent='Save and continue'
+      toast(error?.message||'Your details could not be saved. Please try again.','error')
+    }
   })
 
 }
