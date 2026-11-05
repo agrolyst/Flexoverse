@@ -2024,3 +2024,8 @@ body[data-page="reels"] .reel-feed-actions small{display:block!important;font-si
 body[data-page="reels"] .reel-desktop-left button,body[data-page="reels"] .reel-desktop-right>button{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:30px!important;min-height:30px!important;padding:3px!important}
 body[data-page="reels"] .reel-desktop-left button svg,body[data-page="reels"] .reel-desktop-right>button svg{width:19px!important;height:19px!important}
 @media(max-width:700px){body[data-page="reels"] .reel-feed-actions{gap:15px!important}body[data-page="reels"] .reel-feed-actions button{width:43px!important;min-width:43px!important;min-height:46px!important}body[data-page="reels"] .reel-feed-actions button svg{width:25px!important;height:25px!important}}
+
+/* Flexoverse Plus badge */
+.post-plus-badge{display:inline-flex;align-items:center;gap:3px;margin-left:2px;padding:2px 6px;border:1px solid #d9c8ff;border-radius:999px;background:linear-gradient(135deg,#f4edff,#eee7ff);color:#6842b8;font-size:8px;font-weight:800;line-height:1;white-space:nowrap;vertical-align:middle}
+.post-plus-badge svg{width:11px;height:11px;fill:currentColor;stroke:currentColor;stroke-width:1.1;stroke-linejoin:round;flex:0 0 auto}
+.post-user-name .post-plus-badge{margin:0;flex:0 0 auto}
