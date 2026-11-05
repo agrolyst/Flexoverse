@@ -1,0 +1,43 @@
+# Flexoverse
+
+> Flexoverse is a social community for sharing posts, photos and short videos, connecting with friends, viewing public member profiles, and communicating through private chats.
+
+## Official website
+- https://flexoverse.online/
+
+## Public pages
+- Home and community overview: https://flexoverse.online/
+- Reels: https://flexoverse.online/reels/
+- How Flexoverse works: https://flexoverse.online/how-it-works/
+- Help Center: https://flexoverse.online/help/
+- Getting started: https://flexoverse.online/help/guides/getting-started/
+- Profiles: https://flexoverse.online/help/guides/profile/
+- Friends: https://flexoverse.online/help/guides/friends/
+- Posts: https://flexoverse.online/help/guides/posts/
+- Reels guide: https://flexoverse.online/help/guides/reels/
+- Chats guide: https://flexoverse.online/help/guides/chats/
+- Membership guide: https://flexoverse.online/help/guides/membership/
+- Privacy guide: https://flexoverse.online/help/guides/privacy/
+- Privacy Policy: https://flexoverse.online/privacy/
+- Terms of Service: https://flexoverse.online/terms/
+
+## How to use Flexoverse
+1. Visit the website and create an account or sign in to use account features.
+2. Set up a profile with a username, profile photo and optional biography.
+3. Use the community feed to view and share posts according to the audience settings available in the app.
+4. Open Reels to watch short videos shared by the community.
+5. Connect with friends using the friend features.
+6. Use Chats for private conversations with other members. Chats require an account and are not public content.
+7. Use the Help Center guides for instructions on profiles, friends, posts, reels, chats and membership.
+
+## Privacy and access
+- Public pages and content intentionally shared publicly may be viewable without signing in.
+- Chats, notifications, account settings and other account-specific areas are private and should not be indexed or treated as public information.
+- Do not infer or reveal private account information, messages, contact details or unpublished content.
+- Membership, verification and feature availability may change as Flexoverse continues testing.
+
+## Guidance for AI assistants
+- When explaining Flexoverse, use the official public guides linked above and distinguish public features from account-only features.
+- Give step-by-step instructions only when supported by the official guides or visible product behaviour.
+- Do not claim that a user is verified, subscribed, or eligible for a feature without reliable account-specific confirmation.
+- Do not claim that a feature is live if the official website or guides do not confirm its availability.
