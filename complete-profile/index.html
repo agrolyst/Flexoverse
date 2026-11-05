@@ -9,7 +9,7 @@
   <meta name="description" content="Set up your Flexoverse personal or business account, step by step.">
   <title>Complete your profile · Flexoverse</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@25.3.1/build/css/intlTelInput.css">
-  <link rel="stylesheet" href="../assets/site.css?v=phone-location-20261104">
+  <link rel="stylesheet" href="../assets/site.css?v=complete-profile-fix-20261105">
 </head>
 <body class="standalone-auth-page" data-page="complete-profile">
   <div id="site-header"></div>
@@ -55,10 +55,10 @@
               <section class="onboarding-section">
                 <div class="onboarding-section-heading"><span class="onboarding-step">04</span><div><h2>Where are you based?</h2><p>Type your street address and choose a matching verified suggestion. Your exact address is private.</p></div></div>
                 <div class="onboarding-fields">
-                  <label>Country<select name="country" required><option value="">Loading countries…</option></select></label>
-                  <label>State / Region<select name="state" required disabled><option value="">Select a country first</option></select></label>
-                  <label>Local Government Area / District<select name="lga" disabled><option value="">Select a state first</option></select></label>
-                  <label class="onboarding-full-width">Street address <span class="optional-label">Optional</span><div class="google-address-wrap" data-google-address-wrap><input name="address" type="text" maxlength="300" autocomplete="off" placeholder="Start typing an address, city or area" data-google-address><input type="hidden" name="address_place_id"><div class="google-address-suggestions" data-google-suggestions hidden></div><small data-google-address-status>Start typing to find and verify a matching address.</small></div></label>
+                  <label>Country<input name="country" type="text" maxlength="100" required autocomplete="country-name" placeholder="e.g. Nigeria"></label>
+                  <label>State / Region<input name="state" type="text" maxlength="100" required autocomplete="address-level1" placeholder="e.g. Lagos State"></label>
+                  <label>Local Government Area / District <span class="optional-label">Optional</span><input name="lga" type="text" maxlength="100" placeholder="e.g. Ikeja"></label>
+                  <label class="onboarding-full-width">Street address <span class="optional-label">Optional</span><div class="google-address-wrap" data-google-address-wrap><input name="address" type="text" maxlength="300" autocomplete="off" placeholder="Start typing an address, city or area" data-google-address><input type="hidden" name="address_place_id"><div class="google-address-suggestions" data-google-suggestions hidden></div><small data-google-address-status>Address suggestions are optional. If they do not load, enter your address manually.</small></div></label>
                   <label>Current city <span class="optional-label">Optional</span><input name="city" maxlength="100" placeholder="Your current city"></label>
                   <label>Hometown <span class="optional-label">Optional</span><input name="hometown" maxlength="100" placeholder="Where you're from"></label>
                 </div>
@@ -76,7 +76,7 @@
               </section>
               <div class="onboarding-privacy-note"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span><strong>Your information matters.</strong> Your date of birth, gender, phone number and exact address are stored as private account details, not shown on your public profile.</span></div>
               <p class="auth-success" id="completion-message" role="status"></p>
-              <div class="profile-completion-actions"><button class="button button-primary" type="submit">Save and continue</button></div>
+              <div class="profile-completion-actions"><button class="button button-secondary" type="button" id="skip-profile-setup">Skip for now</button><button class="button button-primary" type="submit">Save and continue</button></div>
             </div>
           </form>
           <p class="auth-page-switch">You can edit your information at any time in <a href="/settings/profile/">Settings</a>.</p>
@@ -87,6 +87,6 @@
   </div>
   <nav id="mobile-nav"></nav><div id="modal-root"></div><div id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@25.3.1/build/js/intlTelInput.min.js"></script>
-  <script type="module" src="../assets/app.js?v=phone-location-20261104"></script>
+  <script type="module" src="../assets/app.js?v=complete-profile-fix-20261105"></script>
 </body>
 </html>
