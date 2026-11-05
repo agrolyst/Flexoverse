@@ -130,12 +130,12 @@ function commentSvg(){return '<svg class="action-svg" viewBox="0 0 24 24" aria-h
 const BADGE_TYPES = {
   verified: { className: 'post-verified-badge', title: 'Verified by Flexoverse', label: 'Verified account', icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>' },
   member: { className: 'post-member-badge', title: 'Flexoverse member', label: 'Member', text: 'Member' },
-  plus: { className: 'post-plus-badge', title: 'Flexoverse Plus member', label: 'Plus Member', icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 2.2 5.1 5.5.5-4.2 3.6 1.3 5.4-4.8-2.9-4.8 2.9 1.3-5.4L4.3 7.6l5.5-.5L12 2Z"/><path d="M7 19h10"/></svg>', text: 'Plus' }
+  plus: { className: 'post-plus-badge', title: 'Flexoverse Plus member', label: 'Plus Member', icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 2.2 5.1 5.5.5-4.2 3.6 1.3 5.4-4.8-2.9-4.8 2.9 1.3-5.4L4.3 7.6l5.5-.5L12 2Z"/><path d="M7 19h10"/></svg>' }
 }
 function renderBadge(type) {
   const badge = BADGE_TYPES[type]
   if (!badge) return ''
-  if (type === 'verified' || type === 'plus') return `<span class="${badge.className}" title="${badge.title}" aria-label="${badge.label}">${badge.icon}${type === 'plus' ? badge.text : ''}</span>`
+  if (type === 'verified' || type === 'plus') return `<span class="${badge.className}" title="${badge.title}" aria-label="${badge.label}">${badge.icon}</span>`
   return `<span class="${badge.className}" title="${badge.title}">${badge.text}</span>`
 }
 
