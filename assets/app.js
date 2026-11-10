@@ -2259,14 +2259,15 @@ async function initialize() {
   const loginLink=document.querySelector('#switch-to-login');if(loginLink)loginLink.href=authPageHref('login')
   mountShell()
   bindHeaderNotificationDropdown()
-  // Bind interactions before any remote data loads so slow Supabase requests cannot leave the UI unresponsive.
+  // Bind interactions before remote data loads so the page remains responsive.
   bindEvents()
-  if(session){await loadNotificationPreferences();await loadNotificationCount();subscribeToNotificationUpdates();showNotificationPermissionPrompt(session.user.id)}
   const composerAvatar=document.querySelector('[data-user-avatar]');if(composerAvatar)composerAvatar.outerHTML=avatar(session?initials(myName()):'FX','blue',profile?.avatar_url)
+  // Load the active page before optional notification queries; chat inbox must never wait on notification counts.
+  if(page==='chats')await loadChats()
   if(page==='home'){await Promise.all([loadHome(),loadHomeReels()])}
   if(page==='friends')await loadFriends()
-  if(page==='chats')await loadChats()
   if(page==='notifications')await loadNotifications()
+  if(session){loadNotificationPreferences().then(()=>loadNotificationCount()).catch(error=>console.warn('Notification preferences unavailable:',error));subscribeToNotificationUpdates();showNotificationPermissionPrompt(session.user.id)}
   if(page==='reels')await loadReels()
   if(page==='my-content')await loadMyContent()
   if(page==='profile')await loadProfilePage()
