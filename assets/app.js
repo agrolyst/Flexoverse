@@ -96,7 +96,7 @@ function mountShell() {
     if (modalRoot) modalRoot.innerHTML = ''
     return
   }
-  const navItems = [['chats','Chats','/chats/'],['calls','Calls','/chats/?view=calls'],['status','Status','/reels/'],['channels','Channels','/channels/'],['communities','Communities','/friends/'],['archive','Archive','/archive/'],['flex-ai','Flex AI','/flex-ai/'],['media','Media','/media/'],['profile','Profile','/profile/']]
+  const navItems = [['chats','Chats','/chats/'],['calls','Calls','/chats/?view=calls'],['status','Status','/status/'],['channels','Channels','/channels/'],['communities','Communities','/friends/'],['archive','Archive','/archive/'],['flex-ai','Flex AI','/flex-ai/'],['media','Media','/media/'],['profile','Profile','/profile/']]
   const activePage=key=>page===key||(key==='status'&&page==='reels')||(key==='communities'&&page==='friends')||(key==='calls'&&page==='chats'&&new URLSearchParams(location.search).get('view')==='calls')
   const brandIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.8 19a5.2 5.2 0 0 1 10.4 0v1H2.8zM14 15.3a4.4 4.4 0 0 1 7.2 3.4v1h-7.2z"/></svg>'
   const searchIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.3 4.3"/></svg>'
