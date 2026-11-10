@@ -2516,3 +2516,34 @@ body[data-page="friends"] .friends-empty-state{padding:32px 18px}
  body:not([data-page="login"]):not([data-page="signup"]) .page-layout{padding-bottom:70px!important}
  body[data-page="chats"] #mobile-nav{display:flex!important}
 }
+
+
+/* Voice-note recording controls: compact, WhatsApp-style and responsive. */
+.message-composer.is-recording{gap:12px!important;min-height:58px!important}
+.message-composer.is-recording>input{display:none!important}
+.message-composer .voice-delete-button,.message-composer .voice-pause-button,.message-composer .voice-send-button{
+ display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;border:0;border-radius:50%;background:transparent;color:#242a32
+}
+.message-composer .voice-delete-button svg,.message-composer .voice-pause-button svg,.message-composer .voice-send-button svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.message-composer .voice-delete-button{margin-right:auto}
+.voice-recording-dot{width:10px;height:10px;flex:0 0 10px;border-radius:50%;background:#c90035;animation:voiceDotPulse 1s infinite}
+.voice-recording-timer{font-size:15px;font-variant-numeric:tabular-nums;color:#202632;white-space:nowrap}
+.voice-wave-bars{height:28px;min-width:0;flex:1;display:flex;align-items:center;justify-content:center;gap:2px;overflow:hidden}
+.voice-wave-bars i{display:block;width:2px;height:var(--bar);max-height:25px;border-radius:3px;background:#8b9099}
+.voice-pause-button{color:#c90035!important}
+.message-composer .voice-send-button{background:#18ad68!important;color:#fff!important;box-shadow:0 2px 7px #18ad6833}
+.message-composer .voice-send-button svg{width:22px;height:22px}
+.message-composer.is-voice-paused .voice-recording-dot{animation:none;opacity:.35}
+.message-composer.is-voice-paused .voice-wave-bars i{opacity:.45}
+.voice-record-button{background:transparent!important;border:0!important;color:#15191f!important}
+.voice-record-button svg{width:22px!important;height:22px!important;stroke:currentColor!important}
+.voice-record-button.recording svg{animation:voiceMicBurst .85s ease-in-out infinite}
+@keyframes voiceMicBurst{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+@keyframes voiceDotPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 #c9003544}50%{opacity:.55;box-shadow:0 0 0 5px #c9003510}}
+@media(max-width:560px){
+ .message-composer.is-recording{gap:7px!important;padding-left:8px!important;padding-right:8px!important}
+ .message-composer .voice-delete-button,.message-composer .voice-pause-button,.message-composer .voice-send-button{flex-basis:34px;width:34px;height:34px}
+ .voice-recording-timer{font-size:13px}
+ .voice-wave-bars{gap:1px}
+ .voice-wave-bars i{width:1.5px}
+}
