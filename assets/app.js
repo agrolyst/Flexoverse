@@ -2259,6 +2259,8 @@ async function initialize() {
   const loginLink=document.querySelector('#switch-to-login');if(loginLink)loginLink.href=authPageHref('login')
   mountShell()
   bindHeaderNotificationDropdown()
+  // Bind interactions before any remote data loads so slow Supabase requests cannot leave the UI unresponsive.
+  bindEvents()
   if(session){await loadNotificationPreferences();await loadNotificationCount();subscribeToNotificationUpdates();showNotificationPermissionPrompt(session.user.id)}
   const composerAvatar=document.querySelector('[data-user-avatar]');if(composerAvatar)composerAvatar.outerHTML=avatar(session?initials(myName()):'FX','blue',profile?.avatar_url)
   if(page==='home'){await Promise.all([loadHome(),loadHomeReels()])}
@@ -2273,7 +2275,6 @@ async function initialize() {
   if(page==='complete-profile')await loadProfileCompletion()
   if(page.startsWith('settings-'))await renderSettingsSection()
   if(['privacy','terms','how-it-works','help','help-guide'].includes(page))renderInfoPage()
-  bindEvents()
   bindSettingsEvents()
   bindProfileCompletionEvents()
   supabase.auth.onAuthStateChange((event,next)=>{session=next;if(event==='SIGNED_OUT')location.reload()})
