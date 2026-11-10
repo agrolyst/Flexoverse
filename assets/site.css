@@ -2547,3 +2547,73 @@ body[data-page="friends"] .friends-empty-state{padding:32px 18px}
  .voice-wave-bars{gap:1px}
  .voice-wave-bars i{width:1.5px}
 }
+
+
+/* Calls and Status: two-panel messenger layouts inspired by the supplied references. */
+.calls-page,.status-page{width:100%;max-width:none!important;margin:0!important;padding:0!important;min-width:0}
+.calls-layout,.status-layout{display:grid;grid-template-columns:minmax(330px,424px) minmax(0,1fr);height:calc(100vh - 72px);min-height:580px;background:#f7f5f3;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:hidden}
+.calls-inbox,.status-inbox{background:#fff;border-right:1px solid #d9d9d9;min-width:0;display:flex;flex-direction:column;padding:18px 19px 16px}
+.calls-inbox-heading,.status-inbox-header{display:flex;align-items:center;justify-content:space-between;margin:0 4px 14px}
+.calls-inbox-heading h1,.status-inbox-header h1{font-size:22px;font-weight:500;margin:0;color:#161616}
+.calls-inbox-heading>button{width:40px;height:40px;border:0;border-radius:50%;background:#19ad68;color:white;display:grid;place-items:center}
+.calls-inbox-heading svg,.status-header-actions svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.calls-search{margin:0 3px 30px;background:#f5f4f3;border-radius:30px;min-height:42px}
+.calls-search input{background:transparent}
+.calls-favourites-title{font-size:15px;font-weight:600;margin:0 4px 24px}
+.calls-add-favourite{display:flex;align-items:center;gap:14px;padding:8px 4px 28px;border:0;background:transparent;text-align:left;color:#222;font-size:15px}
+.calls-add-favourite>span{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#19ad68;color:#fff}
+.calls-add-favourite svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.calls-divider{border-top:1px solid #e4e4e4;margin:0 0 10px}
+.calls-encryption,.calls-stage-encryption{display:flex;align-items:center;justify-content:center;gap:5px;font-size:12px;color:#777;margin:0;padding:0 0 8px}
+.calls-encryption svg,.calls-stage-encryption svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8}
+.calls-encryption strong{color:#14965c;font-weight:600}
+.calls-history-list{margin-top:10px;overflow:auto}
+.calls-stage{position:relative;display:flex;align-items:center;justify-content:center;background:#f7f5f3;min-width:0}
+.calls-welcome{display:flex;flex-direction:column;align-items:center;text-align:center;margin:auto;padding:28px 20px 70px}
+.calls-illustration{width:352px;height:236px;border-radius:25px;background:#fff;display:grid;place-items:center;margin-bottom:24px}
+.calls-illustration svg{width:155px;height:120px;fill:#f5f1e8;stroke:#141b20;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.calls-illustration svg path:nth-of-type(2){fill:#19c86b}
+.calls-welcome h2{font-size:22px;font-weight:500;margin:0 0 8px;color:#080808}
+.calls-welcome>p{font-size:14px;line-height:1.5;color:#777;margin:0 0 26px}
+.calls-quick-actions{display:flex;align-items:flex-start;justify-content:center;gap:28px;flex-wrap:wrap}
+.calls-quick-actions button{display:flex;flex-direction:column;align-items:center;gap:8px;border:0;background:transparent;color:#111;font-size:12px;min-width:68px}
+.calls-quick-actions button>span{width:60px;height:48px;border-radius:30px;background:#eeecea;display:grid;place-items:center}
+.calls-quick-actions button>span.primary{background:#19ad68;color:white}
+.calls-quick-actions svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.calls-stage-encryption{position:absolute;bottom:24px;left:12px;right:12px;font-size:14px;color:#777}
+.status-layout{grid-template-columns:minmax(320px,406px) minmax(0,1fr)}
+.status-inbox{padding:12px 16px 0}
+.status-inbox-header{margin:0 8px 12px}
+.status-header-actions{display:flex;gap:18px;align-items:center}
+.status-header-actions button,.status-header-actions a{border:0;background:transparent;color:#111;padding:2px;display:grid;place-items:center}
+.status-list{overflow:auto;min-height:0}
+.status-person{width:100%;display:flex;align-items:center;gap:13px;padding:12px 4px;border:0;background:transparent;text-align:left;color:#111;cursor:pointer}
+.status-avatar{width:46px;height:46px;flex:0 0 46px;border-radius:50%;padding:2px;border:2px solid #19ad68;display:grid;place-items:center}
+.status-avatar .avatar{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.status-avatar-own{border-color:#d4d4d4;position:relative}
+.status-avatar-own i{position:absolute;right:-3px;bottom:-3px;width:20px;height:20px;border:2px solid white;border-radius:50%;background:#111;color:white;font-style:normal;font-size:15px;display:grid;place-items:center}
+.status-person-copy{display:flex;flex-direction:column;gap:3px;min-width:0}
+.status-person-copy strong{font-size:15px;font-weight:500}
+.status-person-copy small{font-size:13px;color:#777}
+.status-list-label{font-size:13px;color:#777;margin:20px 6px 12px}
+.status-empty-inline{padding:16px 6px;color:#888;font-size:13px}
+.status-stage{display:flex;align-items:center;justify-content:center;background:#f7f5f3;min-width:0}
+.status-welcome{display:flex;flex-direction:column;align-items:center;text-align:center;padding:24px}
+.status-welcome>svg{width:56px;height:56px;fill:none;stroke:#c7c7c7;stroke-width:4;stroke-linecap:round;margin-bottom:24px}
+.status-welcome h2{font-size:30px;font-weight:400;margin:0 0 12px;color:#090909}
+.status-welcome>p{font-size:15px;color:#777;margin:0 0 26px}
+.status-create-actions{display:flex;gap:26px;align-items:center}
+.status-create-actions a{display:flex;flex-direction:column;align-items:center;gap:8px;text-decoration:none;color:#111;font-size:12px}
+.status-create-actions a span{width:60px;height:48px;border-radius:28px;background:#eeecea;display:grid;place-items:center}
+.status-create-actions svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:760px){
+ .calls-layout,.status-layout{display:flex;flex-direction:column;height:calc(100dvh - 64px);min-height:0;overflow:auto}
+ .calls-inbox,.status-inbox{width:100%;height:100%;min-height:0;border-right:0;padding:14px 15px}
+ .calls-stage,.status-stage{display:none}
+ .calls-history-list{flex:1}
+ .status-inbox{padding-bottom:80px}
+ .calls-welcome{padding:22px 12px}
+ .calls-illustration{width:min(100%,320px);height:190px}
+ .calls-quick-actions{gap:12px}
+ .status-welcome h2{font-size:26px}
+}
