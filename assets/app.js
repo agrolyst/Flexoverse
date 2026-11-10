@@ -363,11 +363,68 @@ function observeReelPreviews() {
 
 function openReelViewer(index) {
   if(index<0||index>=reelItems.length)return
-  reelViewerIndex=index;reelPreviewObserver?.disconnect();document.querySelectorAll('.reel-preview').forEach(v=>v.pause())
-  const root=document.querySelector('#reel-viewer-root');if(!root)return
+  reelViewerIndex=index
+  reelPreviewObserver?.disconnect()
+  document.querySelectorAll('.reel-preview').forEach(v=>v.pause())
+  const root=document.querySelector('#reel-viewer-root')
+  if(!root)return
   const r=reelItems[index],name=r.user.full_name||r.user.username||'Flexoverse member',username=r.user.username||'member',isLiked=reelLiked.has(r.id)
-  root.innerHTML=`<div class="reel-viewer tiktok-viewer" role="dialog" aria-modal="true" aria-label="Reel by ${esc(name)}"><button class="reel-viewer-backdrop" type="button" data-close-reel aria-label="Close reel"></button><section class="reel-viewer-shell"><button class="reel-viewer-close" type="button" data-close-reel aria-label="Close reel">×</button><button class="reel-viewer-step reel-viewer-previous" type="button" data-reel-step="-1" aria-label="Previous reel">‹</button><div class="reel-viewer-frame"><video id="active-reel-video" src="${esc(r.video_url)}" playsinline autoplay loop preload="auto"></video><div class="reel-viewer-info"><a class="reel-author" href="${profileUrl(username)}">${avatar(initials(name),'white',r.user.avatar_url)}<span><strong>${esc(name)}</strong><small>@${esc(username)} · ${esc(timeAgo(r.created_at))}</small></span></a>${r.caption?`<p>${esc(r.caption)}</p>`:''}</div><div class="reel-viewer-actions"><button type="button" data-viewer-like="${esc(r.id)}" class="${isLiked?'is-liked':''}" aria-pressed="${isLiked}"><b>♥</b><small data-viewer-like-count>${r.like_count}</small></button><button type="button" data-viewer-comments="${esc(r.id)}"><b>●</b><small>${r.comment_count}</small></button><button type="button" data-share-reel="${esc(r.id)}"><b>↗</b><small>Share</small></button></div></div><aside class="reel-comments-panel" data-reel-comments-panel hidden><header><strong>Comments</strong><button type="button" data-hide-reel-comments>×</button></header><div class="reel-comments-list" data-reel-comments-list><p class="comment-state">Loading comments…</p></div>${session?`<form class="reel-comment-form" data-reel-comment-form="${esc(r.id)}"><input name="content" maxlength="1000" required placeholder="Add a comment…"><button type="submit">Post</button></form>`:'<p class="reel-comment-signin"><a href="/login/">Sign in</a> to join the conversation.</p>'}</aside><button class="reel-viewer-step reel-viewer-next" type="button" data-reel-step="1" aria-label="Next reel">›</button></section><span class="reel-viewer-position">${index+1} / ${reelItems.length}</span></div>`
-  document.body.classList.add('reel-viewer-open');const video=root.querySelector('video');video.muted=false;video.play().catch(()=>{video.muted=true;video.play().catch(()=>{})});root.querySelector('.reel-viewer-close')?.focus()
+  const stamp=new Date(r.created_at)
+  const statusTime=Number.isNaN(stamp.getTime())?'Recently':`Today at ${stamp.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}`
+  root.innerHTML=`<div class="reel-viewer tiktok-viewer status-viewer" role="dialog" aria-modal="true" aria-label="Status by ${esc(name)}">
+    <video class="status-viewer-backdrop" src="${esc(r.video_url)}" autoplay muted loop playsinline aria-hidden="true"></video>
+    <button class="reel-viewer-backdrop" type="button" data-close-reel aria-label="Close status"></button>
+    <button class="status-viewer-back" type="button" data-close-reel aria-label="Back to statuses"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+    <button class="reel-viewer-close" type="button" data-close-reel aria-label="Close status"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+    <section class="reel-viewer-shell status-viewer-shell">
+      <div class="reel-viewer-frame status-viewer-frame">
+        <div class="status-progress" aria-label="Status progress"><span></span></div>
+        <header class="status-viewer-header">
+          <a class="reel-author" href="${profileUrl(username)}">${avatar(initials(name),'white',r.user.avatar_url)}<span><strong>${esc(name)}</strong><small>${esc(statusTime)}</small></span></a>
+          <div class="status-media-controls">
+            <button type="button" data-status-pause aria-label="Pause status"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
+            <button type="button" data-status-volume aria-label="Mute status"><svg viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="M16 9a5 5 0 0 1 0 6M18.5 6.5a9 9 0 0 1 0 11"/></svg></button>
+            <button type="button" data-share-reel="${esc(r.id)}" aria-label="Share status"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+          </div>
+        </header>
+        <video id="active-reel-video" src="${esc(r.video_url)}" playsinline autoplay loop preload="auto"></video>
+        <div class="status-caption">${r.caption?esc(r.caption):''}</div>
+        <footer class="status-reply-bar">
+          <button type="button" class="status-emoji-button" data-status-emoji aria-label="Add emoji"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg></button>
+          ${session?`<form class="status-reply-form" data-reel-comment-form="${esc(r.id)}"><input name="content" maxlength="1000" required placeholder="Type a reply..." aria-label="Reply to status"><button type="submit" aria-label="Send reply"><svg viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4 20-7ZM22 2 11 13"/></svg></button></form>`:'<a class="status-signin-reply" href="/login/">Sign in to reply</a>'}
+          <button type="button" class="status-heart-button" data-viewer-like="${esc(r.id)}" aria-label="Like status" aria-pressed="${isLiked}"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg></button>
+        </footer>
+      </div>
+    </section>
+    <span class="reel-viewer-position status-viewer-position">${index+1} / ${reelItems.length}</span>
+  </div>`
+  document.body.classList.add('reel-viewer-open')
+  const video=root.querySelector('#active-reel-video')
+  const backdrop=root.querySelector('.status-viewer-backdrop')
+  video.muted=false
+  video.play().catch(()=>{video.muted=true;video.play().catch(()=>{})})
+  backdrop?.play().catch(()=>{})
+  const progress=root.querySelector('.status-progress span')
+  video.addEventListener('timeupdate',()=>{if(progress&&video.duration)progress.style.width=`${Math.min(100,video.currentTime/video.duration*100)}%`})
+  video.addEventListener('ended',()=>stepReelViewer(1))
+  root.querySelector('[data-status-pause]')?.addEventListener('click',e=>{
+    if(video.paused){video.play().catch(()=>{});e.currentTarget.innerHTML='<svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg>';e.currentTarget.setAttribute('aria-label','Pause status')}
+    else{video.pause();e.currentTarget.innerHTML='<svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg>';e.currentTarget.setAttribute('aria-label','Play status')}
+  })
+  root.querySelector('[data-status-volume]')?.addEventListener('click',e=>{
+    video.muted=!video.muted
+    e.currentTarget.setAttribute('aria-label',video.muted?'Unmute status':'Mute status')
+    e.currentTarget.classList.toggle('is-muted',video.muted)
+  })
+  root.querySelector('[data-status-emoji]')?.addEventListener('click',()=>{
+    const input=root.querySelector('.status-reply-form input')
+    if(input){input.value+=(input.value?' ':'')+'❤️';input.focus()}
+  })
+  root.querySelector('.status-viewer-frame')?.addEventListener('click',e=>{
+    if(e.target.closest('button,a,form,input'))return
+    if(video.paused)video.play().catch(()=>{});else video.pause()
+  })
+  root.querySelector('.reel-viewer-close')?.focus()
 }
 async function toggleReelLike(id){
   if(!session){openAuth();return}const r=reelItems.find(x=>x.id===id);if(!r)return
