@@ -32,6 +32,8 @@ let voiceRecorder=null;
 let voiceRecorderStream=null;
 let voiceRecorderChunks=[];
 let voiceRecordingStartedAt=0;
+let voiceRecordingTimer=null;
+let voiceRecorderCancelled=false;
 let callSignalChannel = null
 let callWindowRef = null
 let callRootElement = null
@@ -924,36 +926,71 @@ async function attachVoiceMessageUrls(messages){
  const results=await Promise.all(rows.map(async m=>{const {data}=await supabase.storage.from('chat-voice-notes').createSignedUrl(m.media_path,604800);return [m.id,data?.signedUrl||'']}));
  const urls=new Map(results);messages.forEach(m=>{if(urls.has(m.id))m.audio_url=urls.get(m.id)});
 }
+function voiceFormatTime(ms){const seconds=Math.max(0,Math.floor(ms/1000));return Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0')}
+function voiceWaveSvg(){return '<span class="voice-wave-bars" aria-hidden="true">'+Array.from({length:36},(_,i)=>'<i style="--bar:'+([8,13,19,10,24,15,9,21,28,12,17,23,8,15,26,11,19,29,13,7,21,16,25,10,18,27,12,20,8,16,23,11,17,24,9,19][i])+'px"></i>').join('')+'</span>'}
+function updateVoiceRecordingUi(){
+ const elapsed=Date.now()-voiceRecordingStartedAt;
+ const timer=document.querySelector('[data-voice-timer]');if(timer)timer.textContent=voiceFormatTime(elapsed);
+}
+function restoreVoiceComposer(){
+ if(voiceRecordingTimer){clearInterval(voiceRecordingTimer);voiceRecordingTimer=null}
+ const form=document.querySelector('#message-form');if(!form)return;
+ form.classList.remove('is-recording','is-voice-paused');
+ form.innerHTML='<input name="message" maxlength="4000" required autocomplete="off" placeholder="Type a message" aria-label="Type a message"><button class="voice-record-button" type="button" data-voice-record aria-label="Record voice message">'+voiceMicSvg()+'</button><button class="send-button" aria-label="Send message" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button>';
+}
+function cancelVoiceRecording(){
+ if(!voiceRecorder)return;
+ voiceRecorderCancelled=true;
+ if(voiceRecordingTimer){clearInterval(voiceRecordingTimer);voiceRecordingTimer=null}
+ voiceRecorder.onstop=null;
+ if(voiceRecorder.state!=='inactive')voiceRecorder.stop();
+ voiceRecorderStream?.getTracks().forEach(t=>t.stop());voiceRecorderStream=null;voiceRecorder=null;voiceRecorderChunks=[];
+ restoreVoiceComposer();
+}
+async function finishVoiceRecording(){
+ if(!voiceRecorder||voiceRecorder.state==='inactive')return;
+ const send=document.querySelector('[data-voice-send]');if(send)send.disabled=true;
+ if(voiceRecorder.state==='paused')voiceRecorder.resume();
+ voiceRecorder.stop();
+}
+async function toggleVoiceRecordingPause(){
+ if(!voiceRecorder)return;
+ const pause=document.querySelector('[data-voice-pause]');
+ if(voiceRecorder.state==='recording'){voiceRecorder.pause();document.querySelector('#message-form')?.classList.add('is-voice-paused');if(pause){pause.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 12 7-12 7z"/></svg>';pause.setAttribute('aria-label','Resume recording')}}
+ else if(voiceRecorder.state==='paused'){voiceRecorder.resume();document.querySelector('#message-form')?.classList.remove('is-voice-paused');if(pause){pause.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>';pause.setAttribute('aria-label','Pause recording')}}
+}
 async function startVoiceRecording(button){
  if(!session||!activeConversationId)return openAuth();
  if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){toast('Voice recording is not supported in this browser.','error');return}
  try{
   voiceRecorderStream=await navigator.mediaDevices.getUserMedia({audio:true});
-  voiceRecorderChunks=[];
+  voiceRecorderChunks=[];voiceRecorderCancelled=false;
   const mime=['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/mp4'].find(t=>MediaRecorder.isTypeSupported(t));
   voiceRecorder=new MediaRecorder(voiceRecorderStream,mime?{mimeType:mime}:{});
   voiceRecordingStartedAt=Date.now();
   voiceRecorder.ondataavailable=e=>{if(e.data?.size)voiceRecorderChunks.push(e.data)};
   voiceRecorder.onstop=async()=>{
-   const blob=new Blob(voiceRecorderChunks,{type:voiceRecorder.mimeType||'audio/webm'});
+   if(voiceRecordingTimer){clearInterval(voiceRecordingTimer);voiceRecordingTimer=null}
+   const blob=new Blob(voiceRecorderChunks,{type:voiceRecorder?.mimeType||'audio/webm'});
    voiceRecorderStream?.getTracks().forEach(t=>t.stop());voiceRecorderStream=null;
    voiceRecorder=null;voiceRecorderChunks=[];
    const elapsed=Date.now()-voiceRecordingStartedAt;
-   const btn=document.querySelector('[data-voice-record]');if(btn){btn.disabled=true;btn.classList.remove('recording');btn.innerHTML=voiceMicSvg();btn.setAttribute('aria-label','Record voice message')}
-   if(blob.size<1000||elapsed<500){if(btn)btn.disabled=false;return}
-   if(blob.size>15*1024*1024){toast('That voice message is too large. Please record a shorter one.','error');if(btn)btn.disabled=false;return}
-   const ext=blob.type.includes('ogg')?'ogg':blob.type.includes('mp4')?'m4a':'webm';
-   const path=activeConversationId+'/'+session.user.id+'/'+crypto.randomUUID()+'.'+ext;
+   restoreVoiceComposer();
+   if(voiceRecorderCancelled||blob.size<1000||elapsed<500)return;
+   if(blob.size>15*1024*1024){toast('That voice message is too large. Please record a shorter one.','error');return}
+   const path=activeConversationId+'/'+session.user.id+'/'+crypto.randomUUID()+'.'+(blob.type.includes('ogg')?'ogg':blob.type.includes('mp4')?'m4a':'webm');
    const {error:uploadError}=await supabase.storage.from('chat-voice-notes').upload(path,blob,{contentType:blob.type,upsert:false});
-   if(uploadError){toast('Voice message could not be uploaded: '+uploadError.message,'error');if(btn)btn.disabled=false;return}
+   if(uploadError){toast('Voice message could not be uploaded: '+uploadError.message,'error');return}
    const {data,error}=await supabase.from('messages').insert({conversation_id:activeConversationId,sender_id:session.user.id,content:'Voice message',message_type:'audio',media_path:path}).select('id,conversation_id,sender_id,content,created_at,edited_at,reply_to_message_id,message_type,media_path').single();
-   if(error){await supabase.storage.from('chat-voice-notes').remove([path]);toast(error.message,'error');if(btn)btn.disabled=false;return}
+   if(error){await supabase.storage.from('chat-voice-notes').remove([path]);toast(error.message,'error');return}
    await attachVoiceMessageUrls([data]);if(activeConversationId===data.conversation_id){activeChatMessages.push(data);renderChatRoom(chatItems.find(x=>x.conversation_id===activeConversationId))}
    const item=chatItems.find(x=>x.conversation_id===data.conversation_id);if(item){item.last_message='🎤 Voice message';item.last_message_id=data.id;item.last_message_at=data.created_at;item.last_sender_id=session.user.id;renderChatList()}
-   if(btn)btn.disabled=false;
   };
-  voiceRecorder.start();button.classList.add('recording');button.setAttribute('aria-label','Stop recording');button.innerHTML=voiceStopSvg();toast('Recording… tap the microphone again to send.');
- }catch(error){voiceRecorderStream?.getTracks().forEach(t=>t.stop());voiceRecorderStream=null;voiceRecorder=null;toast(error.name==='NotAllowedError'?'Allow microphone access to record a voice message.':error.message,'error')}
+  voiceRecorder.start();
+  const form=document.querySelector('#message-form');
+  if(form){form.classList.add('is-recording');form.innerHTML='<button class="voice-delete-button" type="button" data-voice-cancel aria-label="Discard recording" title="Discard recording"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-9 0 1 14h10l1-14M10 11v6m4-6v6"/></svg></button><span class="voice-recording-dot" aria-hidden="true"></span><time class="voice-recording-timer" data-voice-timer>0:00</time>'+voiceWaveSvg()+'<button class="voice-pause-button" type="button" data-voice-pause aria-label="Pause recording" title="Pause recording"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button><button class="voice-send-button" type="button" data-voice-send aria-label="Send voice message" title="Send voice message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button>'}
+  voiceRecordingTimer=setInterval(updateVoiceRecordingUi,200);
+ }catch(error){voiceRecorderStream?.getTracks().forEach(t=>t.stop());voiceRecorderStream=null;voiceRecorder=null;restoreVoiceComposer();toast(error.name==='NotAllowedError'?'Allow microphone access to record a voice message.':error.message,'error')}
 }
 function voiceMicSvg(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6"/></svg>'}
 function voiceStopSvg(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>'}
@@ -1579,7 +1616,7 @@ function bindChatPageEvents() {
   document.querySelector('#chat-inbox-toggle')?.addEventListener('click',()=>showCallHistory(false))
   document.querySelector('#chat-inbox-heading')?.addEventListener('click',e=>{if(e.target.closest('[data-toggle-chat-selection]')){chatSelectionMode=!chatSelectionMode;selectedChatIds.clear();renderChatList();return}if(e.target.closest('[data-delete-selected-chats]'))deleteSelectedChats()})
   document.querySelector('#conversation-list')?.addEventListener('click',e=>{if(e.target.closest('[data-chat-new]'))return openNewChatDialog();if(e.target.closest('[data-retry-chats]'))return loadChats();if(e.target.closest('[data-retry-call-history]'))return loadCallHistory();const callRow=e.target.closest('[data-call-conversation]');if(callRow){showCallHistory(false);return selectConversation(callRow.dataset.callConversation)}const row=e.target.closest('[data-conversation-id]');if(row){if(chatSelectionMode){const id=row.dataset.conversationId;selectedChatIds.has(id)?selectedChatIds.delete(id):selectedChatIds.add(id);renderChatList();return}selectConversation(row.dataset.conversationId)}})
-  document.querySelector('#chat-room')?.addEventListener('click',e=>{const voice=e.target.closest('[data-voice-record]');if(voice){if(voiceRecorder&&voiceRecorder.state==='recording'){voice.disabled=true;voiceRecorder.stop()}else startVoiceRecording(voice);return}if(e.target.closest('[data-chat-back]')){document.querySelector('#chat-layout')?.classList.remove('has-active-conversation');history.replaceState(null,'','/chats/')}})
+  document.querySelector('#chat-room')?.addEventListener('click',e=>{if(e.target.closest('[data-voice-cancel]')){cancelVoiceRecording();return}if(e.target.closest('[data-voice-pause]')){toggleVoiceRecordingPause();return}if(e.target.closest('[data-voice-send]')){finishVoiceRecording();return}const voice=e.target.closest('[data-voice-record]');if(voice){startVoiceRecording(voice);return}if(e.target.closest('[data-chat-back]')){document.querySelector('#chat-layout')?.classList.remove('has-active-conversation');history.replaceState(null,'','/chats/')}})
   document.querySelector('#chat-room')?.addEventListener('click',e=>{
     const toggle=e.target.closest('[data-chat-menu-toggle]');
     if(toggle){const menu=document.querySelector('[data-chat-menu]');if(menu){menu.hidden=!menu.hidden;toggle.setAttribute('aria-expanded',String(!menu.hidden))}return}
