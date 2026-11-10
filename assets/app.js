@@ -396,6 +396,7 @@ function openReelViewer(index) {
         </footer>
       </div>
     </section>
+    <button class="reel-viewer-step reel-viewer-previous status-step-previous" type="button" data-reel-step="-1" aria-label="Previous status"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button><button class="reel-viewer-step reel-viewer-next status-step-next" type="button" data-reel-step="1" aria-label="Next status"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
     <span class="reel-viewer-position status-viewer-position">${index+1} / ${reelItems.length}</span>
   </div>`
   document.body.classList.add('reel-viewer-open')
