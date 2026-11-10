@@ -2259,3 +2259,77 @@ body[data-page="friends"] .friends-empty-state{padding:32px 18px}
 @media(prefers-reduced-motion:reduce){
  body[data-page="friends"] .friends-stat-card,body[data-page="friends"] .friend-person-card,body[data-page="friends"] .friends-hero-cta{transition:none}
 }
+
+
+/* Voice message bubbles */
+.chat-voice-message{display:grid;gap:7px;min-width:220px;max-width:300px;padding:4px 0}.chat-voice-message-top{display:flex;align-items:center;gap:12px}.chat-voice-wave{display:flex;align-items:center;justify-content:space-between;gap:2px;flex:1;height:34px;overflow:hidden}.chat-voice-wave i{display:block;width:3px;min-width:2px;height:var(--wave,14px);border-radius:9px;background:currentColor;opacity:.58}.chat-voice-download{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:rgba(20,30,40,.08);color:inherit;flex:none}.chat-voice-download svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.chat-voice-player{display:block;width:100%;height:34px;max-width:280px}.message.sent .chat-voice-download{background:rgba(20,80,40,.09)}
+
+
+/* Flexoverse desktop messenger layout — WhatsApp-inspired */
+@media(min-width:761px){
+ body[data-page="chats"]{height:100vh;min-height:600px;overflow:hidden;background:#f6f5f2}
+ body[data-page="chats"] .site-header{height:38px;min-height:38px;padding:0 16px;border-bottom:1px solid #e6e4e1;background:#f7f6f4;box-shadow:none}
+ body[data-page="chats"] .site-header .wordmark{font-size:13px;gap:8px}
+ body[data-page="chats"] .site-header .logo-mark{width:20px;height:20px}
+ body[data-page="chats"] .site-header .header-search,
+ body[data-page="chats"] .site-header .top-navigation,
+ body[data-page="chats"] .site-header .header-actions{display:none}
+ body[data-page="chats"] .page-layout{display:block;width:100%;max-width:none;height:calc(100vh - 38px);padding:0;margin:0}
+ body[data-page="chats"] #left-sidebar,
+ body[data-page="chats"] #right-sidebar,
+ body[data-page="chats"] .chat-page-heading,
+ body[data-page="chats"] .privacy-hint,
+ body[data-page="chats"] #mobile-nav{display:none!important}
+ body[data-page="chats"] .main-column.chats-page{display:block;width:100%;max-width:none;height:100%;margin:0;padding:0}
+ body[data-page="chats"] .chat-layout{display:grid;grid-template-columns:420px minmax(0,1fr);width:100%;height:100%;min-height:0;max-height:none;border:0;border-radius:0;background:#fff;box-shadow:none}
+ body[data-page="chats"] .chat-inbox{height:100%;padding:0 10px 8px;border-right:1px solid #e5e5e5;background:#fff}
+ body[data-page="chats"] .chat-inbox-heading{min-height:64px;padding:12px 10px 8px}
+ body[data-page="chats"] .chat-inbox-heading h2{font-size:22px;font-weight:600;color:#111}
+ body[data-page="chats"] .chat-section-kicker{display:none}
+ body[data-page="chats"] .chat-total{display:none}
+ body[data-page="chats"] .chat-selection-controls{display:none}
+ body[data-page="chats"] .inbox-search{height:42px;margin:0 10px 10px;border:0;border-radius:24px;background:#f4f3f2;padding:0 14px}
+ body[data-page="chats"] .inbox-search input{font-size:14px}
+ body[data-page="chats"] .chat-filter-tabs{display:flex;gap:7px;padding:0 10px 10px;overflow-x:auto}
+ body[data-page="chats"] .chat-filter-tab{flex:none;border:1px solid #d7d7d7;border-radius:20px;padding:7px 13px;background:#fff;color:#333;font-size:13px}
+ body[data-page="chats"] .chat-filter-tab.active{background:#d9f7d2;border-color:#a9d7a2;color:#185d2b}
+ body[data-page="chats"] .chat-plus-button{width:36px;height:36px;border:1px solid #d7d7d7;border-radius:50%;background:#fff;font-size:20px}
+ body[data-page="chats"] .chat-inbox-tabs{display:none}
+ body[data-page="chats"] .conversation-list{gap:2px;padding:0 0 8px}
+ body[data-page="chats"] .conversation{min-height:72px;padding:10px 12px;border-radius:12px;gap:14px}
+ body[data-page="chats"] .conversation.active{background:#f4f3f2}
+ body[data-page="chats"] .conversation>.avatar{width:48px;height:48px;flex:0 0 48px}
+ body[data-page="chats"] .conversation-text{gap:5px}
+ body[data-page="chats"] .conversation-text strong{font-size:15px;font-weight:500;color:#111}
+ body[data-page="chats"] .conversation-text small{font-size:12px;color:#667085}
+ body[data-page="chats"] .conversation time{font-size:11px;color:#777}
+ body[data-page="chats"] .chat-room{height:100%;min-height:0;background:#efeae2}
+ body[data-page="chats"] .chat-room-head{height:64px;min-height:64px;padding:0 16px;gap:14px;background:#fff;border-bottom:1px solid #e8e8e8}
+ body[data-page="chats"] .chat-room-head .avatar{width:42px;height:42px}
+ body[data-page="chats"] .chat-room-person strong{font-size:16px;font-weight:500;color:#111}
+ body[data-page="chats"] .chat-room-person small{font-size:12px;color:#667085}
+ body[data-page="chats"] .chat-room-head .chat-room-back{display:none}
+ body[data-page="chats"] .chat-room-head .chat-room-profile{margin-left:auto}
+ body[data-page="chats"] .chat-history{padding:22px 5.5%;gap:10px;background-color:#efeae2;background-image:radial-gradient(rgba(130,115,95,.08) .8px,transparent .8px);background-size:18px 18px}
+ body[data-page="chats"] .message{max-width:min(72%,620px);padding:8px 10px;border-radius:9px;font-size:14px;line-height:1.45;box-shadow:0 1px 1px rgba(0,0,0,.06)}
+ body[data-page="chats"] .message.received{background:#fff;color:#17202a;border-bottom-left-radius:3px}
+ body[data-page="chats"] .message.sent{background:#d9fdd3;color:#17202a;border-bottom-right-radius:3px}
+ body[data-page="chats"] .message small{font-size:10px;color:#66756a}
+ body[data-page="chats"] .message-composer{min-height:64px;padding:9px 14px;gap:12px;background:#fff;border-top:1px solid #e7e7e7}
+ body[data-page="chats"] .message-composer input{height:46px;padding:0 12px;border:0;border-radius:24px;background:#f5f5f5;font-size:14px}
+ body[data-page="chats"] .message-composer .voice-record-button,
+ body[data-page="chats"] .message-composer .send-button{width:40px;height:40px;flex:0 0 40px;border-radius:50%;background:transparent;color:#303942}
+ body[data-page="chats"] .message-composer .voice-record-button svg,
+ body[data-page="chats"] .message-composer .send-button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+ body[data-page="chats"] .chat-welcome{background:#f7f7f7}
+}
+.chat-voice-message{display:flex;align-items:center;gap:10px;min-width:250px;max-width:340px;padding:2px 0}
+.chat-voice-play{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;border:0;border-radius:50%;background:rgba(30,90,55,.12);color:inherit;cursor:pointer}
+.chat-voice-play svg{width:20px;height:20px;fill:currentColor;stroke:none}
+.chat-voice-content{min-width:0;flex:1}
+.chat-voice-wave{display:flex;align-items:center;justify-content:space-between;gap:2px;height:34px;overflow:hidden;cursor:default}
+.chat-voice-wave i{display:block;width:3px;min-width:2px;height:var(--wave,14px);border-radius:9px;background:linear-gradient(to right,currentColor calc(var(--played,0)*100%),currentColor 0);opacity:.62}
+.chat-voice-meta{display:flex;justify-content:space-between;gap:8px;color:inherit;font-size:10px;opacity:.75}
+.chat-voice-download{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:50%;background:rgba(20,30,40,.08);color:inherit}
+.chat-voice-download svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.chat-voice-player{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
