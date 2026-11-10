@@ -2263,7 +2263,7 @@ async function initialize() {
   bindEvents()
   const composerAvatar=document.querySelector('[data-user-avatar]');if(composerAvatar)composerAvatar.outerHTML=avatar(session?initials(myName()):'FX','blue',profile?.avatar_url)
   // Load the active page before optional notification queries; chat inbox must never wait on notification counts.
-  if(page==='chats')await loadChats()
+  if(page==='chats'){await loadChats();if(new URLSearchParams(location.search).get('view')==='calls')showCallHistory(true)}
   if(page==='home'){await Promise.all([loadHome(),loadHomeReels()])}
   if(page==='friends')await loadFriends()
   if(page==='notifications')await loadNotifications()
