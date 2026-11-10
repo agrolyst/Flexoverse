@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#655ce8">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=brand-favicon-20261104">
+  <link rel="shortcut icon" href="/favicon.svg?v=brand-favicon-20261104">
+  <meta name="description" content="View all the posts, reels and videos you have shared on Flexoverse.">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Media · Flexoverse</title>
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body data-page="my-content">
+  <div id="site-header"></div>
+  <div class="page-layout">
+    <aside id="left-sidebar"></aside>
+    <main class="main-column my-content-page">
+      <section class="page-intro">
+        <p class="overline">YOUR CREATIONS</p>
+        <h1>Media<span class="title-period">.</span></h1>
+        <p class="muted">All the posts, reels and videos you have shared, together in one place.</p>
+      </section>
+      <section class="my-content-stats card" aria-label="Your content totals">
+        <div><strong id="my-total-count">0</strong><span>Total shares</span></div>
+        <div><strong id="my-post-count">0</strong><span>Posts</span></div>
+        <div><strong id="my-video-count">0</strong><span>Videos & reels</span></div>
+      </section>
+      <nav class="my-content-filters" aria-label="Filter your content">
+        <button class="active" type="button" data-my-content-filter="all" aria-pressed="true">Everything</button>
+        <button type="button" data-my-content-filter="posts" aria-pressed="false">Posts</button>
+        <button type="button" data-my-content-filter="videos" aria-pressed="false">Videos & reels</button>
+      </nav>
+      <section class="my-content-section" data-my-content-type="posts">
+        <div class="section-heading"><div><h2>Your posts</h2><p class="muted">Text updates and photo posts</p></div><a class="text-link" href="/create/">Create post →</a></div>
+        <div id="my-content-posts" class="feed-list" aria-live="polite"><div class="feed-state card">Loading your posts…</div></div>
+      </section>
+      <section class="my-content-section" data-my-content-type="videos">
+        <div class="section-heading"><div><h2>Your videos & reels</h2><p class="muted">Videos you have uploaded to Flexoverse</p></div><a class="text-link" href="/create/">Share video →</a></div>
+        <div id="my-content-videos" class="my-content-video-grid" aria-live="polite"><div class="feed-state card">Loading your videos…</div></div>
+      </section>
+    </main>
+    <aside id="right-sidebar"></aside>
+  </div>
+  <nav id="mobile-nav"></nav>
+  <div id="modal-root"></div>
+  <div id="reel-viewer-root"></div>
+  <div id="toast" role="status"></div>
+  <script type="module" src="../assets/app.js"></script>
+</body>
+</html>
