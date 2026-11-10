@@ -2442,3 +2442,33 @@ body[data-page="friends"] .friends-empty-state{padding:32px 18px}
  body[data-page="chats"] .message-composer .reply-composer-bar{flex:0 0 100%!important}
 }
 .chat-voice-download{display:none!important}
+
+
+/* Match the full homepage header on the Chats page. */
+.notification-bell-icon{display:block;width:24px;height:24px;fill:currentColor;transform:scaleX(-1);transform-origin:center;animation:notification-bell-tada 2.4s ease-in-out infinite}
+@keyframes notification-bell-tada{
+ 0%,10%,20%,30%,40%,100%{transform:scaleX(-1) rotate(0) scale(1)}
+ 5%,15%,25%,35%{transform:scaleX(-1) rotate(-9deg) scale(1.06)}
+ 12%,32%{transform:scaleX(-1) rotate(9deg) scale(1.06)}
+}
+@media(prefers-reduced-motion:reduce){.notification-bell-icon{animation:none}}
+@media(min-width:761px){
+ body[data-page="chats"] .site-header{
+  height:72px!important;min-height:72px!important;padding:0 max(calc((100vw - 1440px)/2),clamp(20px,3vw,44px))!important;
+  gap:clamp(16px,2.3vw,32px)!important;background:rgba(255,255,255,.96)!important;
+  border-bottom:1px solid #eceef3!important;box-shadow:none!important;
+ }
+ body[data-page="chats"] .site-header .wordmark{min-width:213px!important;font-size:20px!important;gap:10px!important}
+ body[data-page="chats"] .site-header .logo-mark{width:34px!important;height:34px!important}
+ body[data-page="chats"] .site-header .header-search,
+ body[data-page="chats"] .site-header .top-navigation,
+ body[data-page="chats"] .site-header .header-actions{display:flex!important}
+ body[data-page="chats"] .site-header .header-search{width:250px!important;flex:0 1 250px!important}
+ body[data-page="chats"] .site-header .top-navigation{height:100%!important;align-items:center!important}
+ body[data-page="chats"] .site-header .header-actions{margin-left:auto!important;align-items:center!important}
+ body[data-page="chats"] .page-layout{
+  width:calc(100% - 72px)!important;height:calc(100vh - 72px)!important;
+  margin:0 0 0 72px!important;
+ }
+ body[data-page="chats"] #mobile-nav{top:72px!important}
+}
