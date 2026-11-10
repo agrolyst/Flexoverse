@@ -459,7 +459,7 @@ function stepReelViewer(step) {
 }
 
 async function shareReel(id) {
-  const url=`${location.origin}/reels/?id=${encodeURIComponent(id)}`
+  const url=`${location.origin}/status/?id=${encodeURIComponent(id)}`
   try{await navigator.clipboard.writeText(url);toast('Reel link copied.','success')}catch{toast('Open the reel and copy its link from the address bar.')}
 }
 
@@ -807,7 +807,7 @@ function prepareReelComposer() {
       if(error){await supabase.storage.from('reels').remove([path]);uploaded=false;throw error}
       try{localStorage.removeItem(draftKey)}catch{}
       toast('Your reel was shared.','success')
-      location.replace('/reels/')
+      location.replace('/status/')
     }catch(error){console.error(error);if(uploaded)await supabase.storage.from('reels').remove([path]);toast(error.message||'The video could not be uploaded. Try again.','error');submit.disabled=false;submit.querySelector('span').textContent='Share reel'}
   })
 }
