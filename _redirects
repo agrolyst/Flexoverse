@@ -1,3 +1,6 @@
 /profile/view /profile/view/index.html 200
 /profile/view/ /profile/view/index.html 200
 /profile/view/* /profile/view/index.html 200
+/status /reels/index.html 200
+/status/ /reels/index.html 200
+/status/* /reels/index.html 200
