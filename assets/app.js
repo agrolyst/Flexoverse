@@ -921,7 +921,7 @@ function renderChatWelcome(message='Choose a chat to catch up or start a new con
 async function attachVoiceMessageUrls(messages){
  const rows=messages.filter(m=>m.message_type==='audio'&&m.media_path&&!m.audio_url);
  if(!rows.length)return;
- const results=await Promise.all(rows.map(async m=>{const {data}=await supabase.storage.from('chat-voice-notes').createSignedUrl(m.media_path,3600);return [m.id,data?.signedUrl||'']}));
+ const results=await Promise.all(rows.map(async m=>{const {data}=await supabase.storage.from('chat-voice-notes').createSignedUrl(m.media_path,604800);return [m.id,data?.signedUrl||'']}));
  const urls=new Map(results);messages.forEach(m=>{if(urls.has(m.id))m.audio_url=urls.get(m.id)});
 }
 async function startVoiceRecording(button){
@@ -972,7 +972,7 @@ function renderChatRoom(item,messages=activeChatMessages) {
   const groupClass=(samePrev?'group-middle':'group-start')+(sameNext?'':' group-end');
   const parent=messages.find(m=>m.id===message.reply_to_message_id);
   const quote=message.reply_to_message_id?`<div class="message-reply-quote ${parent?'':'missing-reply'}"><span class="reply-quote-accent"></span><div class="reply-quote-content"><strong>${parent?(parent.sender_id===session?.user?.id?'You':esc(item.peer_name||'Contact')):'Original message'}</strong><span>${parent?esc(parent.content.slice(0,180)):'This message is no longer available'}</span></div></div>`:'';
-  const messageBody=message.message_type==='audio'?(message.audio_url?'<audio class="chat-voice-player" controls preload="none" src="'+esc(message.audio_url)+'"></audio>':'<span class="voice-message-unavailable">Voice message unavailable</span>'):esc(message.content);
+  const messageBody=message.message_type==='audio'?(message.audio_url?`<div class="chat-voice-message"><div class="chat-voice-message-top"><span class="chat-voice-wave" aria-hidden="true">${Array.from({length: thirty=32},(_,i)=>`<i style="--wave:${[8,14,20,11,26,16,10,22,29,13,18,24,9,16,27,12,20,30,14,8,22,17,26,11,19,28,13,21,9,17,24,12][i]}px"></i>`).join('')}</span><a class="chat-voice-download" href="${esc(message.audio_url)}" download aria-label="Download voice message" title="Download voice message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 20h16"/></svg></a></div><audio class="chat-voice-player" controls preload="none" src="${esc(message.audio_url)}"></audio></div>`:'<span class="voice-message-unavailable">Voice message unavailable</span>'):esc(message.content);
   const reactions=activeMessageReactions.filter(r=>r.message_id===message.id);
   const reactionBar=reactions.length?`<div class="message-reactions">${[...new Set(reactions.map(r=>r.reaction))].map(reaction=>{const mine=reactions.some(r=>r.reaction===reaction&&r.user_id===session?.user?.id);return `<button type="button" class="message-reaction ${mine?'mine':''}" data-toggle-reaction="${esc(reaction)}" data-message-id="${esc(message.id)}">${reaction} <small>${reactions.filter(r=>r.reaction===reaction).length}</small></button>`}).join('')}</div>`:'';
   const selectedMessage=selectedMessageIds.has(message.id);
