@@ -983,7 +983,7 @@ async function openChatListContextMenu(item,anchor,point){
  +row('unread','Mark as unread','unread')
  +row('favorite',chatFavoriteIds.has(item.conversation_id)?'Remove from Favorites':'Add to Favorites','favorite')
  +'<div class="chat-list-context-submenu">'+row('add-list','Add to list','list')+'<div class="chat-list-context-list" hidden><button type="button" data-chat-list-name="Close friends">Close friends</button><button type="button" data-chat-list-name="Family">Family</button><button type="button" data-chat-list-name="Work">Work</button></div></div>'
- +'<div class="chat-list-context-separator"></div>'+row('block','Block','block')+row('clear','Clear chat','clear')+row('delete','Delete chat','delete');
+ +(isFriend?'':row('close','Close chat','close'))+'<div class="chat-list-context-separator"></div>'+row('block','Block','block')+row('clear','Clear chat','clear')+row('delete','Delete chat','delete');
  document.body.append(menu);
  const rect=anchor?.getBoundingClientRect(),x=point?.clientX??rect?.left??12,y=point?.clientY??rect?.bottom??12,w=Math.min(228,window.innerWidth-16);
  menu.style.left=Math.max(8,Math.min(x,window.innerWidth-w-8))+'px';menu.style.top=Math.max(8,Math.min(y,window.innerHeight-menu.offsetHeight-8))+'px';
@@ -1000,6 +1000,7 @@ async function handleChatListContextAction(action,id){
  if(action==='favorite'){chatFavoriteIds.has(id)?chatFavoriteIds.delete(id):chatFavoriteIds.add(id);try{localStorage.setItem('flexoverse-chat-favorites:'+session.user.id,JSON.stringify([...chatFavoriteIds]))}catch{}close();renderChatList();toast(chatFavoriteIds.has(id)?'Added to Favorites.':'Removed from Favorites.','success');return}
  const kind={archive:'archived',mute:'muted',pin:'pinned'}[action];
  if(kind){const on=chatListToggle(kind,id);close();renderChatList();toast(kind==='archived'?(on?'Chat archived.':'Chat restored to your inbox.'):kind==='muted'?(on?'Notifications muted.':'Notifications unmuted.'):(on?'Chat pinned.':'Chat unpinned.'),'success');return}
+ if(action==='close'){close();if(activeConversationId===id){activeConversationId=null;renderChatWelcome('Choose a chat or start a new conversation.')}return}
  if(action==='add-list'){const sub=document.querySelector('.chat-list-context-list');if(sub)sub.hidden=!sub.hidden;return}
  if(action==='unread'){const result=await supabase.from('conversation_members').update({last_read_at:null}).eq('conversation_id',id).eq('user_id',session.user.id);if(result.error)return toast(result.error.message,'error');item.unread_count=Math.max(1,Number(item.unread_count||0));close();renderChatList();toast('Marked as unread.','success');return}
  if(action==='block'){if(!item.peer_id)return toast('Groups cannot be blocked here.','info');if(!confirm('Block '+item.peer_name+'?'))return;const result=await supabase.from('user_blocks').upsert({blocker_id:session.user.id,blocked_id:item.peer_id},{onConflict:'blocker_id,blocked_id'});if(result.error)return toast(result.error.message,'error');close();toast('Contact blocked.','success');return}
