@@ -34,6 +34,10 @@ let voiceRecorderChunks=[];
 let voiceRecordingStartedAt=0;
 let voiceRecordingTimer=null;
 let voiceRecorderCancelled=false;
+let pendingVoiceBlob=null;
+let pendingVoiceDuration=0;
+let pendingVoiceConversationId=null;
+let pendingVoicePreviewUrl=null;
 let callSignalChannel = null
 let callWindowRef = null
 let callRootElement = null
@@ -1042,19 +1046,42 @@ async function startVoiceRecording(button){
    restoreVoiceComposer();
    if(voiceRecorderCancelled||blob.size<1000||elapsed<500)return;
    if(blob.size>15*1024*1024){toast('That voice message is too large. Please record a shorter one.','error');return}
-   const path=activeConversationId+'/'+session.user.id+'/'+crypto.randomUUID()+'.'+(blob.type.includes('ogg')?'ogg':blob.type.includes('mp4')?'m4a':'webm');
-   const {error:uploadError}=await supabase.storage.from('chat-voice-notes').upload(path,blob,{contentType:blob.type,upsert:false});
-   if(uploadError){toast('Voice message could not be uploaded: '+uploadError.message,'error');return}
-   const {data,error}=await supabase.from('messages').insert({conversation_id:activeConversationId,sender_id:session.user.id,content:'Voice message',message_type:'audio',media_path:path}).select('id,conversation_id,sender_id,content,created_at,edited_at,reply_to_message_id,message_type,media_path').single();
-   if(error){await supabase.storage.from('chat-voice-notes').remove([path]);toast(error.message,'error');return}
-   await attachVoiceMessageUrls([data]);if(activeConversationId===data.conversation_id){activeChatMessages.push(data);renderChatRoom(chatItems.find(x=>x.conversation_id===activeConversationId))}
-   const item=chatItems.find(x=>x.conversation_id===data.conversation_id);if(item){item.last_message='🎤 Voice message';item.last_message_id=data.id;item.last_message_at=data.created_at;item.last_sender_id=session.user.id;renderChatList()}
+   pendingVoiceBlob=blob;pendingVoiceDuration=elapsed;pendingVoiceConversationId=activeConversationId;
+   if(pendingVoicePreviewUrl)URL.revokeObjectURL(pendingVoicePreviewUrl);
+   pendingVoicePreviewUrl=URL.createObjectURL(blob);
+   showVoicePreview();
   };
   voiceRecorder.start();
   const form=document.querySelector('#message-form');
   if(form){form.classList.add('is-recording');form.innerHTML='<button class="voice-delete-button" type="button" data-voice-cancel aria-label="Discard recording" title="Discard recording"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-9 0 1 14h10l1-14M10 11v6m4-6v6"/></svg></button><span class="voice-recording-dot" aria-hidden="true"></span><time class="voice-recording-timer" data-voice-timer>0:00</time>'+voiceWaveSvg()+'<button class="voice-pause-button" type="button" data-voice-pause aria-label="Pause recording" title="Pause recording"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button><button class="voice-send-button" type="button" data-voice-send aria-label="Send voice message" title="Send voice message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button>'}
   voiceRecordingTimer=setInterval(updateVoiceRecordingUi,200);
  }catch(error){voiceRecorderStream?.getTracks().forEach(t=>t.stop());voiceRecorderStream=null;voiceRecorder=null;restoreVoiceComposer();toast(error.name==='NotAllowedError'?'Allow microphone access to record a voice message.':error.message,'error')}
+}
+function showVoicePreview(){
+ const form=document.querySelector('#message-form');if(!form||!pendingVoiceBlob)return;
+ form.classList.remove('is-recording','is-voice-paused');form.classList.add('is-voice-preview');
+ form.innerHTML='<button class="voice-delete-button" type="button" data-voice-preview-cancel aria-label="Discard voice note" title="Discard voice note"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-9 0 1 14h10l1-14M10 11v6m4-6v6"/></svg></button><audio class="voice-preview-audio" controls preload="metadata" src="'+pendingVoicePreviewUrl+'"></audio><span class="voice-preview-duration">'+voiceFormatTime(pendingVoiceDuration)+'</span><button class="voice-send-button" type="button" data-voice-preview-send aria-label="Send voice note" title="Send voice note"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button>';
+}
+function discardVoicePreview(){
+ pendingVoiceBlob=null;pendingVoiceDuration=0;pendingVoiceConversationId=null;
+ if(pendingVoicePreviewUrl){URL.revokeObjectURL(pendingVoicePreviewUrl);pendingVoicePreviewUrl=null}
+ restoreVoiceComposer();
+}
+async function sendVoicePreview(){
+ if(!pendingVoiceBlob||!session||!pendingVoiceConversationId)return;
+ const blob=pendingVoiceBlob,conversationId=pendingVoiceConversationId;
+ const send=document.querySelector('[data-voice-preview-send]');if(send){send.disabled=true;send.textContent='…'}
+ const extension=blob.type.includes('ogg')?'ogg':blob.type.includes('mp4')?'m4a':'webm';
+ const path=conversationId+'/'+session.user.id+'/'+crypto.randomUUID()+'.'+extension;
+ const {error:uploadError}=await supabase.storage.from('chat-voice-notes').upload(path,blob,{contentType:blob.type,upsert:false});
+ if(uploadError){if(send)send.disabled=false;toast('Voice note could not be uploaded: '+uploadError.message,'error');return}
+ const {data,error}=await supabase.from('messages').insert({conversation_id:conversationId,sender_id:session.user.id,content:'Voice message',message_type:'audio',media_path:path}).select('id,conversation_id,sender_id,content,created_at,edited_at,reply_to_message_id,message_type,media_path').single();
+ if(error){await supabase.storage.from('chat-voice-notes').remove([path]);if(send)send.disabled=false;toast(error.message,'error');return}
+ discardVoicePreview();
+ await attachVoiceMessageUrls([data]);
+ if(activeConversationId===data.conversation_id){activeChatMessages.push(data);renderChatRoom(chatItems.find(x=>x.conversation_id===activeConversationId))}
+ const item=chatItems.find(x=>x.conversation_id===data.conversation_id);
+ if(item){item.last_message='🎤 Voice message';item.last_message_id=data.id;item.last_message_at=data.created_at;item.last_sender_id=session.user.id;renderChatList()}
 }
 function voiceMicSvg(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6"/></svg>'}
 function voiceStopSvg(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>'}
@@ -1680,7 +1707,7 @@ function bindChatPageEvents() {
   document.querySelector('#chat-inbox-toggle')?.addEventListener('click',()=>showCallHistory(false))
   document.querySelector('#chat-inbox-heading')?.addEventListener('click',e=>{if(e.target.closest('[data-toggle-chat-selection]')){chatSelectionMode=!chatSelectionMode;selectedChatIds.clear();renderChatList();return}if(e.target.closest('[data-delete-selected-chats]'))deleteSelectedChats()})
   document.querySelector('#conversation-list')?.addEventListener('click',e=>{if(e.target.closest('[data-chat-new]'))return openNewChatDialog();if(e.target.closest('[data-retry-chats]'))return loadChats();if(e.target.closest('[data-retry-call-history]'))return loadCallHistory();const callRow=e.target.closest('[data-call-conversation]');if(callRow){showCallHistory(false);return selectConversation(callRow.dataset.callConversation)}const row=e.target.closest('[data-conversation-id]');if(row){if(chatSelectionMode){const id=row.dataset.conversationId;selectedChatIds.has(id)?selectedChatIds.delete(id):selectedChatIds.add(id);renderChatList();return}selectConversation(row.dataset.conversationId)}})
-  document.querySelector('#chat-room')?.addEventListener('click',e=>{const action=e.target.closest('[data-calls-action]')?.dataset.callsAction;if(action==='new-call'){openNewChatDialog();return}if(action==='phone'){const number=prompt('Enter the contact phone number');if(number?.trim())toast('Phone-number calling is not available yet. Start a call from a Flexoverse chat.','info');return}if(action==='schedule'){toast('Call scheduling is coming soon. You can start a voice or video call from a chat.','info');return}if(action==='voice'||action==='video'){openNewChatDialog();return}if(e.target.closest('[data-close-chat-info]')||e.target.matches('[data-chat-info-backdrop]')){document.querySelector('#modal-root').innerHTML='';return}const themeChoice=e.target.closest('[data-theme-choice]');if(themeChoice){const room=document.querySelector('#chat-room');room?.classList.remove('chat-room-soft-theme','chat-room-warm-theme');if(themeChoice.dataset.themeChoice==='soft')room?.classList.add('chat-room-soft-theme');if(themeChoice.dataset.themeChoice==='warm')room?.classList.add('chat-room-warm-theme');document.querySelector('[data-chat-theme-panel]')?.remove();return}if(e.target.closest('[data-voice-cancel]')){cancelVoiceRecording();return}if(e.target.closest('[data-voice-pause]')){toggleVoiceRecordingPause();return}if(e.target.closest('[data-voice-send]')){finishVoiceRecording();return}const voice=e.target.closest('[data-voice-record]');if(voice){startVoiceRecording(voice);return}if(e.target.closest('[data-chat-back]')){document.querySelector('#chat-layout')?.classList.remove('has-active-conversation');history.replaceState(null,'','/chats/')}})
+  document.querySelector('#chat-room')?.addEventListener('click',e=>{const action=e.target.closest('[data-calls-action]')?.dataset.callsAction;if(action==='new-call'){openNewChatDialog();return}if(action==='phone'){const number=prompt('Enter the contact phone number');if(number?.trim())toast('Phone-number calling is not available yet. Start a call from a Flexoverse chat.','info');return}if(action==='schedule'){toast('Call scheduling is coming soon. You can start a voice or video call from a chat.','info');return}if(action==='voice'||action==='video'){openNewChatDialog();return}if(e.target.closest('[data-close-chat-info]')||e.target.matches('[data-chat-info-backdrop]')){document.querySelector('#modal-root').innerHTML='';return}const themeChoice=e.target.closest('[data-theme-choice]');if(themeChoice){const room=document.querySelector('#chat-room');room?.classList.remove('chat-room-soft-theme','chat-room-warm-theme');if(themeChoice.dataset.themeChoice==='soft')room?.classList.add('chat-room-soft-theme');if(themeChoice.dataset.themeChoice==='warm')room?.classList.add('chat-room-warm-theme');document.querySelector('[data-chat-theme-panel]')?.remove();return}if(e.target.closest('[data-voice-cancel]')){cancelVoiceRecording();return}if(e.target.closest('[data-voice-preview-cancel]')){discardVoicePreview();return}if(e.target.closest('[data-voice-preview-send]')){sendVoicePreview();return}if(e.target.closest('[data-voice-pause]')){toggleVoiceRecordingPause();return}if(e.target.closest('[data-voice-send]')){finishVoiceRecording();return}const voice=e.target.closest('[data-voice-record]');if(voice){startVoiceRecording(voice);return}if(e.target.closest('[data-chat-back]')){document.querySelector('#chat-layout')?.classList.remove('has-active-conversation');history.replaceState(null,'','/chats/')}})
   document.querySelector('#chat-room')?.addEventListener('click',e=>{
     const toggle=e.target.closest('[data-chat-menu-toggle]');
     if(toggle){const menu=document.querySelector('[data-chat-menu]');if(menu){menu.hidden=!menu.hidden;toggle.setAttribute('aria-expanded',String(!menu.hidden))}return}
