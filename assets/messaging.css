@@ -257,3 +257,27 @@ body[data-page="chats"] .chat-contact-media-section .chat-contact-empty{padding:
 body[data-page="chats"] .chat-contact-list-section .chat-contact-row-multiline{min-height:64px!important}
 body[data-page="chats"] .chat-contact-section h3>span{font-size:0!important}
 @media(max-width:760px){body[data-page="chats"] .chat-contact-list-section{padding:0 8px!important}body[data-page="chats"] .chat-contact-row{min-height:52px!important;padding:11px 12px!important}}
+
+
+/* WhatsApp-style composer: attachment + emoji + message + one context-sensitive action. */
+body[data-page="chats"] .message-composer{position:relative!important;display:flex!important;align-items:center!important;gap:8px!important;min-height:62px!important;padding:7px 12px!important;background:#fff!important;border-top:1px solid #e8edef!important;border-radius:0!important}
+body[data-page="chats"] .message-composer input{height:46px!important;min-width:0!important;flex:1 1 auto!important;padding:0 5px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#17212b!important;font-size:14px!important;outline:none!important}
+body[data-page="chats"] .message-composer input::placeholder{color:#667781!important;opacity:1!important}
+body[data-page="chats"] .message-composer .composer-icon-button{display:grid!important;place-items:center!important;flex:0 0 30px!important;width:30px!important;height:38px!important;padding:0!important;border:0!important;border-radius:50%!important;background:transparent!important;color:#17212b!important;cursor:pointer!important}
+body[data-page="chats"] .message-composer .composer-icon-button:hover{background:#f1f3f4!important}
+body[data-page="chats"] .message-composer .composer-icon-button svg{display:block!important;width:21px!important;height:21px!important;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+body[data-page="chats"] .message-composer .chat-attach-button svg{width:20px!important;height:20px!important;fill:#062aff!important;stroke:none!important}
+body[data-page="chats"] .message-composer .composer-action-button{display:grid!important;place-items:center!important;flex:0 0 34px!important;width:34px!important;height:38px!important;padding:0!important;border:0!important;border-radius:50%!important;background:transparent!important;color:#17212b!important;cursor:pointer!important}
+body[data-page="chats"] .message-composer .composer-action-button svg{width:22px!important;height:22px!important;fill:none!important;stroke:currentColor!important;stroke-width:1.8!important;stroke-linecap:round!important;stroke-linejoin:round!important}
+body[data-page="chats"] .message-composer .composer-action-button.send-button{width:38px!important;height:38px!important;flex-basis:38px!important;background:#087f52!important;color:#fff!important}
+body[data-page="chats"] .message-composer .composer-action-button.send-button svg{width:20px!important;height:20px!important}
+body[data-page="chats"] .chat-emoji-popover{position:absolute!important;z-index:70!important;left:42px!important;bottom:58px!important;display:grid!important;grid-template-columns:repeat(6,36px)!important;gap:4px!important;padding:9px!important;border:1px solid #e3e8ea!important;border-radius:12px!important;background:#fff!important;box-shadow:0 5px 22px #0002!important}
+body[data-page="chats"] .chat-emoji-popover button{width:36px!important;height:36px!important;border:0!important;border-radius:7px!important;background:transparent!important;font-size:21px!important;cursor:pointer!important}
+body[data-page="chats"] .chat-emoji-popover button:hover{background:#f0f2f3!important}
+body[data-page="chats"] .chat-contact-extra-actions{padding:8px 12px 18px!important}
+body[data-page="chats"] .chat-contact-extra-actions .chat-contact-row{min-height:58px!important}
+body[data-page="chats"] .chat-contact-extra-actions .chat-contact-row:first-child{margin:0 0 2px!important;background:#f5f4f3!important}
+body[data-page="chats"] .chat-contact-extra-actions .chat-contact-row.chat-contact-danger-row{color:#e00036!important}
+body[data-page="chats"] .chat-contact-extra-actions .chat-contact-row.chat-contact-danger-row>svg{stroke:#e00036!important}
+body[data-page="chats"] .chat-contact-extra-actions .chat-contact-row.chat-contact-danger-row:hover{background:#fff1f3!important}
+@media(max-width:600px){body[data-page="chats"] .message-composer{gap:5px!important;padding:6px 9px!important}body[data-page="chats"] .message-composer .composer-icon-button{flex-basis:28px!important;width:28px!important}body[data-page="chats"] .message-composer .composer-action-button{flex-basis:32px!important;width:32px!important}}
