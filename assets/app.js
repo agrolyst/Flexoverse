@@ -1171,6 +1171,15 @@ function openChatContactPanel(){
  layout.append(panel);layout.classList.add('has-contact-panel');
 }
 
+function formatChatText(value='') {
+ const text=String(value??'');
+ const pattern=/\*([^*\n]+)\*/g;
+ let html='',last=0,match;
+ while((match=pattern.exec(text))){html+=esc(text.slice(last,match.index))+`<strong>${esc(match[1])}</strong>`;last=pattern.lastIndex}
+ html+=esc(text.slice(last));
+ return html.replace(/\r?\n/g,'<br>');
+}
+
 function renderChatRoom(item,messages=activeChatMessages) {
  const room=document.querySelector('#chat-room');if(!room||!item)return;
  document.querySelector('#chat-layout')?.classList.add('has-active-conversation');
@@ -1186,7 +1195,7 @@ function renderChatRoom(item,messages=activeChatMessages) {
   const groupClass=(samePrev?'group-middle':'group-start')+(sameNext?'':' group-end');
   const parent=messages.find(m=>m.id===message.reply_to_message_id);
   const quote=message.reply_to_message_id?`<div class="message-reply-quote ${parent?'':'missing-reply'}"><span class="reply-quote-accent"></span><div class="reply-quote-content"><strong>${parent?(parent.sender_id===session?.user?.id?'You':esc(item.peer_name||'Contact')):'Original message'}</strong><span>${parent?esc(parent.content.slice(0,180)):'This message is no longer available'}</span></div></div>`:'';
-  const messageBody=message.message_type==='audio'?(message.audio_url?`<div class="chat-voice-message"><button class="chat-voice-play" type="button" data-voice-play aria-label="Play voice message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 12 7-12 7z"/></svg></button><div class="chat-voice-content"><button class="chat-voice-wave" type="button" data-voice-seek aria-label="Seek voice message" title="Tap to seek"><span class="voice-progress-track"><span class="voice-progress-fill"></span><span class="voice-progress-knob"></span></span></button><div class="chat-voice-meta"><span data-voice-time>0:00 / 0:00</span><span>Voice message</span></div></div><button class="chat-voice-speed" type="button" data-voice-speed aria-label="Playback speed">1×</button><audio class="chat-voice-player" preload="metadata" src="${esc(message.audio_url)}"></audio></div>`:'<span class="voice-message-unavailable">Voice message unavailable</span>'):esc(message.content||'');
+  const messageBody=message.message_type==='audio'?(message.audio_url?`<div class="chat-voice-message"><button class="chat-voice-play" type="button" data-voice-play aria-label="Play voice message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 12 7-12 7z"/></svg></button><div class="chat-voice-content"><button class="chat-voice-wave" type="button" data-voice-seek aria-label="Seek voice message" title="Tap to seek"><span class="voice-progress-track"><span class="voice-progress-fill"></span><span class="voice-progress-knob"></span></span></button><div class="chat-voice-meta"><span data-voice-time>0:00 / 0:00</span><span>Voice message</span></div></div><button class="chat-voice-speed" type="button" data-voice-speed aria-label="Playback speed">1×</button><audio class="chat-voice-player" preload="metadata" src="${esc(message.audio_url)}"></audio></div>`:'<span class="voice-message-unavailable">Voice message unavailable</span>'):formatChatText(message.content||'');
   const reactions=activeMessageReactions.filter(r=>r.message_id===message.id);
   const reactionBar=reactions.length?`<div class="message-reactions">${[...new Set(reactions.map(r=>r.reaction))].map(reaction=>{const mine=reactions.some(r=>r.reaction===reaction&&r.user_id===session?.user?.id);return `<button type="button" class="message-reaction ${mine?'mine':''}" data-toggle-reaction="${esc(reaction)}" data-message-id="${esc(message.id)}">${reaction} <small>${reactions.filter(r=>r.reaction===reaction).length}</small></button>`}).join('')}</div>`:'';
   const selectedMessage=selectedMessageIds.has(message.id);
