@@ -1173,11 +1173,11 @@ function openChatContactPanel(){
 
 function formatChatText(value='') {
  const text=String(value??'');
- const pattern=/\\*([^*\\n]+)\\*/g;
+ const pattern=/\*([^*\n]+)\*/g;
  let html='',last=0,match;
  while((match=pattern.exec(text))){html+=esc(text.slice(last,match.index))+`<strong>${esc(match[1])}</strong>`;last=pattern.lastIndex}
  html+=esc(text.slice(last));
- return html.replace(/\\r?\\n/g,'<br>');
+ return html.replace(/\r?\n/g,'<br>');
 }
 
 function renderChatRoom(item,messages=activeChatMessages) {
