@@ -101,3 +101,36 @@ body[data-page="chats"] #mobile-nav a[href="/archive/"],
 body[data-page="chats"] #mobile-nav a[href="/flex-ai/"],
 body[data-page="chats"] #mobile-nav a[href="/media/"],
 body[data-page="chats"] #mobile-nav a[href="/profile/"]{display:none!important}
+
+/* Inbox filters: keep every filter and the create button visible without a scroll rail. */
+body[data-page="chats"] .chat-filter-tabs{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:space-between!important;gap:6px!important;width:100%!important;min-width:0!important;overflow:hidden!important;padding:0 14px 13px!important;box-sizing:border-box!important;scrollbar-width:none!important}
+body[data-page="chats"] .chat-filter-tabs::-webkit-scrollbar{display:none!important}
+body[data-page="chats"] .chat-filter-tab{flex:1 1 0!important;min-width:0!important;width:auto!important;padding:8px 5px!important;font-size:11px!important;line-height:1.15!important;white-space:nowrap!important;text-align:center!important;border:1px solid #e7ece9!important}
+body[data-page="chats"] .chat-filter-tab.active{border-color:#a9dfb5!important}
+body[data-page="chats"] .chat-plus-wrap{position:relative!important;flex:0 0 34px!important;width:34px!important}
+body[data-page="chats"] .chat-plus-button{width:32px!important;height:32px!important;box-shadow:none!important}
+body[data-page="chats"] .chat-header-menu button{min-height:42px!important;gap:12px!important;font-size:13px!important;padding:0 11px!important}
+body[data-page="chats"] .chat-header-menu .chat-menu-icon{width:19px!important;height:19px!important;flex:0 0 19px!important;fill:none!important;stroke:currentColor!important;stroke-width:1.7!important;stroke-linecap:round!important;stroke-linejoin:round!important}
+.chat-contact-card{position:relative;width:min(390px,calc(100vw - 32px));padding:28px 22px 24px;text-align:center;background:#fff;border-radius:18px;box-shadow:0 18px 55px #10182830}
+.chat-contact-card .modal-close{position:absolute;right:12px;top:10px;width:34px;height:34px;border:0;border-radius:50%;background:#f3f5f6;font-size:22px;color:#344054}
+.chat-contact-avatar{display:flex;justify-content:center;margin:8px 0 14px}
+.chat-contact-avatar .avatar{width:82px;height:82px;font-size:25px}
+.chat-contact-card h2{margin:0;color:#17212b;font-size:21px}
+.chat-contact-card>.muted{margin:6px 0 22px;color:#667781;font-size:13px}
+.chat-contact-details{margin:0 0 20px;border-top:1px solid #edf0f1;text-align:left}
+.chat-contact-details>div{display:flex;flex-direction:column;gap:5px;padding:13px 2px;border-bottom:1px solid #edf0f1}
+.chat-contact-details span{font-size:11px;color:#667781}
+.chat-contact-details strong{font-size:13px;color:#17212b;font-weight:600}
+.chat-contact-card .button{display:inline-flex;justify-content:center;text-decoration:none}
+.chat-theme-panel{position:absolute;z-index:60;right:12px;top:calc(100% + 6px);display:flex;flex-direction:column;gap:5px;width:170px;padding:12px;background:#fff;border:1px solid #e8edef;border-radius:12px;box-shadow:0 12px 35px #17202f24}
+.chat-theme-panel strong{padding:3px 5px 7px;font-size:12px;color:#17212b}
+.chat-theme-panel button{padding:9px 10px;border:0;border-radius:8px;background:#f4f6f6;text-align:left;color:#34434a;font-size:12px}
+.chat-theme-panel button:hover{background:#e8f6ed;color:#087f52}
+body[data-page="chats"] .chat-room.chat-room-warm-theme .chat-history{background:#f6eee3!important}
+body[data-page="chats"] .chat-room.chat-room-warm-theme .message.sent{background:#f4dfbd!important}
+@media(max-width:380px){
+ body[data-page="chats"] .chat-filter-tabs{gap:4px!important;padding-left:10px!important;padding-right:10px!important}
+ body[data-page="chats"] .chat-filter-tab{font-size:10px!important;padding:8px 3px!important}
+ body[data-page="chats"] .chat-plus-wrap{flex-basis:30px!important;width:30px!important}
+ body[data-page="chats"] .chat-plus-button{width:29px!important;height:29px!important}
+}
