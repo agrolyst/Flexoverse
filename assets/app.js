@@ -995,7 +995,7 @@ async function attachVoiceMessageUrls(messages){
  const urls=new Map(results);messages.forEach(m=>{if(urls.has(m.id))m.audio_url=urls.get(m.id)});
 }
 function voiceFormatTime(ms){const seconds=Math.max(0,Math.floor(ms/1000));return Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0')}
-function '<span class="voice-recording-dots" aria-hidden="true"><i></i><i></i></span>'{return '<span class="voice-wave-bars" aria-hidden="true">'+Array.from({length:36},(_,i)=>'<i style="--bar:'+([8,13,19,10,24,15,9,21,28,12,17,23,8,15,26,11,19,29,13,7,21,16,25,10,18,27,12,20,8,16,23,11,17,24,9,19][i])+'px"></i>').join('')+'</span>'}
+function voiceWaveSvg(){return '<span class="voice-wave-bars" aria-hidden="true">'+Array.from({length:36},(_,i)=>'<i style="--bar:'+([8,13,19,10,24,15,9,21,28,12,17,23,8,15,26,11,19,29,13,7,21,16,25,10,18,27,12,20,8,16,23,11,17,24,9,19][i])+'px"></i>').join('')+'</span>'}
 function updateVoiceRecordingUi(){
  const elapsed=Date.now()-voiceRecordingStartedAt;
  const timer=document.querySelector('[data-voice-timer]');if(timer)timer.textContent=voiceFormatTime(elapsed);
@@ -1053,7 +1053,7 @@ async function startVoiceRecording(button){
   };
   voiceRecorder.start();
   const form=document.querySelector('#message-form');
-  if(form){form.classList.add('is-recording');form.innerHTML='<button class="voice-delete-button" type="button" data-voice-cancel aria-label="Discard recording" title="Discard recording"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-9 0 1 14h10l1-14M10 11v6m4-6v6"/></svg></button><span class="voice-recording-dot" aria-hidden="true"></span><time class="voice-recording-timer" data-voice-timer>0:00</time>'+voiceWaveSvg()+'<button class="voice-pause-button" type="button" data-voice-pause aria-label="Pause recording" title="Pause recording"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button><button class="voice-send-button" type="button" data-voice-send aria-label="Send voice message" title="Send voice message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button>'}
+  if(form){form.classList.add('is-recording');form.innerHTML='<button class="voice-delete-button" type="button" data-voice-cancel aria-label="Discard recording" title="Discard recording"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-9 0 1 14h10l1-14M10 11v6m4-6v6"/></svg></button><span class="voice-recording-dot" aria-hidden="true"></span><time class="voice-recording-timer" data-voice-timer>0:00</time>'+'<span class="voice-recording-dots" aria-hidden="true"><i></i><i></i></span>'+'<button class="voice-pause-button" type="button" data-voice-pause aria-label="Pause recording" title="Pause recording"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button><button class="voice-send-button" type="button" data-voice-send aria-label="Send voice message" title="Send voice message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button>'}
   voiceRecordingTimer=setInterval(updateVoiceRecordingUi,200);
  }catch(error){voiceRecorderStream?.getTracks().forEach(t=>t.stop());voiceRecorderStream=null;voiceRecorder=null;restoreVoiceComposer();toast(error.name==='NotAllowedError'?'Allow microphone access to record a voice message.':error.message,'error')}
 }
