@@ -94,3 +94,10 @@ body[data-page="chats"] #mobile-nav a[href="/chats/"]{color:var(--fx-chat-green)
  body[data-page="chats"] #mobile-nav{height:62px!important}
 }
 @media(prefers-reduced-motion:reduce){body[data-page="chats"] *{scroll-behavior:auto!important;transition:none!important}}
+
+body[data-page="chats"] #mobile-nav a[href="/channels/"],
+body[data-page="chats"] #mobile-nav a[href="/friends/"],
+body[data-page="chats"] #mobile-nav a[href="/archive/"],
+body[data-page="chats"] #mobile-nav a[href="/flex-ai/"],
+body[data-page="chats"] #mobile-nav a[href="/media/"],
+body[data-page="chats"] #mobile-nav a[href="/profile/"]{display:none!important}
