@@ -960,17 +960,63 @@ function chatDay(value) {
   return new Intl.DateTimeFormat(undefined,{weekday:'long',month:'long',day:'numeric'}).format(date).toUpperCase()
 }
 
+
+const chatListStateKey=kind=>'flexoverse-chat-'+kind+':'+(session?.user?.id||'guest');
+function readChatListState(kind){try{return JSON.parse(localStorage.getItem(chatListStateKey(kind))||'[]')}catch{return []}}
+function writeChatListState(kind,values){try{localStorage.setItem(chatListStateKey(kind),JSON.stringify(values))}catch{}}
+function chatListHas(kind,id){return readChatListState(kind).includes(id)}
+function chatListToggle(kind,id){const values=readChatListState(kind),next=values.includes(id)?values.filter(x=>x!==id):[...values,id];writeChatListState(kind,next);return next.includes(id)}
+function chatContextIcon(path){return '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+path+'</svg>'}
+async function openChatListContextMenu(item,anchor,point){
+ if(!item||!session)return;
+ document.querySelector('.chat-list-context-menu')?.remove();
+ let relation=null;
+ if(item.peer_id){const result=await supabase.from('friend_requests').select('id,from_user_id,to_user_id,status').or('and(from_user_id.eq.'+session.user.id+',to_user_id.eq.'+item.peer_id+'),and(from_user_id.eq.'+item.peer_id+',to_user_id.eq.'+session.user.id+')').maybeSingle();relation=result.data||null}
+ const isFriend=relation?.status==='accepted',isPending=relation?.status==='pending';
+ const icons={add:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m-3-3h6"/>',archive:'<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v11h14V9m-9 4h4"/>',mute:'<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="m17 9 5 6m0-6-5 6"/>',pin:'<path d="m16 3 5 5-4 1-4 4 1 4-2 2-4-6-6-4 2-2 4 1 4-4zM12 17l-7 7"/>',unread:'<path d="M4 5h16v14H4z"/><path d="m4 7 8 6 8-6"/>',favorite:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/>',list:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/>',block:'<circle cx="12" cy="12" r="9"/><path d="m6 6 12 12"/>',clear:'<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',delete:'<path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m4 4v6m4-6v6"/>',close:'<path d="m6 6 12 12M18 6 6 18"/>'};
+ const row=(action,label,icon,disabled)=>'<button type="button" role="menuitem" data-chat-list-action="'+action+'" data-chat-id="'+esc(item.conversation_id)+'" '+(disabled?'disabled':'')+'>'+chatContextIcon(icons[icon])+'<span>'+label+'</span></button>';
+ const menu=document.createElement('div');menu.className='chat-list-context-menu';menu.setAttribute('role','menu');menu.setAttribute('aria-label','Chat options');
+ menu.innerHTML=(isFriend?'':row('add-contact',isPending?(relation.from_user_id===session.user.id?'Request sent':'Accept friend request'):'Add to contacts','add',isPending&&relation.from_user_id===session.user.id))
+ +row('archive',chatListHas('archived',item.conversation_id)?'Unarchive chat':'Archive chat','archive')
+ +row('mute',chatListHas('muted',item.conversation_id)?'Unmute notifications':'Mute notifications','mute')
+ +row('pin',chatListHas('pinned',item.conversation_id)?'Unpin chat':'Pin chat','pin')
+ +row('unread','Mark as unread','unread')
+ +row('favorite',chatFavoriteIds.has(item.conversation_id)?'Remove from Favorites':'Add to Favorites','favorite')
+ +'<div class="chat-list-context-submenu">'+row('add-list','Add to list','list')+'<div class="chat-list-context-list" hidden><button type="button" data-chat-list-name="Close friends">Close friends</button><button type="button" data-chat-list-name="Family">Family</button><button type="button" data-chat-list-name="Work">Work</button></div></div>'
+ +'<div class="chat-list-context-separator"></div>'+row('block','Block','block')+row('clear','Clear chat','clear')+row('delete','Delete chat','delete');
+ document.body.append(menu);
+ const rect=anchor?.getBoundingClientRect(),x=point?.clientX??rect?.left??12,y=point?.clientY??rect?.bottom??12,w=Math.min(228,window.innerWidth-16);
+ menu.style.left=Math.max(8,Math.min(x,window.innerWidth-w-8))+'px';menu.style.top=Math.max(8,Math.min(y,window.innerHeight-menu.offsetHeight-8))+'px';
+}
+async function handleChatListContextAction(action,id){
+ const item=chatItems.find(x=>x.conversation_id===id);if(!item)return;
+ const close=()=>document.querySelector('.chat-list-context-menu')?.remove();
+ if(action==='add-contact'&&item.peer_id){
+  const result=await supabase.from('friend_requests').select('id,from_user_id,to_user_id,status').or('and(from_user_id.eq.'+session.user.id+',to_user_id.eq.'+item.peer_id+'),and(from_user_id.eq.'+item.peer_id+',to_user_id.eq.'+session.user.id+')').maybeSingle(),relation=result.data;
+  if(relation?.status==='pending'&&relation.to_user_id===session.user.id){const update=await supabase.from('friend_requests').update({status:'accepted'}).eq('id',relation.id);if(update.error)return toast(update.error.message,'error');toast('Friend request accepted.','success')}
+  else if(!relation){if(!await sendFriendRequest(item.peer_id))return}
+  close();return;
+ }
+ if(action==='favorite'){chatFavoriteIds.has(id)?chatFavoriteIds.delete(id):chatFavoriteIds.add(id);try{localStorage.setItem('flexoverse-chat-favorites:'+session.user.id,JSON.stringify([...chatFavoriteIds]))}catch{}close();renderChatList();toast(chatFavoriteIds.has(id)?'Added to Favorites.':'Removed from Favorites.','success');return}
+ const kind={archive:'archived',mute:'muted',pin:'pinned'}[action];
+ if(kind){const on=chatListToggle(kind,id);close();renderChatList();toast(kind==='archived'?(on?'Chat archived.':'Chat restored to your inbox.'):kind==='muted'?(on?'Notifications muted.':'Notifications unmuted.'):(on?'Chat pinned.':'Chat unpinned.'),'success');return}
+ if(action==='add-list'){const sub=document.querySelector('.chat-list-context-list');if(sub)sub.hidden=!sub.hidden;return}
+ if(action==='unread'){const result=await supabase.from('conversation_members').update({last_read_at:null}).eq('conversation_id',id).eq('user_id',session.user.id);if(result.error)return toast(result.error.message,'error');item.unread_count=Math.max(1,Number(item.unread_count||0));close();renderChatList();toast('Marked as unread.','success');return}
+ if(action==='block'){if(!item.peer_id)return toast('Groups cannot be blocked here.','info');if(!confirm('Block '+item.peer_name+'?'))return;const result=await supabase.from('user_blocks').upsert({blocker_id:session.user.id,blocked_id:item.peer_id},{onConflict:'blocker_id,blocked_id'});if(result.error)return toast(result.error.message,'error');close();toast('Contact blocked.','success');return}
+ if(action==='clear'||action==='delete'){const message=action==='clear'?'Clear this chat from your inbox? The other person keeps their copy.':'Remove this chat from your inbox? The other person may still see it.';if(!confirm(message))return;const result=await supabase.from('conversation_members').delete().eq('conversation_id',id).eq('user_id',session.user.id);if(result.error)return toast(result.error.message,'error');chatItems=chatItems.filter(x=>x.conversation_id!==id);if(activeConversationId===id){activeConversationId=null;renderChatWelcome('Choose a chat or start a new conversation.')}close();renderChatList();toast('Chat removed from your inbox.','success')}
+}
+
 function renderChatList() {
   const list=document.querySelector('#conversation-list')
   if(!list)return
   const search=document.querySelector('#conversation-search')?.value.trim().toLowerCase()||''
-  const filtered=chatItems.filter(item=>{
+  const archived=new Set(readChatListState('archived'));const filtered=chatItems.filter(item=>{if(archived.has(item.conversation_id))return false;
     if(chatListFilter==='unread'&&!item.unread_count)return false
     if(chatListFilter==='groups'&&!item.is_group)return false
     if(chatListFilter==='favourites'&&!chatFavoriteIds.has(item.conversation_id))return false
     return true
   })
-  const visible=filtered.filter(item=>`${item.peer_name} ${item.peer_username}`.toLowerCase().includes(search))
+  filtered.sort((a,b)=>Number(chatListHas('pinned',b.conversation_id))-Number(chatListHas('pinned',a.conversation_id)));const visible=filtered.filter(item=>`${item.peer_name} ${item.peer_username}`.toLowerCase().includes(search))
   const total=document.querySelector('#chat-total');if(total)total.textContent=String(chatItems.length)
   document.querySelectorAll('[data-chat-filter]').forEach(tab=>{const active=tab.dataset.chatFilter===chatListFilter;tab.classList.toggle('active',active);tab.setAttribute('aria-pressed',String(active))})
   renderChatSelectionControls()
@@ -1707,6 +1753,14 @@ function bindChatPageEvents() {
   document.querySelector('#chat-inbox-toggle')?.addEventListener('click',()=>showCallHistory(false))
   document.querySelector('#chat-inbox-heading')?.addEventListener('click',e=>{if(e.target.closest('[data-toggle-chat-selection]')){chatSelectionMode=!chatSelectionMode;selectedChatIds.clear();renderChatList();return}if(e.target.closest('[data-delete-selected-chats]'))deleteSelectedChats()})
   document.querySelector('#conversation-list')?.addEventListener('click',e=>{if(e.target.closest('[data-chat-new]'))return openNewChatDialog();if(e.target.closest('[data-retry-chats]'))return loadChats();if(e.target.closest('[data-retry-call-history]'))return loadCallHistory();const callRow=e.target.closest('[data-call-conversation]');if(callRow){showCallHistory(false);return selectConversation(callRow.dataset.callConversation)}const row=e.target.closest('[data-conversation-id]');if(row){if(chatSelectionMode){const id=row.dataset.conversationId;selectedChatIds.has(id)?selectedChatIds.delete(id):selectedChatIds.add(id);renderChatList();return}selectConversation(row.dataset.conversationId)}})
+
+   const inbox=document.querySelector('#conversation-list');
+   inbox?.addEventListener('contextmenu',e=>{const row=e.target.closest('[data-conversation-id]');if(!row||chatSelectionMode)return;e.preventDefault();openChatListContextMenu(chatItems.find(x=>x.conversation_id===row.dataset.conversationId),row,e)});
+   let chatRowPressTimer=null;
+   inbox?.addEventListener('touchstart',e=>{const row=e.target.closest('[data-conversation-id]');if(!row||chatSelectionMode)return;const t=e.touches[0];chatRowPressTimer=setTimeout(()=>{chatRowPressTimer=null;openChatListContextMenu(chatItems.find(x=>x.conversation_id===row.dataset.conversationId),row,{clientX:t.clientX,clientY:t.clientY})},550)},{passive:true});
+   ['touchend','touchmove','touchcancel'].forEach(n=>inbox?.addEventListener(n,()=>{if(chatRowPressTimer){clearTimeout(chatRowPressTimer);chatRowPressTimer=null}},{passive:true}));
+   document.addEventListener('click',async e=>{const menu=document.querySelector('.chat-list-context-menu');if(!menu)return;if(!menu.contains(e.target)){menu.remove();return}const choice=e.target.closest('[data-chat-list-name]');if(choice){const id=menu.querySelector('[data-chat-list-action]')?.dataset.chatId||'',key='flexoverse-chat-lists:'+session.user.id;let saved={};try{saved=JSON.parse(localStorage.getItem(key)||'{}')}catch{}saved[choice.dataset.chatListName]=[...new Set([...(saved[choice.dataset.chatListName]||[]),id])];localStorage.setItem(key,JSON.stringify(saved));menu.remove();toast('Added to '+choice.dataset.chatListName+'.','success');return}const action=e.target.closest('[data-chat-list-action]');if(action&&!action.disabled)await handleChatListContextAction(action.dataset.chatListAction,action.dataset.chatId)});
+
   document.querySelector('#chat-room')?.addEventListener('click',e=>{const action=e.target.closest('[data-calls-action]')?.dataset.callsAction;if(action==='new-call'){openNewChatDialog();return}if(action==='phone'){const number=prompt('Enter the contact phone number');if(number?.trim())toast('Phone-number calling is not available yet. Start a call from a Flexoverse chat.','info');return}if(action==='schedule'){toast('Call scheduling is coming soon. You can start a voice or video call from a chat.','info');return}if(action==='voice'||action==='video'){openNewChatDialog();return}if(e.target.closest('[data-close-chat-info]')||e.target.matches('[data-chat-info-backdrop]')){document.querySelector('#modal-root').innerHTML='';return}const themeChoice=e.target.closest('[data-theme-choice]');if(themeChoice){const room=document.querySelector('#chat-room');room?.classList.remove('chat-room-soft-theme','chat-room-warm-theme');if(themeChoice.dataset.themeChoice==='soft')room?.classList.add('chat-room-soft-theme');if(themeChoice.dataset.themeChoice==='warm')room?.classList.add('chat-room-warm-theme');document.querySelector('[data-chat-theme-panel]')?.remove();return}if(e.target.closest('[data-voice-cancel]')){cancelVoiceRecording();return}if(e.target.closest('[data-voice-preview-cancel]')){discardVoicePreview();return}if(e.target.closest('[data-voice-preview-send]')){sendVoicePreview();return}if(e.target.closest('[data-voice-pause]')){toggleVoiceRecordingPause();return}if(e.target.closest('[data-voice-send]')){finishVoiceRecording();return}const voice=e.target.closest('[data-voice-record]');if(voice){startVoiceRecording(voice);return}if(e.target.closest('[data-chat-back]')){document.querySelector('#chat-layout')?.classList.remove('has-active-conversation');history.replaceState(null,'','/chats/')}})
   document.querySelector('#chat-room')?.addEventListener('click',e=>{
     const toggle=e.target.closest('[data-chat-menu-toggle]');
