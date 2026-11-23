@@ -1146,6 +1146,13 @@ function openChatContactPanel(){
  +'<section class="chat-contact-section"><h3><span>☆</span> Starred messages</h3><p class="chat-contact-empty">Starred messages will appear here.</p></section>'
  +'<section class="chat-contact-section"><h3><span>♧</span> About</h3><div class="chat-contact-about-row"><small>Username</small><strong>'+(item.peer_username?'@'+esc(item.peer_username):'Not available')+'</strong></div><div class="chat-contact-about-row"><small>Chat type</small><strong>'+(item.is_group?'Group':'Private conversation')+'</strong></div></section>'
  +'<section class="chat-contact-section chat-contact-danger"><button type="button" data-contact-block>Block contact</button></section>';
+ panel.addEventListener('click',e=>{
+  if(e.target.closest('[data-close-contact-panel]')){closeChatContactPanel();return}
+  if(e.target.closest('[data-contact-call="audio"]')){startCall('audio');return}
+  if(e.target.closest('[data-contact-call="video"]')){startCall('video');return}
+  if(e.target.closest('[data-contact-search]')){closeChatContactPanel();const search=document.querySelector('[data-chat-menu-action="search"]');if(search)search.click();return}
+  if(e.target.closest('[data-contact-block]')){if(item.peer_id&&confirm('Block '+item.peer_name+'?'))supabase.from('user_blocks').upsert({blocker_id:session.user.id,blocked_id:item.peer_id},{onConflict:'blocker_id,blocked_id'}).then(({error})=>error?toast(error.message,'error'):(toast('Contact blocked.','success'),closeChatContactPanel()));return}
+ });
  layout.append(panel);layout.classList.add('has-contact-panel');
 }
 
