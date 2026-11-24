@@ -320,7 +320,11 @@ body[data-page="chats"] .chat-emoji-popover{width:min(505px,calc(100vw - 24px))!
 body[data-page="chats"] .chat-emoji-popover .chat-emoji-picker-element{display:block!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;background:#fff!important;color:#111b21!important}
 
 /* Live contact presence and message delivery receipts */
-body[data-page="chats"] .chat-avatar-wrap{position:relative;display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center}
+body[data-page="chats"] .chat-avatar-wrap{position:relative;display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;align-self:center}
+body[data-page="chats"] .conversation>.chat-avatar-wrap{width:48px;height:48px;flex:0 0 48px;min-width:48px;min-height:48px}
+body[data-page="chats"] .conversation>.chat-avatar-wrap>.avatar{width:48px;height:48px;flex:0 0 48px;object-fit:cover;border-radius:50%}
+body[data-page="chats"] .chat-room-head>.chat-header-avatar{width:44px;height:44px;flex:0 0 44px}
+body[data-page="chats"] .chat-room-head>.chat-header-avatar>.avatar{width:44px;height:44px;flex:0 0 44px;object-fit:cover;border-radius:50%}
 body[data-page="chats"] .chat-avatar-wrap>.avatar{display:block}
 body[data-page="chats"] .chat-presence-dot{display:inline-block;width:10px;height:10px;flex:0 0 10px;border:2px solid #fff;border-radius:50%;background:#e04444}
 body[data-page="chats"] .chat-avatar-wrap>.chat-presence-dot{position:absolute;right:0;bottom:0}
@@ -330,7 +334,10 @@ body[data-page="chats"] .chat-header-avatar>.chat-presence-dot{width:12px;height
 body[data-page="chats"] .chat-presence-label{display:flex;align-items:center;gap:6px}
 body[data-page="chats"] .chat-presence-label .chat-presence-dot{width:8px;height:8px;flex-basis:8px;border:0}
 body[data-page="chats"] .message small.message-meta{display:flex;align-items:center;justify-content:flex-end;gap:5px}
-body[data-page="chats"] .message-delivery{display:inline-flex;align-items:center;font-size:11px;line-height:1;font-weight:700;letter-spacing:-2px}
+body[data-page="chats"] .message-delivery{display:inline-flex;align-items:center;justify-content:center;width:16px;height:14px;line-height:1;flex:0 0 auto}
+body[data-page="chats"] .message-delivery svg{display:block;width:16px;height:14px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+body[data-page="chats"] .message-delivery.delivered{width:18px;flex-basis:18px}
+body[data-page="chats"] .message-delivery.delivered svg,body[data-page="chats"] .message-delivery.read svg{width:18px}
 body[data-page="chats"] .message-delivery.sent,body[data-page="chats"] .message-delivery.delivered{color:#87939a}
 body[data-page="chats"] .message-delivery.read{color:#2196f3}
 body[data-page="chats"] .message-delivery.pending{width:12px;height:12px;color:#87939a}
