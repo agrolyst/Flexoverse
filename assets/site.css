@@ -2673,3 +2673,21 @@ body[data-page="friends"] .friends-empty-state{padding:32px 18px}
  .status-emoji-button,.status-heart-button{width:28px}
 }
 @media(prefers-reduced-motion:reduce){.status-progress span{transition:none}}
+
+
+/* Verified badge explainer dialog */
+.post-verified-badge,.profile-verified-badge{cursor:pointer}
+.post-verified-badge:focus-visible,.profile-verified-badge:focus-visible{outline:2px solid var(--accent,#655ce8);outline-offset:3px;border-radius:5px}
+.verified-info-backdrop{z-index:1200}
+.verified-info-dialog{position:relative;width:min(440px,calc(100vw - 32px));max-height:min(84vh,680px);overflow:auto;padding:34px 30px 28px;border-radius:22px;background:var(--surface,#fff);color:var(--text,#20212a);box-shadow:0 24px 80px rgba(15,18,40,.24);text-align:center}
+.verified-info-close{position:absolute;top:12px;right:14px;width:36px;height:36px;border:0;border-radius:50%;background:var(--surface-muted,#f1f2f6);color:inherit;font-size:25px;line-height:1;cursor:pointer}
+.verified-info-mark{display:grid;place-items:center;width:58px;height:58px;margin:0 auto 17px;border-radius:50%;background:#e9f0ff;color:#3678e8}
+.verified-info-mark svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.verified-info-dialog .overline{margin:0 0 8px;color:#477be5;font-weight:750;letter-spacing:.12em;font-size:11px}
+.verified-info-dialog h2{margin:0 0 14px;font-size:23px;line-height:1.25}
+.verified-info-dialog p:not(.overline){margin:0 0 13px;color:var(--muted,#687080);font-size:14px;line-height:1.65;text-align:left}
+.verified-info-learn{display:inline-flex;justify-content:center;min-width:140px;margin-top:8px;text-decoration:none}
+.verified-guide-section{margin:24px 0;padding:22px;border:1px solid var(--border,#e7e8ee);border-radius:16px;background:var(--surface,#fff)}
+.verified-guide-section h2{margin-top:0}
+.verified-guide-section p{line-height:1.7;color:var(--muted,#687080)}
+@media(max-width:520px){.verified-info-dialog{padding:32px 22px 24px;border-radius:18px}.verified-info-dialog h2{font-size:21px}}
