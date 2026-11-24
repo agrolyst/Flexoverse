@@ -10,7 +10,7 @@
   <meta name="description" content="Private conversations with your Flexoverse friends.">
   <title>Chats · Flexoverse</title>
   <link rel="stylesheet" href="../assets/site.css?v=voice-composer-20261110">
-  <link rel="stylesheet" href="../assets/messaging.css?v=avatar-alignment-1">
+  <link rel="stylesheet" href="../assets/messaging.css?v=avatar-fallback-settings-1">
 </head>
 <body data-page="chats">
   <div id="site-header"></div>
@@ -23,7 +23,7 @@
           <h1>Messages</h1>
           <p class="muted">Private messages, voice notes, and calls with your people.</p>
         </div>
-        <button class="button button-primary" id="chat-new-button" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>New message</span></button>
+        <div class="chat-heading-actions"><a class="button button-soft chat-settings-link" href="/settings/" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.7 2.9-.2-.1a1.7 1.7 0 0 0-1.9.3l-.1.1h-3.4l-.1-.2a1.7 1.7 0 0 0-1.5-1.1 1.7 1.7 0 0 0-1.5 1.1l-.1.2H6l-.1-.2a1.7 1.7 0 0 0-1.9-.3l-.2.1-1.7-2.9.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1.1H1v-3.4h.2a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1L4 4.5l.2.1a1.7 1.7 0 0 0 1.9-.3l.1-.1h3.4l.1.2a1.7 1.7 0 0 0 1.5 1.1 1.7 1.7 0 0 0 1.5-1.1l.1-.2h3.4l.1.2a1.7 1.7 0 0 0 1.9.3l.2-.1 1.7 2.9-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1.1h.2V14h-.2a1.7 1.7 0 0 0-1.5 1Z"/></svg><span>Settings</span></a><button class="button button-primary" id="chat-new-button" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>New message</span></button></div>
       </section>
       <section class="chat-layout card" id="chat-layout" aria-label="Messages">
         <aside class="chat-inbox">
@@ -51,6 +51,6 @@
   <div id="modal-root"></div>
   <div id="call-root"></div>
   <div id="toast" role="status"></div>
-  <script type="module" src="../assets/app.js?v=single-double-ticks-1"></script>
+  <script type="module" src="../assets/app.js?v=avatar-fallback-settings-1"></script>
 </body>
 </html>
