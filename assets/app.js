@@ -26,6 +26,11 @@ let chatItems = []
 let activeConversationId = null
 let activeChatMessages = []
 let chatRealtimeChannel = null
+let chatPresenceChannel = null
+let chatPresenceHeartbeat = null
+let chatPresenceUsers = new Map()
+let pendingChatMessages = []
+let chatInboxRefreshTimer = null
 let chatTypingChannel=null;
 let chatTypingStopTimer=null;
 let voiceRecorder=null;
@@ -1007,6 +1012,10 @@ async function handleChatListContextAction(action,id){
  if(action==='clear'||action==='delete'){const message=action==='clear'?'Clear this chat from your inbox? The other person keeps their copy.':'Remove this chat from your inbox? The other person may still see it.';if(!confirm(message))return;const result=await supabase.from('conversation_members').delete().eq('conversation_id',id).eq('user_id',session.user.id);if(result.error)return toast(result.error.message,'error');chatItems=chatItems.filter(x=>x.conversation_id!==id);if(activeConversationId===id){activeConversationId=null;renderChatWelcome('Choose a chat or start a new conversation.')}close();renderChatList();toast('Chat removed from your inbox.','success')}
 }
 
+function chatPresenceFor(userId){return !!(userId&&chatPresenceUsers.has(userId))}
+function chatLastSeenLabel(value){if(!value)return 'Offline';const date=new Date(value);if(Number.isNaN(date.getTime()))return 'Offline';return 'Last seen at '+new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'}).format(date)}
+function chatPresenceLabel(item){return item.peer_online?'<i class="chat-presence-dot online" aria-label="Online"></i><span>Online</span>':'<i class="chat-presence-dot offline" aria-label="Offline"></i><span>'+esc(chatLastSeenLabel(item.peer_last_seen_at))+'</span>'}
+function chatMessageStatus(message,item){if(message.local_status==='pending')return '<span class="message-delivery pending" title="Waiting to send" aria-label="Waiting to send"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.2 1.4"/></svg></span>';const created=Date.parse(message.created_at||'');if(item.peer_last_read_at&&Date.parse(item.peer_last_read_at)>=created)return '<span class="message-delivery read" title="Read" aria-label="Read">✓✓</span>';if(item.peer_last_delivered_at&&Date.parse(item.peer_last_delivered_at)>=created)return '<span class="message-delivery delivered" title="Delivered" aria-label="Delivered">✓✓</span>';return '<span class="message-delivery sent" title="Sent" aria-label="Sent">✓</span>'}
 function renderChatList() {
   const list=document.querySelector('#conversation-list')
   if(!list)return
@@ -1025,7 +1034,7 @@ function renderChatList() {
     list.innerHTML=chatItems.length?'<div class="conversation-empty"><strong>No chats found</strong><p>Try searching with another name.</p></div>':'<div class="conversation-empty"><strong>Your inbox is quiet</strong><p>Start a private conversation with one of your friends.</p><button class="button button-soft" type="button" data-chat-new>Start a chat</button></div>'
     return
   }
-  list.innerHTML=visible.map(item=>{const active=item.conversation_id===activeConversationId;const unread=item.unread_count>0;const selected=selectedChatIds.has(item.conversation_id);const preview=item.last_message?(item.last_sender_id===session?.user?.id?`You: ${item.last_message}`:item.last_message):'Start the conversation';return `<div class="conversation-row-wrap ${selected?'is-selected':''}"><button class="conversation ${active?'active':''} ${unread?'unread-conversation':''}" type="button" data-conversation-id="${esc(item.conversation_id)}" aria-current="${active?'true':'false'}">${chatSelectionMode?`<span class="chat-select-check ${selected?'checked':''}" aria-hidden="true">${selected?'✓':''}</span>`:''}${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}${chatFavoriteIds.has(item.conversation_id)?'<span class="conversation-favourite" aria-label="Favourite">★</span>':''}<span class="conversation-text"><strong>${esc(item.peer_name)}${item.peer_is_verified?'<span class="post-verified-badge" title="Verified by Flexoverse" aria-label="Verified account"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>':''}</strong><small>${esc(preview)}</small></span><time>${esc(chatTime(item.last_message_at||item.created_at))}</time>${unread?'<i class="unread" aria-label="Unread messages"></i>':''}</button></div>`}).join('')
+  list.innerHTML=visible.map(item=>{const active=item.conversation_id===activeConversationId;const unread=item.unread_count>0;const selected=selectedChatIds.has(item.conversation_id);const preview=item.last_message?(item.last_sender_id===session?.user?.id?`You: ${item.last_message}`:item.last_message):'Start the conversation';return `<div class="conversation-row-wrap ${selected?'is-selected':''}"><button class="conversation ${active?'active':''} ${unread?'unread-conversation':''}" type="button" data-conversation-id="${esc(item.conversation_id)}" aria-current="${active?'true':'false'}">${chatSelectionMode?`<span class="chat-select-check ${selected?'checked':''}" aria-hidden="true">${selected?'✓':''}</span>`:''}<span class="chat-avatar-wrap">${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<i class="chat-presence-dot ${item.peer_online?'online':'offline'}" aria-label="${item.peer_online?'Online':'Offline'}"></i></span>${chatFavoriteIds.has(item.conversation_id)?'<span class="conversation-favourite" aria-label="Favourite">★</span>':''}<span class="conversation-text"><strong>${esc(item.peer_name)}${item.peer_is_verified?'<span class="post-verified-badge" title="Verified by Flexoverse" aria-label="Verified account"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>':''}</strong><small>${esc(preview)}</small></span><time>${esc(chatTime(item.last_message_at||item.created_at))}</time>${unread?'<i class="unread" aria-label="Unread messages"></i>':''}</button></div>`}).join('')
 }
 
 function renderChatWelcome(message='Choose a chat to catch up or start a new conversation with a friend.') {
@@ -1199,10 +1208,10 @@ function renderChatRoom(item,messages=activeChatMessages) {
   const reactions=activeMessageReactions.filter(r=>r.message_id===message.id);
   const reactionBar=reactions.length?`<div class="message-reactions">${[...new Set(reactions.map(r=>r.reaction))].map(reaction=>{const mine=reactions.some(r=>r.reaction===reaction&&r.user_id===session?.user?.id);return `<button type="button" class="message-reaction ${mine?'mine':''}" data-toggle-reaction="${esc(reaction)}" data-message-id="${esc(message.id)}">${reaction} <small>${reactions.filter(r=>r.reaction===reaction).length}</small></button>`}).join('')}</div>`:'';
   const selectedMessage=selectedMessageIds.has(message.id);
-  groups.push(`<div class="message-wrap ${own?'own-message':'other-message'} ${groupClass} ${selectedMessage?'is-message-selected':''}" data-message-wrap="${esc(message.id)}"><div class="message ${own?'sent':'received'}" data-message-id="${esc(message.id)}">${messageSelectionMode?`<span class="message-select-check" aria-hidden="true">${selectedMessage?'✓':''}</span>`:''}${senderLabel}${quote}${messageBody}<small>${esc(new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'}).format(new Date(message.created_at)))}${message.edited_at?' · edited':''}</small>${reactionBar}</div>${own?`<button type="button" class="message-more" data-message-menu="${esc(message.id)}" aria-label="Message options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>`:''}</div>`)
+  groups.push(`<div class="message-wrap ${own?'own-message':'other-message'} ${groupClass} ${selectedMessage?'is-message-selected':''}" data-message-wrap="${esc(message.id)}"><div class="message ${own?'sent':'received'}" data-message-id="${esc(message.id)}">${messageSelectionMode?`<span class="message-select-check" aria-hidden="true">${selectedMessage?'✓':''}</span>`:''}${senderLabel}${quote}${messageBody}<small><span>${esc(new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'}).format(new Date(message.created_at)))}${message.edited_at?' · edited':''}</span>${own?chatMessageStatus(message,item):''}</small>${reactionBar}</div>${own?`<button type="button" class="message-more" data-message-menu="${esc(message.id)}" aria-label="Message options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>`:''}</div>`)
  }
  const replyBar=pendingReplyTo?`<div class="reply-composer-bar"><span><strong>Replying to ${pendingReplyTo.sender_id===session?.user?.id?'yourself':esc(item.peer_name)}</strong><small>${esc(pendingReplyTo.content.slice(0,120))}</small></span><button type="button" data-cancel-reply aria-label="Cancel reply">×</button></div>`:'';
- room.innerHTML=`${selectionBar}<header class="chat-room-head"><button class="chat-room-back" type="button" data-chat-back aria-label="Back to conversations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12"/></svg></button>${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<div class="chat-room-person" data-open-contact-info role="button" tabindex="0" aria-label="Open contact information"><strong>${esc(item.peer_name)}${item.peer_is_verified?'<span class="post-verified-badge" title="Verified by Flexoverse" aria-label="Verified account"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>':''}</strong><small><span class="status-dot"></span> Your friend</small></div><div class="chat-header-actions">
+ room.innerHTML=`${selectionBar}<header class="chat-room-head"><button class="chat-room-back" type="button" data-chat-back aria-label="Back to conversations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12"/></svg></button><span class="chat-avatar-wrap chat-header-avatar">${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<i class="chat-presence-dot ${item.peer_online?'online':'offline'}" aria-label="${item.peer_online?'Online':'Offline'}"></i></span><div class="chat-room-person" data-open-contact-info role="button" tabindex="0" aria-label="Open contact information"><strong>${esc(item.peer_name)}${item.peer_is_verified?'<span class="post-verified-badge" title="Verified by Flexoverse" aria-label="Verified account"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span>':''}</strong><small class="chat-presence-label">${chatPresenceLabel(item)}</small></div><div class="chat-header-actions">
 <button type="button" class="chat-header-action" data-chat-header-call="video" aria-label="Video call" title="Video call"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg></button>
 <button type="button" class="chat-header-action" data-chat-header-call="audio" aria-label="Voice call" title="Voice call"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3H4a1 1 0 0 0-1 1c0 9.4 7.6 17 17 17a1 1 0 0 0 1-1v-3l-5-2-2 2a14 14 0 0 1-6-6l2-2-3-6Z"/></svg></button>
 <button type="button" class="chat-header-action" data-chat-header-search aria-label="Search messages" title="Search messages"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4 4"/></svg></button>
@@ -1212,10 +1221,11 @@ function renderChatRoom(item,messages=activeChatMessages) {
  const history=document.querySelector('#chat-history');if(history)history.scrollTop=history.scrollHeight;
  renderTypingPresence();
 }
+async function markConversationDelivered(conversationId,createdAt){if(!session||!conversationId||!createdAt)return;const {data}=await supabase.from('conversation_members').select('last_delivered_at').eq('conversation_id',conversationId).eq('user_id',session.user.id).maybeSingle();if(!data)return;if(!data.last_delivered_at||Date.parse(data.last_delivered_at)<Date.parse(createdAt)){await supabase.from('conversation_members').update({last_delivered_at:createdAt}).eq('conversation_id',conversationId).eq('user_id',session.user.id)}}
 async function markConversationRead(conversationId) {
   if(!session||!conversationId)return
   const readAt=new Date().toISOString()
-  const {error}=await supabase.from('conversation_members').update({last_read_at:readAt}).eq('conversation_id',conversationId).eq('user_id',session.user.id)
+  const {error}=await supabase.from('conversation_members').update({last_read_at:readAt,last_delivered_at:readAt}).eq('conversation_id',conversationId).eq('user_id',session.user.id)
   if(error){console.warn('Could not update message read state:',error.message);return}
   const item=chatItems.find(chat=>chat.conversation_id===conversationId)
   if(item){item.last_read_at=readAt;item.unread_count=0}
@@ -1262,19 +1272,22 @@ async function selectConversation(conversationId,updateUrl=true) {
   if(!item)return
   messageSelectionMode=false;selectedMessageIds.clear()
   activeConversationId=conversationId
+  const {data:peerMember}=await supabase.from('conversation_members').select('last_read_at,last_delivered_at').eq('conversation_id',conversationId).neq('user_id',session.user.id).maybeSingle()
+  item.peer_last_read_at=peerMember?.last_read_at||null;item.peer_last_delivered_at=peerMember?.last_delivered_at||null
   await subscribeToChatTyping(conversationId)
   await endCall(false)
   await ensureCallChannel(conversationId).catch(error=>{console.warn('Call channel unavailable:',error.message)})
   activeChatMessages=[]
   renderChatList()
   const room=document.querySelector('#chat-room')
-  if(room)room.innerHTML=`<header class="chat-room-head"><button class="chat-room-back" type="button" data-chat-back aria-label="Back to conversations"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6M9 12h12"/></svg></button>${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<div class="chat-room-person"><strong>${esc(item.peer_name)}</strong><small><span class="status-dot"></span> Your friend</small></div></header><div class="chat-history" id="chat-history"><div class="chat-loading"><span class="friends-loading-dot"></span>Loading messages</div></div>`
+  if(room)room.innerHTML=`<header class="chat-room-head"><button class="chat-room-back" type="button" data-chat-back aria-label="Back to conversations"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6M9 12h12"/></svg></button>${avatar(initials(item.peer_name),'blue',item.peer_avatar_url)}<div class="chat-room-person"><strong>${esc(item.peer_name)}</strong><small class="chat-presence-label">${chatPresenceLabel(item)}</small></div></header><div class="chat-history" id="chat-history"><div class="chat-loading"><span class="friends-loading-dot"></span>Loading messages</div></div>`
   document.querySelector('#chat-layout')?.classList.add('has-active-conversation')
   if(updateUrl)history.replaceState(null,'',`/chats/?id=${encodeURIComponent(conversationId)}`)
   const {data,error}=await supabase.from('messages').select('id,conversation_id,sender_id,content,created_at,edited_at,reply_to_message_id,message_type,media_path').eq('conversation_id',conversationId).order('created_at',{ascending:false}).limit(100)
   if(activeConversationId!==conversationId)return
   if(error){toast('Messages could not load. Try selecting this chat again.','error');renderChatRoom(item,[]);return}
   activeChatMessages=(data||[]).reverse()
+  activeChatMessages.push(...pendingChatMessages.filter(m=>m.conversation_id===conversationId&&!activeChatMessages.some(row=>row.id===m.id)))
   await attachVoiceMessageUrls(activeChatMessages)
   const senderIds=[...new Set(activeChatMessages.map(m=>m.sender_id))];if(senderIds.length){const {data:senders}=await supabase.from('profiles').select('id,full_name,username,is_verified').in('id',senderIds);const names=new Map((senders||[]).map(p=>[p.id,{name:p.full_name||p.username,verified:p.is_verified===true}]));activeChatMessages=activeChatMessages.map(m=>({...m,sender_name:names.get(m.sender_id)?.name||'Member',sender_is_verified:names.get(m.sender_id)?.verified||false}))}
   const reactionResult=await supabase.from('message_reactions').select('id,message_id,user_id,reaction').in('message_id',activeChatMessages.map(m=>m.id))
@@ -1285,7 +1298,10 @@ async function selectConversation(conversationId,updateUrl=true) {
 
 function handleChatMessage(message) {
   const item=chatItems.find(chat=>chat.conversation_id===message.conversation_id)
-  if(!item||item.last_message_id===message.id)return
+  if(!item){loadChats(activeConversationId||'');return}
+  const existingMessage=activeChatMessages.find(row=>row.id===message.id)
+  if(item.last_message_id===message.id&&!existingMessage?.local_status)return
+  if(message.sender_id!==session?.user?.id)markConversationDelivered(message.conversation_id,message.created_at)
   item.last_message=message.message_type==='audio'?'🎤 Voice message':message.content
   item.last_message_id=message.id
   item.last_message_at=message.created_at
@@ -1294,7 +1310,7 @@ function handleChatMessage(message) {
   renderChatList()
   if(activeConversationId===message.conversation_id){
     if(item.is_group&&message.sender_id!==session?.user?.id){supabase.from('profiles').select('full_name,username,is_verified').eq('id',message.sender_id).maybeSingle().then(({data})=>{message.sender_name=data?.full_name||data?.username||'Member';message.sender_is_verified=data?.is_verified===true;if(activeConversationId===message.conversation_id)renderChatRoom(item)})}
-    if(!activeChatMessages.some(row=>row.id===message.id))activeChatMessages.push(message)
+    if(existingMessage){Object.assign(existingMessage,message);existingMessage.local_status='sent'}else activeChatMessages.push(message)
     const history=document.querySelector('#chat-history')
     const wasNearBottom=history&&history.scrollHeight-history.scrollTop-history.clientHeight<100
     renderChatRoom(item)
@@ -1307,7 +1323,8 @@ function handleChatMessage(message) {
 function subscribeToChatInbox() {
   if(!session)return
   if(chatRealtimeChannel)supabase.removeChannel(chatRealtimeChannel)
-  chatRealtimeChannel=supabase.channel(`chat-inbox-${session.user.id}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},payload=>handleChatMessage(payload.new)).subscribe()
+  chatRealtimeChannel=supabase.channel(`chat-inbox-${session.user.id}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},payload=>handleChatMessage(payload.new)).on('postgres_changes',{event:'INSERT',schema:'public',table:'conversation_members'},payload=>{if(payload.new.user_id===session.user.id){clearTimeout(chatInboxRefreshTimer);chatInboxRefreshTimer=setTimeout(()=>loadChats(activeConversationId||''),180)}}).on('postgres_changes',{event:'UPDATE',schema:'public',table:'conversation_members'},payload=>handleConversationMemberUpdate(payload.new)).subscribe()
+  subscribeToChatPresence()
 }
 
 async function loadChats(preferredConversation='') {
@@ -1318,9 +1335,11 @@ async function loadChats(preferredConversation='') {
   try{chatFavoriteIds=new Set(JSON.parse(localStorage.getItem('flexoverse-chat-favorites:'+session.user.id)||'[]'))}catch{chatFavoriteIds=new Set()}
   const {data,error}=await supabase.rpc('list_my_conversations')
   if(error){console.error('Could not load conversations:',error);list.innerHTML='<div class="conversation-empty"><strong>Your chats could not load</strong><p>Check your connection and try again.</p><button class="button button-outline" type="button" data-retry-chats>Try again</button></div>';return}
-  chatItems=(data||[]).map(row=>({...row,peer_name:row.peer_name||row.peer_username||'Flexoverse friend',peer_username:row.peer_username||'member',is_group:!row.peer_id,unread_count:Number(row.unread_count||0)}));const peerIds=[...new Set(chatItems.filter(x=>x.peer_id).map(x=>x.peer_id))];if(peerIds.length){const {data:peers}=await supabase.from('profiles').select('id,is_verified').in('id',peerIds);const verified=new Map((peers||[]).map(p=>[p.id,p.is_verified===true]));chatItems=chatItems.map(item=>({...item,peer_is_verified:verified.get(item.peer_id)||false}))}
+  chatItems=(data||[]).map(row=>({...row,peer_name:row.peer_name||row.peer_username||'Flexoverse friend',peer_username:row.peer_username||'member',is_group:!row.peer_id,unread_count:Number(row.unread_count||0)}));const peerIds=[...new Set(chatItems.filter(x=>x.peer_id).map(x=>x.peer_id))];if(peerIds.length){const {data:peers}=await supabase.from('profiles').select('id,is_verified,last_seen_at').in('id',peerIds);const peerMap=new Map((peers||[]).map(p=>[p.id,p]));chatItems=chatItems.map(item=>({...item,peer_is_verified:peerMap.get(item.peer_id)?.is_verified===true,peer_last_seen_at:peerMap.get(item.peer_id)?.last_seen_at||null,peer_online:chatPresenceFor(item.peer_id)}))}
   renderChatList()
   subscribeToChatInbox()
+  loadPendingChatMessages()
+  flushPendingChatMessages()
   const requested=preferredConversation||new URLSearchParams(location.search).get('id')
   if(requested&&chatItems.some(item=>item.conversation_id===requested)){await selectConversation(requested,false);return}
   if(!chatItems.length)renderChatWelcome('Start a private conversation with an accepted friend. Your messages stay in your inbox.');
@@ -1862,7 +1881,7 @@ function bindChatPageEvents() {
  const editForm=e.target.closest('[data-edit-message-form]');if(editForm){e.preventDefault();const id=editForm.dataset.messageId,content=editForm.querySelector('textarea').value.trim();if(!content)return;if(!messageCanEdit(activeChatMessages.find(m=>m.id===id))){toast('Messages can only be edited within 5 minutes.','info');document.querySelector('#modal-root').innerHTML='';return}const save=editForm.querySelector('[type="submit"]');save.disabled=true;await updateChatMessage(id,content);return}
  const form=e.target.closest('[data-edit-message-form]');if(!form)return;e.preventDefault();const content=form.querySelector('textarea').value.trim();if(!content)return;const btn=form.querySelector('[type=submit]');btn.disabled=true;await updateChatMessage(form.dataset.messageId,content);btn.disabled=false})
   document.querySelector('#chat-room')?.addEventListener('input',e=>{if(e.target.matches('#message-form [name="message"]')){setChatTyping(!!e.target.value.trim());const form=e.target.closest('#message-form'),action=form?.querySelector('.composer-action-button');if(action){if(e.target.value.trim()){action.type='submit';action.removeAttribute('data-voice-record');action.classList.remove('voice-record-button');action.classList.add('send-button');action.setAttribute('aria-label','Send message');action.title='Send message';action.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg>'}else{action.type='button';action.setAttribute('data-voice-record','');action.classList.remove('send-button');action.classList.add('voice-record-button');action.setAttribute('aria-label','Record voice message');action.title='Record voice message';action.innerHTML=voiceMicSvg()}}}});
-  document.querySelector('#chat-room')?.addEventListener('submit',async e=>{const form=e.target.closest('#message-form');if(!form)return;e.preventDefault();if(!session)return openAuth();const input=form.querySelector('[name="message"]'),content=String(input.value||'').trim();if(!content||!activeConversationId)return;setChatTyping(false);const submit=form.querySelector('[type="submit"]');submit.disabled=true;const replyId=pendingReplyTo?.id||null;const {data,error}=await supabase.from('messages').insert({conversation_id:activeConversationId,sender_id:session.user.id,content,reply_to_message_id:replyId}).select('id,conversation_id,sender_id,content,created_at,edited_at,reply_to_message_id,message_type,media_path').single();submit.disabled=false;if(error){toast(error.message,'error');return}pendingReplyTo=null;handleChatMessage(data);await markConversationRead(activeConversationId);document.querySelector('#message-form [name="message"]')?.focus()})
+  document.querySelector('#chat-room')?.addEventListener('submit',async e=>{const form=e.target.closest('#message-form');if(!form)return;e.preventDefault();if(!session)return openAuth();const input=form.querySelector('[name="message"]'),content=String(input.value||'').trim();if(!content||!activeConversationId)return;setChatTyping(false);const pending={id:crypto.randomUUID(),conversation_id:activeConversationId,sender_id:session.user.id,content,created_at:new Date().toISOString(),edited_at:null,reply_to_message_id:pendingReplyTo?.id||null,message_type:'text',media_path:null,local_status:'pending'};pendingChatMessages.push(pending);savePendingChatMessages();activeChatMessages.push(pending);const item=chatItems.find(x=>x.conversation_id===activeConversationId);if(item){item.last_message=content;item.last_message_id=pending.id;item.last_message_at=pending.created_at;item.last_sender_id=session.user.id;renderChatList()}input.value='';pendingReplyTo=null;renderChatRoom(item);await sendPendingChatMessage(pending);document.querySelector('#message-form [name="message"]')?.focus()})
   document.querySelector('#modal-root')?.addEventListener('click',async e=>{
     if(e.target.closest('[data-close-chat-modal]')||e.target.matches('[data-chat-modal-backdrop]')){document.querySelector('#modal-root').innerHTML='';return}
     if(e.target.closest('[data-open-new-group]')){openNewGroupDialog();return}
